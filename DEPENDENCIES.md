@@ -18,3 +18,16 @@ python -m pip install -r requirements.txt
 
 - Keep `.venv/` out of git.
 - Use bounded ranges (`>=x,<y`) to reduce accidental major-version breakage.
+
+## Dev Hot Reload (Safe Restart)
+
+Use the dev launcher:
+
+```powershell
+RADAN Kitter (Dev Hot Reload).bat
+```
+
+Behavior:
+- Watches `.py` files for changes.
+- Restarts the app process automatically after save.
+- Does not do in-process module reloading (safer for PySide6).

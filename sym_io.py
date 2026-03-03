@@ -72,6 +72,56 @@ def donor_extract_placeholder_paths(donor_text: str) -> Tuple[str, int]:
     return placeholder, capacity
 
 
+def _extract_slot_blocks(
+    lines: List[str],
+    placeholder: str,
+) -> List[Tuple[int, int, int, int]]:
+    """
+    Parse donor slot blocks and return tuples:
+      (start_idx, end_idx, head_idx, path_idx)
+    where block range is inclusive and expected shape is:
+      U,,,,2...
+      [optional N,...]
+      F,...$/<part short>
+      C,$
+      U,,$<placeholder path>
+      U,$
+    """
+    ph_path_norm = os.path.normpath(placeholder).lower()
+    path_lines: List[int] = []
+    for i, ln in enumerate(lines):
+        nln = os.path.normpath(ln.strip().replace("U,,", "").replace("$", "")).lower()
+        if nln == ph_path_norm or placeholder in ln:
+            path_lines.append(i)
+
+    if not path_lines:
+        return []
+
+    out: List[Tuple[int, int, int, int]] = []
+    for path_idx in path_lines:
+        # Start at nearest preceding slot opener.
+        start_idx = path_idx
+        for j in range(path_idx, max(-1, path_idx - 12), -1):
+            if j >= 0 and lines[j].startswith("U,,,,2"):
+                start_idx = j
+                break
+
+        # End at next "U,$" line, else path line.
+        end_idx = path_idx
+        if path_idx + 1 < len(lines) and lines[path_idx + 1].startswith("U,$"):
+            end_idx = path_idx + 1
+
+        # Find head line containing the short-name marker.
+        head_idx = max(start_idx, path_idx - 1)
+        for j in range(path_idx - 1, max(start_idx - 1, path_idx - 12), -1):
+            if "$/" in lines[j]:
+                head_idx = j
+                break
+
+        out.append((start_idx, end_idx, head_idx, path_idx))
+    return out
+
+
 def build_kit_sym_from_donor(
     donor_path: str,
     member_part_syms: List[str],
@@ -84,53 +134,44 @@ def build_kit_sym_from_donor(
     donor_text = read_text_fallback(donor_path)
     placeholder, capacity = donor_extract_placeholder_paths(donor_text)
 
-    if len(member_part_syms) > capacity:
-        raise RuntimeError(
-            f"Kit has {len(member_part_syms)} members but donor capacity is {capacity}. "
-            f"Use a larger donor or split kits."
-        )
-
-    pieces = donor_text.split(placeholder)
-    occ = len(pieces) - 1
-    if occ < capacity:
-        raise RuntimeError("Donor placeholder occurrences mismatch; donor file may not be compatible.")
-
     k = len(member_part_syms)
     lines = donor_text.splitlines(keepends=True)
     ph_short = os.path.splitext(os.path.basename(placeholder))[0]
-    ph_path_norm = os.path.normpath(placeholder).lower()
+    slot_blocks = _extract_slot_blocks(lines, placeholder)
+    if not slot_blocks:
+        raise RuntimeError("Donor has no parsable instance slot blocks.")
 
-    slot_path_lines: List[int] = []
-    for i, ln in enumerate(lines):
-        if os.path.normpath(ln.strip().replace("U,,", "").replace("$", "")).lower() == ph_path_norm:
-            slot_path_lines.append(i)
-        elif placeholder in ln:
-            slot_path_lines.append(i)
+    # Deduplicate any accidental repeated ranges.
+    dedup: List[Tuple[int, int, int, int]] = []
+    seen = set()
+    for b in slot_blocks:
+        key = (b[0], b[1])
+        if key in seen:
+            continue
+        seen.add(key)
+        dedup.append(b)
+    slot_blocks = sorted(dedup, key=lambda b: b[0])
+    capacity = len(slot_blocks)
 
-    if len(slot_path_lines) < k:
-        raise RuntimeError("Donor has fewer instance path slots than required kit members.")
+    prefix = lines[:slot_blocks[0][0]]
+    suffix = lines[slot_blocks[-1][1] + 1 :]
 
-    keep_line = [True] * len(lines)
+    generated: List[str] = []
+    for idx in range(k):
+        src = slot_blocks[idx % capacity]
+        s0, s1, h0, p0 = src
+        block = lines[s0 : s1 + 1]
+        head_rel = max(0, min(len(block) - 1, h0 - s0))
+        path_rel = max(0, min(len(block) - 1, p0 - s0))
 
-    def _find_slot_head(idx_u: int) -> int:
-        lo = max(0, idx_u - 8)
-        for j in range(idx_u - 1, lo - 1, -1):
-            if "$/" in lines[j] and ph_short in lines[j]:
-                return j
-        return max(0, idx_u - 1)
+        sym_path = member_part_syms[idx]
+        sym_short = os.path.splitext(os.path.basename(sym_path))[0]
 
-    for idx, line_no in enumerate(slot_path_lines):
-        head = _find_slot_head(line_no)
-        if idx < k:
-            sym_path = member_part_syms[idx]
-            lines[line_no] = lines[line_no].replace(placeholder, sym_path)
-            sym_short = os.path.splitext(os.path.basename(sym_path))[0]
-            lines[head] = re.sub(rf"(\$/){re.escape(ph_short)}(\s*)$", rf"\1{sym_short}\2", lines[head])
-        else:
-            for j in range(head, line_no + 1):
-                keep_line[j] = False
+        block[path_rel] = block[path_rel].replace(placeholder, sym_path)
+        block[head_rel] = re.sub(rf"(\$/){re.escape(ph_short)}(\s*)$", rf"\1{sym_short}\2", block[head_rel])
+        generated.extend(block)
 
-    new_text = "".join(ln for i, ln in enumerate(lines) if keep_line[i])
+    new_text = "".join(prefix + generated + suffix)
 
     new_text = re.sub(
         r'(<Info\s+num="0"\s+name="Number of Loops"\s+value=")\d+(")',

@@ -1,0 +1,29 @@
+from __future__ import annotations
+
+import os
+from typing import Callable, List, Optional, Tuple
+
+import pdf_packet
+from app_utils import ensure_dir, now_stamp
+from rpd_io import PartRow
+
+
+def build_packet(
+    parts: List[PartRow],
+    *,
+    rpd_path: str,
+    out_dirname: str,
+    resolve_asset_fn: Callable[[str, str], Optional[str]],
+    progress_cb: Optional[Callable[[int, int, str], None]] = None,
+) -> Tuple[str, int, int]:
+    base_dir = os.path.dirname(rpd_path)
+    out_dir = os.path.join(base_dir, out_dirname)
+    ensure_dir(out_dir)
+    packet_path = os.path.join(out_dir, f"PrintPacket_QTY_{now_stamp()}.pdf")
+    pages, missing = pdf_packet.build_watermarked_packet(
+        parts,
+        packet_path,
+        resolve_asset_fn=resolve_asset_fn,
+        progress_cb=progress_cb,
+    )
+    return packet_path, pages, missing
