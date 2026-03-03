@@ -1,0 +1,23 @@
+# Python virtual environments
+.venv/
+.venv_broken_*/
+venv/
+
+# Python caches/artifacts
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Tool/runtime output
+runs/
+_bak/
+_out/
+radan_kitter_launch.log
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+
+# Local backup copies
+* - Copy.py
