@@ -25,7 +25,13 @@ try:
 except Exception:
     np = None
 
-from config import ENG_RELEASE_MAP as CFG_ENG_RELEASE_MAP, W_RELEASE_ROOT as CFG_W_RELEASE_ROOT
+from config import (
+    ENG_RELEASE_MAP as CFG_ENG_RELEASE_MAP,
+    PACKET_LAYER0_KEEP_BR_ENABLED as CFG_PACKET_LAYER0_KEEP_BR_ENABLED,
+    PACKET_LAYER0_KEEP_BR_HEIGHT_FRAC as CFG_PACKET_LAYER0_KEEP_BR_HEIGHT_FRAC,
+    PACKET_LAYER0_KEEP_BR_WIDTH_FRAC as CFG_PACKET_LAYER0_KEEP_BR_WIDTH_FRAC,
+    W_RELEASE_ROOT as CFG_W_RELEASE_ROOT,
+)
 import runtime_trace as rt
 from rpd_io import PartRow
 
@@ -52,13 +58,14 @@ TITLE_GRAYSCALE_OPACITY = 0.40
 PACKET_RASTER_DPI = 220
 PACKET_BW_THRESHOLD = 208
 PACKET_JPEG_QUALITY = 82
-PACKET_LAYER0_KEEP_BR_ENABLED = True
-PACKET_LAYER0_KEEP_BR_X_START = 0.72
-PACKET_LAYER0_KEEP_BR_Y_START = 0.70
+PACKET_LAYER0_KEEP_BR_ENABLED = bool(CFG_PACKET_LAYER0_KEEP_BR_ENABLED)
+PACKET_LAYER0_KEEP_BR_WIDTH_FRAC = max(0.0, min(1.0, float(CFG_PACKET_LAYER0_KEEP_BR_WIDTH_FRAC)))
+PACKET_LAYER0_KEEP_BR_HEIGHT_FRAC = max(0.0, min(1.0, float(CFG_PACKET_LAYER0_KEEP_BR_HEIGHT_FRAC)))
 # PyMuPDF page processing can be unstable in threaded mode on some systems.
 # Keep stable single-thread default; allow override via env for testing.
 PACKET_MAX_WORKERS = max(1, min(8, int(os.environ.get("RK_PACKET_WORKERS", "2"))))
-PACKET_INVERT_BW = str(os.environ.get("RK_PACKET_INVERT_BW", "1")).strip().lower() not in ("0", "false", "off", "no")
+# Default OFF: keep normal black-on-white output unless explicitly requested.
+PACKET_INVERT_BW = str(os.environ.get("RK_PACKET_INVERT_BW", "0")).strip().lower() not in ("0", "false", "off", "no")
 
 
 class PacketBuildCanceled(Exception):
@@ -591,9 +598,136 @@ def _layer0_keep_bottom_right_rect(page_rect):
     h = max(0.0, y1 - y0)
     if w <= 1e-6 or h <= 1e-6:
         return None
-    kx = max(0.0, min(1.0, float(PACKET_LAYER0_KEEP_BR_X_START)))
-    ky = max(0.0, min(1.0, float(PACKET_LAYER0_KEEP_BR_Y_START)))
-    return fitz.Rect(x0 + (w * kx), y0 + (h * ky), x1, y1)
+    keep_w = max(0.0, w * float(PACKET_LAYER0_KEEP_BR_WIDTH_FRAC))
+    keep_h = max(0.0, h * float(PACKET_LAYER0_KEEP_BR_HEIGHT_FRAC))
+    if keep_w <= 1e-6 or keep_h <= 1e-6:
+        return None
+    return fitz.Rect(max(x0, x1 - keep_w), max(y0, y1 - keep_h), x1, y1)
+
+
+def _set_layer0_only(doc) -> None:
+    if doc is None:
+        return
+    try:
+        ui_cfgs = doc.layer_ui_configs() or []
+    except Exception:
+        ui_cfgs = []
+    on_nums: List[int] = []
+    off_nums: List[int] = []
+    toggle_nums: List[int] = []
+    for cfg in ui_cfgs:
+        try:
+            num = int(cfg.get("number"))
+        except Exception:
+            continue
+        if num < 0:
+            continue
+        toggle_nums.append(num)
+        name = str(cfg.get("text", "") or cfg.get("name", "") or cfg.get("label", ""))
+        is_l0 = _is_layer_zero_name(name)
+        if is_l0:
+            on_nums.append(num)
+        else:
+            off_nums.append(num)
+    # Exporter fallback: if we could not name-match layer 0, assume first toggle
+    # entry represents layer 0.
+    if not on_nums and toggle_nums:
+        first_num = int(toggle_nums[0])
+        on_nums = [first_num]
+        off_nums = [n for n in off_nums if int(n) != first_num]
+    for num in off_nums:
+        try:
+            doc.set_layer_ui_config(num, 2)
+        except Exception:
+            pass
+    for num in on_nums:
+        try:
+            doc.set_layer_ui_config(num, 1)
+        except Exception:
+            pass
+
+    try:
+        ocgs = doc.get_ocgs() or {}
+    except Exception:
+        ocgs = {}
+    if isinstance(ocgs, dict) and ocgs:
+        on_xrefs: List[int] = []
+        off_xrefs: List[int] = []
+        all_xrefs: List[int] = []
+        for k, v in ocgs.items():
+            try:
+                x = int(k)
+            except Exception:
+                continue
+            if x <= 0:
+                continue
+            all_xrefs.append(x)
+            name = ""
+            if isinstance(v, dict):
+                name = str(v.get("name") or v.get("text") or "")
+            if _is_layer_zero_name(name):
+                on_xrefs.append(x)
+            else:
+                off_xrefs.append(x)
+        if not on_xrefs and all_xrefs:
+            first_x = sorted(set(int(x) for x in all_xrefs if int(x) > 0))[0]
+            on_xrefs = [first_x]
+            off_xrefs = [int(x) for x in off_xrefs if int(x) != first_x]
+        if on_xrefs or off_xrefs:
+            on_xrefs = sorted(set(on_xrefs))
+            off_xrefs = sorted(set(off_xrefs))
+            try:
+                doc.set_layer(-1, basestate="OFF", on=on_xrefs, off=off_xrefs)
+            except TypeError:
+                try:
+                    doc.set_layer(-1, on=on_xrefs, off=off_xrefs)
+                except Exception:
+                    pass
+            except Exception:
+                pass
+
+
+def _logo_stream_from_layer0_crop(
+    page,
+    clip_rect,
+    dpi: int = 220,
+    white_transparent_thresh: int = 252,
+) -> bytes:
+    """
+    Render source crop and return a grayscale PNG stream with near-white pixels
+    transparent, so logo marks pass through without a gray/white block.
+    """
+    if fitz is None or page is None or clip_rect is None:
+        return b""
+    try:
+        pix = page.get_pixmap(
+            matrix=fitz.Matrix(float(dpi) / 72.0, float(dpi) / 72.0),
+            alpha=False,
+            clip=clip_rect,
+        )
+    except Exception:
+        return b""
+    try:
+        gpix = _grayscale_pixmap(pix)
+        h, w, n = int(gpix.height), int(gpix.width), int(gpix.n)
+        if h <= 0 or w <= 0 or n < 3:
+            return b""
+        if np is None:
+            return gpix.tobytes("png")
+        arr = np.frombuffer(gpix.samples, dtype=np.uint8).reshape((h, w, n))
+        gray = arr[:, :, 0]
+        alpha = np.where(gray >= int(white_transparent_thresh), 0, 255).astype(np.uint8)
+        if int((alpha > 0).sum()) <= 0:
+            return b""
+        rgba = np.empty((h, w, 4), dtype=np.uint8)
+        rgba[:, :, 0] = gray
+        rgba[:, :, 1] = gray
+        rgba[:, :, 2] = gray
+        rgba[:, :, 3] = alpha
+        rpix = fitz.Pixmap(fitz.csRGB, w, h, rgba.tobytes(), True)
+        return rpix.tobytes("png")
+    except Exception:
+        return b""
 
 
 def _rect_center_in(rect_xyxy, keep_rect) -> bool:
@@ -699,9 +833,11 @@ def _grayscale_preserve_red_and_highlight(pix, red_gate_mask=None):
             return pix
         arr = np.frombuffer(pix.samples, dtype=np.uint8).reshape((h, w, n))
         rgb = arr[:, :, :3]
-        r = rgb[:, :, 0].astype(np.uint16)
-        g = rgb[:, :, 1].astype(np.uint16)
-        b = rgb[:, :, 2].astype(np.uint16)
+        # Use uint32 to avoid overflow in weighted grayscale math:
+        # 587 * 255 = 149685 (exceeds uint16 max 65535).
+        r = rgb[:, :, 0].astype(np.uint32)
+        g = rgb[:, :, 1].astype(np.uint32)
+        b = rgb[:, :, 2].astype(np.uint32)
 
         red_pixels = (r >= 70) & (r >= (g + 6)) & (r >= (b + 6))
         if red_gate_mask is None:
@@ -732,6 +868,30 @@ def _grayscale_preserve_red_and_highlight(pix, red_gate_mask=None):
         out[:, :, 1] = bw
         out[:, :, 2] = bw
         out[keep_color] = rgb[keep_color]
+        return fitz.Pixmap(fitz.csRGB, w, h, out.tobytes(), False)
+    except Exception:
+        return pix
+
+
+def _grayscale_pixmap(pix):
+    """Convert a pixmap to plain grayscale (no threshold / no invert)."""
+    if fitz is None or pix is None or np is None:
+        return pix
+    try:
+        h, w, n = int(pix.height), int(pix.width), int(pix.n)
+        if h <= 0 or w <= 0 or n < 3:
+            return pix
+        arr = np.frombuffer(pix.samples, dtype=np.uint8).reshape((h, w, n))
+        rgb = arr[:, :, :3]
+        # Use uint32 to avoid overflow in weighted grayscale math.
+        r = rgb[:, :, 0].astype(np.uint32)
+        g = rgb[:, :, 1].astype(np.uint32)
+        b = rgb[:, :, 2].astype(np.uint32)
+        gray = ((299 * r + 587 * g + 114 * b) // 1000).astype(np.uint8)
+        out = np.empty((h, w, 3), dtype=np.uint8)
+        out[:, :, 0] = gray
+        out[:, :, 1] = gray
+        out[:, :, 2] = gray
         return fitz.Pixmap(fitz.csRGB, w, h, out.tobytes(), False)
     except Exception:
         return pix
@@ -1441,12 +1601,23 @@ def _apply_packet_result(
         if mode == "vector":
             pdf_path = str(res.get("pdf_path") or "").strip()
             src = None
+            src_orig = None
             flat = None
             try:
                 if pdf_path and os.path.exists(pdf_path):
                     src = fitz.open(pdf_path)
+                    try:
+                        src_orig = fitz.open(pdf_path)
+                    except Exception:
+                        src_orig = None
                     if src.page_count >= 1:
                         src_page = src.load_page(0)
+                        src_orig_page = None
+                        if src_orig is not None and src_orig.page_count >= 1:
+                            try:
+                                src_orig_page = src_orig.load_page(0)
+                            except Exception:
+                                src_orig_page = None
                         # Collect layer-0 primitives before visibility/recolor edits.
                         zero_aliases = _first_toggle_layer_aliases(src)
                         zero_draw_masks, zero_text_boxes, zero_page_area = _collect_layer_zero_masks(
@@ -1499,6 +1670,20 @@ def _apply_packet_result(
                                 erase_text,
                                 zero_page_area,
                             )
+                        # Robust fallback: explicitly keep bottom-right logo window
+                        # from layer-0 only source crop with white -> transparent.
+                        if keep_rect is not None and src_orig_page is not None:
+                            try:
+                                logo_stream = _logo_stream_from_layer0_crop(src_orig_page, keep_rect, dpi=220)
+                                if logo_stream:
+                                    render_page.insert_image(
+                                        keep_rect,
+                                        stream=logo_stream,
+                                        keep_proportion=False,
+                                        overlay=True,
+                                    )
+                            except Exception:
+                                pass
 
                         # Apply colored overlays after flattening so they do not get recolored.
                         seen_dim = set()
@@ -1549,6 +1734,11 @@ def _apply_packet_result(
                 if src is not None:
                     try:
                         src.close()
+                    except Exception:
+                        pass
+                if src_orig is not None:
+                    try:
+                        src_orig.close()
                     except Exception:
                         pass
                 if flat is not None:

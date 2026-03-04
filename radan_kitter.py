@@ -120,6 +120,7 @@ class Main(QMainWindow):
             sanitize_kit_name_fn=sanitize_kit_name,
         )
         self._update_numpad_legend(None)
+        self._refresh_open_rpd_indicator()
 
         self._preview_timer = QTimer()
         self._preview_timer.setSingleShot(True)
@@ -211,11 +212,34 @@ class Main(QMainWindow):
                 on_selection_changed=lambda: self._preview_timer.start(25),
             )
             self.rpd_path = path
+            self._refresh_open_rpd_indicator()
             self.preview_current()
             span.success(part_count=len(self.parts))
         except Exception as exc:
             span.fail(exc)
             raise
+
+    def _refresh_open_rpd_indicator(self) -> None:
+        p = os.path.normpath(str(self.rpd_path or "").strip())
+        lbl = getattr(self, "rpd_indicator_label", None)
+        if not p:
+            self.setWindowTitle("RADAN Kitter")
+            if lbl is not None:
+                try:
+                    lbl.setText("Open RPD: (none)")
+                    lbl.setToolTip("")
+                except Exception:
+                    pass
+            return
+
+        base = os.path.basename(p)
+        self.setWindowTitle(f"RADAN Kitter - {base}")
+        if lbl is not None:
+            try:
+                lbl.setText(f"Open RPD: {p}")
+                lbl.setToolTip(p)
+            except Exception:
+                pass
 
     def _update_numpad_legend(self, row: Optional[int]) -> None:
         self.preview_coordinator.update_numpad_legend(self.model, row)
@@ -263,14 +287,6 @@ class Main(QMainWindow):
         )
 
     def build_packet_only(self):
-        packet_mode = "raster"
-        try:
-            btn = self.packet_mode_group.checkedButton()
-            txt = str(btn.text() if btn is not None else "").strip().lower()
-            if txt.startswith("vec"):
-                packet_mode = "vector"
-        except Exception:
-            packet_mode = "raster"
         ui_actions.run_build_packet(
             parent=self,
             tree=self.tree,
@@ -278,7 +294,7 @@ class Main(QMainWindow):
             rpd_path=self.rpd_path,
             out_dirname=OUT_DIRNAME,
             resolve_asset_fn=assets.resolve_asset,
-            packet_mode=packet_mode,
+            packet_mode="vector",
         )
 
     def run_rf_suggestions(self):

@@ -57,6 +57,14 @@ HOT_RELOAD_RESPONSE_PATH = os.path.join(GLOBAL_RUNTIME_DIR, "hot_reload_response
 PACKET_TEMP_LOCAL_OUTPUT_ENABLED = True
 PACKET_TEMP_LOCAL_OUTPUT_DIR = os.path.join(APP_DIR, "_packet_debug_out")
 PACKET_TEMP_FIRST_PAGE_ONLY = False
+# Temporary packet page cap for debug iteration. Set <=0 to disable cap.
+PACKET_TEMP_MAX_PAGES = 0
+
+# Packet layer-0 preserve window (bottom-right), as page fractions.
+# Keeps only this zone from layer 0 (e.g., company logo in title block).
+PACKET_LAYER0_KEEP_BR_ENABLED = True
+PACKET_LAYER0_KEEP_BR_WIDTH_FRAC = 0.23
+PACKET_LAYER0_KEEP_BR_HEIGHT_FRAC = 0.18
 
 DONOR_TEMPLATE_PATH = os.path.join(APP_DIR, "KitDonor-100Instances.sym")
 if not os.path.exists(DONOR_TEMPLATE_PATH):
@@ -86,7 +94,6 @@ ML_SIGNAL_COLS = [
     "pdf_bendline_score",
     "pdf_ink_gradient_mean",
     "pdf_ink_gradient_std",
-    "pdf_ink_gradient_max",
 ]
 
 # Backward-compat aliases

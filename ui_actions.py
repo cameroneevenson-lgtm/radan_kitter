@@ -16,6 +16,7 @@ import rf_service
 import runtime_trace as rt
 import ui_ml_signal_plot
 from config import (
+    PACKET_TEMP_MAX_PAGES,
     PACKET_TEMP_FIRST_PAGE_ONLY,
     PACKET_TEMP_LOCAL_OUTPUT_DIR,
     PACKET_TEMP_LOCAL_OUTPUT_ENABLED,
@@ -167,7 +168,17 @@ def run_build_packet(
     if bool(getattr(parent, "_rk_build_packet_running", False)):
         return
 
-    build_parts = list(parts[:1]) if bool(PACKET_TEMP_FIRST_PAGE_ONLY) else list(parts)
+    page_cap: Optional[int] = None
+    if bool(PACKET_TEMP_FIRST_PAGE_ONLY):
+        page_cap = 1
+    try:
+        cfg_cap = int(PACKET_TEMP_MAX_PAGES)
+    except Exception:
+        cfg_cap = 0
+    if cfg_cap > 0:
+        page_cap = cfg_cap if page_cap is None else min(page_cap, cfg_cap)
+
+    build_parts = list(parts[:page_cap]) if page_cap is not None else list(parts)
     if not build_parts:
         return
     effective_out_dir = (
@@ -185,6 +196,7 @@ def run_build_packet(
         rpd_path=rpd_path,
         part_count=len(build_parts),
         first_page_only=bool(PACKET_TEMP_FIRST_PAGE_ONLY),
+        page_cap=(int(page_cap) if page_cap is not None else 0),
         output_dir=effective_out_dir,
         suppress_layer_0=True,
         workers=1,
@@ -451,6 +463,7 @@ def run_ml_recompute_all(
             signal_cols=list(signal_cols),
             should_stop=progress.wasCanceled,
             on_progress=on_progress,
+            max_workers=2,
         )
         progress.setValue(progress.maximum())
         stopped = bool(summary.get("stopped", False))
@@ -464,6 +477,7 @@ def run_ml_recompute_all(
                 f"Rows with compute errors: {int(summary.get('error_rows', 0))}\n"
                 f"Rows missing PDF path/file: {int(summary.get('missing_pdf_rows', 0))}\n"
                 f"Rows missing DXF path/file: {int(summary.get('missing_dxf_rows', 0))}\n"
+                f"Workers: {int(summary.get('workers', 1))}\n"
                 f"Dataset: {summary.get('dataset_path', '')}"
             ),
         )

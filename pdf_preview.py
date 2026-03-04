@@ -19,6 +19,8 @@ PDF_PREVIEW_CACHE_MB = 8192
 PDF_PREVIEW_RENDER_OVERSAMPLE = 2.0
 PDF_PREVIEW_RESIZE_RERENDER_MS = 120
 PDF_PREVIEW_CACHE_BUCKET_PX = 160
+PDF_PREVIEW_INVERT_COLORS = False
+PDF_PREVIEW_INVERT_GRAYSCALE_ONLY = True
 
 
 @dataclass
@@ -65,8 +67,18 @@ def _render_pdf_page_to_qimage(
         pix = page.get_pixmap(matrix=mat, alpha=False)
 
         # Create QImage (copy) from pixmap samples
-        img = QImage(pix.samples, pix.width, pix.height, pix.stride, QImage.Format_RGB888)
-        return img.copy()
+        img = QImage(pix.samples, pix.width, pix.height, pix.stride, QImage.Format_RGB888).copy()
+        if PDF_PREVIEW_INVERT_COLORS:
+            try:
+                if PDF_PREVIEW_INVERT_GRAYSCALE_ONLY:
+                    g = img.convertToFormat(QImage.Format_Grayscale8)
+                    g.invertPixels()
+                    img = g.convertToFormat(QImage.Format_RGB888)
+                else:
+                    img.invertPixels()
+            except Exception:
+                pass
+        return img
     finally:
         doc.close()
 
@@ -100,6 +112,8 @@ def _apply_preferred_layers(doc: fitz.Document) -> bool:
         "bendcenterline",
         "title",
         "titleblock",
+        "dimension",
+        "dim",
     }
     name_to_nums = {}
     for cfg in ui_cfgs:
@@ -143,13 +157,11 @@ def _apply_preferred_layers(doc: fitz.Document) -> bool:
         return changed
 
     # Fallback: no targets found. Hide requested non-preview layers by name.
-    off_exact = {"0", "hidden", "border", "symbol", "dimension", "dim"}
+    off_exact = {"0", "hidden", "border", "symbol"}
     for cfg in ui_cfgs:
         nm = _norm_layer_name(cfg.get("text", ""))
         if not (
             nm in off_exact
-            or nm.startswith("dimension")
-            or nm.startswith("dim")
             or nm.startswith("symbol")
             or nm.startswith("border")
             or nm.startswith("hidden")

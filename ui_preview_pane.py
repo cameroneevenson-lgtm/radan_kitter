@@ -33,7 +33,11 @@ class PreviewCoordinator:
 
     def update_numpad_legend(self, model: Optional[PartsModel], row: Optional[int]) -> None:
         highlight_idx = None
+        selected_idx = None
         if model is not None and row is not None and 0 <= row < len(model.rows):
+            selected = self._sanitize_kit_name(model.rows[row].kit_label)
+            if selected in self._canon_kits:
+                selected_idx = self._canon_kits.index(selected)
             sug = self._sanitize_kit_name(model.rows[row].suggested_kit)
             if sug in self._canon_kits:
                 highlight_idx = self._canon_kits.index(sug)
@@ -42,6 +46,7 @@ class PreviewCoordinator:
                 canon_kits=self._canon_kits,
                 kit_abbr=self._kit_abbr,
                 highlight_idx=highlight_idx,
+                selected_idx=selected_idx,
             )
         )
 

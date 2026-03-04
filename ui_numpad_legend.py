@@ -8,6 +8,7 @@ def build_numpad_legend_html(
     canon_kits: List[str],
     kit_abbr: Dict[str, str],
     highlight_idx: Optional[int],
+    selected_idx: Optional[int] = None,
 ) -> str:
     keys_layout = [7, 8, 9, 4, 5, 6, 1, 2, 3]
     # Canonical priorities are 1..9 for canon_kits[0..8].
@@ -29,7 +30,19 @@ def build_numpad_legend_html(
             "background:#f6f9fc; color:#16222d; padding:0;"
         )
         inner_pad = "padding:4px 6px;"
-        if kit_idx == highlight_idx:
+        if kit_idx == selected_idx and kit_idx == highlight_idx:
+            base = (
+                "min-width:108px; border:2px solid #d8ba5a; border-radius:5px;"
+                "background:#2c4f7b; color:#f4f8ff; padding:0;"
+            )
+            inner_pad = "padding:3px 5px;"
+        elif kit_idx == selected_idx:
+            base = (
+                "min-width:108px; border:2px solid #7db2ff; border-radius:5px;"
+                "background:#2f6feb; color:#f4f8ff; padding:0;"
+            )
+            inner_pad = "padding:3px 5px;"
+        elif kit_idx == highlight_idx:
             base = (
                 "min-width:108px; border:2px solid #8f7800; border-radius:5px;"
                 "background:#ffe16b; color:#121212; padding:0;"

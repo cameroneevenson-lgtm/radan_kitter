@@ -3,15 +3,13 @@ from __future__ import annotations
 from typing import Callable, Sequence
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QPixmap
+from PySide6.QtGui import QColor, QPainter, QPixmap
 from PySide6.QtWidgets import (
     QAbstractItemView,
-    QButtonGroup,
     QHBoxLayout,
     QLabel,
     QMainWindow,
     QPushButton,
-    QRadioButton,
     QSizePolicy,
     QSplitter,
     QTableView,
@@ -28,6 +26,26 @@ def _build_legend_text(canon_kits: Sequence[str]) -> str:
         f"4: {canon_kits[3]}    5: {canon_kits[4]}    6: {canon_kits[5]}\n"
         f"1: {canon_kits[0]}    2: {canon_kits[1]}    3: {canon_kits[2]}"
     )
+
+
+def _make_tiled_banner_pixmap(logo_path: str, *, height_px: int, width_px: int) -> QPixmap:
+    pm = QPixmap(logo_path) if logo_path else QPixmap()
+    if pm.isNull():
+        return QPixmap()
+    tile = pm.scaledToHeight(max(1, height_px), Qt.SmoothTransformation)
+    if tile.isNull():
+        return QPixmap()
+    out_w = max(tile.width(), width_px)
+    out = QPixmap(out_w, max(1, height_px))
+    out.fill(QColor("#000000"))
+    p = QPainter(out)
+    p.setOpacity(0.36)
+    x = 0
+    while x < out_w:
+        p.drawPixmap(x, 0, tile)
+        x += max(1, tile.width())
+    p.end()
+    return out
 
 
 def apply_company_logo(logo_label: QLabel, company_logo_path: str) -> None:
@@ -66,6 +84,8 @@ def build_main_layout(
     on_hot_reload_accept: Callable[[], None],
     on_hot_reload_reject: Callable[[], None],
 ) -> None:
+    accent = "#3b82f6"
+
     table = QTableView()
     window.table = table  # type: ignore[attr-defined]
     table.setAlternatingRowColors(True)
@@ -75,23 +95,48 @@ def build_main_layout(
     table.setMinimumWidth(460)
     table.installEventFilter(window)
     table.viewport().installEventFilter(window)
+    table.setStyleSheet(
+        "QTableView {"
+        " font-size: 17px;"
+        " font-weight: 500;"
+        " color: #0f172a;"
+        " background: #fafbfc;"
+        " alternate-background-color: #f4f6f8;"
+        " gridline-color: #dde3ea;"
+        " border: 1px solid #d1d8e0;"
+        " selection-background-color: #3b82f6;"
+        " selection-color: #ffffff;"
+        " }"
+        "QTableView::item { padding: 2px 4px; }"
+        "QTableView:focus { border: 1px solid #3b82f6; }"
+        "QHeaderView::section {"
+        " font-size: 17px;"
+        " font-weight: 600;"
+        " color: #0f172a;"
+        " background: #eef2f7;"
+        " border: 1px solid #d1d8e0;"
+        " padding: 5px 8px;"
+        " }"
+    )
+    table.verticalHeader().setDefaultSectionSize(40)
+    table.verticalHeader().setMinimumSectionSize(28)
 
     pdf_view = PdfPreviewView()
     pdf_view.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-    pdf_view.setStyleSheet("QGraphicsView { background: #0f1114; }")
+    pdf_view.setStyleSheet("QGraphicsView { background: #2b3038; }")
     window.pdf_view = pdf_view  # type: ignore[attr-defined]
 
     numpad_legend = QLabel(_build_legend_text(canon_kits))
     numpad_legend.setWordWrap(True)
     numpad_legend.setAlignment(Qt.AlignCenter)
-    numpad_legend.setMinimumHeight(92)
+    numpad_legend.setMinimumHeight(112)
     numpad_legend.setStyleSheet(
         "QLabel {"
         " color: #0f1720;"
-        " background: #e8eef5;"
-        " border: 1px solid #c5d1de;"
+        " background: #ecf2fa;"
+        " border: 1px solid #c6d6ea;"
         " border-radius: 6px;"
-        " padding: 6px 8px;"
+        " padding: 10px 12px;"
         " }"
     )
     numpad_legend.setTextInteractionFlags(Qt.TextBrowserInteraction)
@@ -117,22 +162,6 @@ def build_main_layout(
     rf_suggest_btn.clicked.connect(on_rf_suggest)
     clear_btn = QPushButton("Clear kits (selected)")
     clear_btn.clicked.connect(on_clear_selected)
-    packet_mode_group = QButtonGroup(window)
-    mode_lbl = QLabel("mode")
-    mode_lbl.setAlignment(Qt.AlignVCenter | Qt.AlignRight)
-    packet_mode_raster = QRadioButton("Raster")
-    packet_mode_vector = QRadioButton("Vector")
-    packet_mode_group.addButton(packet_mode_raster, 1)
-    packet_mode_group.addButton(packet_mode_vector, 2)
-    packet_mode_vector.setChecked(True)
-    window.packet_mode_group = packet_mode_group  # type: ignore[attr-defined]
-    packet_mode_box = QWidget()
-    packet_mode_row = QHBoxLayout(packet_mode_box)
-    packet_mode_row.setContentsMargins(0, 0, 0, 0)
-    packet_mode_row.setSpacing(4)
-    packet_mode_row.addWidget(mode_lbl)
-    packet_mode_row.addWidget(packet_mode_raster)
-    packet_mode_row.addWidget(packet_mode_vector)
 
     action_buttons = [
         open_btn,
@@ -145,38 +174,66 @@ def build_main_layout(
         rf_suggest_btn,
         clear_btn,
     ]
+    primary_buttons = {open_btn, write_rpd_btn, packet_btn}
     for b in action_buttons:
-        b.setMinimumHeight(28)
-        b.setMaximumHeight(30)
-    packet_mode_box.setMinimumHeight(28)
-    packet_mode_box.setMaximumHeight(30)
+        b.setMinimumHeight(34)
+        b.setMaximumHeight(34)
+        weight = "600" if b in primary_buttons else "500"
+        b.setStyleSheet(
+            "font-size: 17px;"
+            f"font-weight: {weight};"
+            f"padding: 4px 12px;"
+            f"border: 1px solid #cbd5e1;"
+            f"border-radius: 5px;"
+            f"background: #f8fafc;"
+        )
 
-    logo_label = QLabel("")
-    logo_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-    logo_label.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-    logo_label.setVisible(False)
-    apply_company_logo(logo_label, company_logo_path)
-    window.logo_label = logo_label  # type: ignore[attr-defined]
+    logo_banner = QLabel("")
+    logo_banner.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+    logo_banner.setFixedHeight(36)
+    logo_banner.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+    logo_banner.setMinimumWidth(300)
+    tiled = _make_tiled_banner_pixmap(company_logo_path, height_px=28, width_px=2600)
+    if not tiled.isNull():
+        logo_banner.setPixmap(tiled)
+        logo_banner.setStyleSheet("QLabel { border: none; background: transparent; }")
+        logo_banner.setVisible(True)
+    else:
+        logo_banner.setVisible(False)
+    window.logo_label = logo_banner  # type: ignore[attr-defined]
 
     top_bar = QWidget()
     top_bar.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-    top_bar.setFixedHeight(38)
+    top_bar.setFixedHeight(46)
     top = QHBoxLayout(top_bar)
     top.setContentsMargins(0, 0, 0, 0)
     top.setSpacing(6)
     top.addWidget(open_btn)
     top.addWidget(write_rpd_btn)
     top.addWidget(packet_btn)
-    top.addWidget(packet_mode_box)
     top.addWidget(prep_kits_btn)
     top.addWidget(ml_log_btn)
     top.addWidget(ml_plot_btn)
     top.addWidget(ml_recompute_btn)
     top.addWidget(rf_suggest_btn)
     top.addWidget(clear_btn)
-    top.addStretch(1)
-    top.addWidget(logo_label, 0, Qt.AlignRight | Qt.AlignVCenter)
+    top.addWidget(logo_banner, 1, Qt.AlignRight | Qt.AlignVCenter)
     window.top_bar = top_bar  # type: ignore[attr-defined]
+
+    rpd_indicator = QLabel("Open RPD: (none)")
+    rpd_indicator.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+    rpd_indicator.setMinimumHeight(24)
+    rpd_indicator.setStyleSheet(
+        "QLabel {"
+        " color: #2a3642;"
+        " background: #f2f6fa;"
+        " border: 1px solid #d5dee8;"
+        " border-radius: 5px;"
+        " padding: 2px 8px;"
+        " }"
+    )
+    rpd_indicator.setTextInteractionFlags(Qt.TextSelectableByMouse)
+    window.rpd_indicator_label = rpd_indicator  # type: ignore[attr-defined]
 
     hot_reload_bar = QWidget()
     hot_reload_bar.setVisible(False)
@@ -225,11 +282,13 @@ def build_main_layout(
     lay.setContentsMargins(6, 4, 6, 6)
     lay.setSpacing(4)
     lay.addWidget(top_bar, 0)
+    lay.addWidget(rpd_indicator, 0)
     lay.addWidget(hot_reload_bar, 0)
     lay.addWidget(splitter, 1)
     lay.setStretch(0, 0)
     lay.setStretch(1, 0)
-    lay.setStretch(2, 1)
+    lay.setStretch(2, 0)
+    lay.setStretch(3, 1)
     window.setCentralWidget(root)
     window.resize(1850, 1100)
     window.setMinimumSize(1400, 860)

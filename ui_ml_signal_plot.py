@@ -6,15 +6,12 @@ import os
 from typing import Dict, List, Sequence, Tuple
 
 import pandas as pd
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
     QDialog,
-    QHBoxLayout,
     QLabel,
-    QPushButton,
     QScrollArea,
-    QSpinBox,
     QVBoxLayout,
     QWidget,
 )
@@ -46,6 +43,21 @@ try:
     from matplotlib.backends.backend_agg import FigureCanvasAgg
 except Exception:
     FigureCanvasAgg = None
+
+try:
+    from config import CANON_KITS, KIT_ABBR
+except Exception:
+    CANON_KITS = []
+    KIT_ABBR = {}
+
+_PLOT_DATA_CACHE: Dict[tuple, dict] = {}
+_COUNT_LIKE_SIGNALS = {
+    "dxf_entity_count",
+    "dxf_exterior_notch_count",
+    "dxf_has_interior_polylines",
+    "dxf_color_count",
+    "dxf_has_nondefault_color",
+}
 
 
 def _finite(v: float) -> bool:
@@ -82,6 +94,38 @@ def _short_signal_labels(signals: Sequence[str]) -> List[str]:
     return out
 
 
+def _ordered_kit_names(kit_names: Sequence[str]) -> List[str]:
+    by_norm: Dict[str, str] = {}
+    for k in kit_names:
+        s = str(k or "").strip()
+        if not s:
+            continue
+        by_norm.setdefault(s.lower(), s)
+    out: List[str] = []
+    for k in CANON_KITS:
+        s = str(k or "").strip()
+        if not s:
+            continue
+        found = by_norm.pop(s.lower(), None)
+        if found:
+            out.append(found)
+    if by_norm:
+        out.extend(sorted(by_norm.values(), key=lambda x: x.lower()))
+    return out
+
+
+def _kit_slice_labels(kit_names: Sequence[str]) -> List[str]:
+    out: List[str] = []
+    for k in kit_names:
+        ks = str(k or "").strip()
+        ab = str(KIT_ABBR.get(ks, "") or "").strip().upper()
+        if not ab:
+            letters = "".join(ch for ch in ks.upper() if ch.isalpha())
+            ab = letters[:3] if letters else ks[:3].upper()
+        out.append(ab[:3])
+    return out
+
+
 def _normalized_kit_signal_stats(
     df: pd.DataFrame,
     signal_cols: Sequence[str],
@@ -103,22 +147,45 @@ def _normalized_kit_signal_stats(
 
     work = _coerce_numeric(work, present_signals)
     kit_counts = work.groupby(kit_col, dropna=False).size().sort_values(ascending=False)
-    kit_names = [str(k) for k in kit_counts.index.tolist()]
+    kit_names = _ordered_kit_names([str(k) for k in kit_counts.index.tolist()])
 
-    # Per-signal global normalization so mixed-scale features can be compared on one polar chart.
+    # Transform features for better comparability on the polar plot:
+    # - log1p on count-like signals to reduce outlier compression.
+    # - robust p5..p95 scaling to keep rare spikes from flattening the chart.
+    transformed = work[[kit_col] + present_signals].copy()
+    for s in present_signals:
+        col = pd.to_numeric(transformed[s], errors="coerce")
+        if s in _COUNT_LIKE_SIGNALS:
+            col = col.clip(lower=0)
+            if np is not None:
+                col = np.log1p(col)
+            else:
+                col = col.map(lambda v: math.log1p(float(v)) if _finite(v) and float(v) >= 0.0 else float("nan"))
+        transformed[s] = col
+
     mins: Dict[str, float] = {}
     maxs: Dict[str, float] = {}
     for s in present_signals:
-        col = pd.to_numeric(work[s], errors="coerce")
+        col = pd.to_numeric(transformed[s], errors="coerce")
         finite_vals = col[np.isfinite(col)] if np is not None else col.dropna()
         if len(finite_vals) <= 0:
             mins[s] = float("nan")
             maxs[s] = float("nan")
             continue
-        mins[s] = float(finite_vals.min())
-        maxs[s] = float(finite_vals.max())
+        try:
+            lo = float(finite_vals.quantile(0.05))
+            hi = float(finite_vals.quantile(0.95))
+        except Exception:
+            lo = float(finite_vals.min())
+            hi = float(finite_vals.max())
+        # Fallback for tiny spread after robust clipping.
+        if not (_finite(lo) and _finite(hi)) or abs(hi - lo) < 1e-12:
+            lo = float(finite_vals.min())
+            hi = float(finite_vals.max())
+        mins[s] = lo
+        maxs[s] = hi
 
-    norm = work[[kit_col] + present_signals].copy()
+    norm = transformed[[kit_col] + present_signals].copy()
     for s in present_signals:
         lo = mins.get(s, float("nan"))
         hi = maxs.get(s, float("nan"))
@@ -151,6 +218,53 @@ def _normalized_kit_signal_stats(
     return kit_names, present_signals, kit_to_mean, kit_to_std, total_rows
 
 
+def _dataset_cache_key(dataset_path: str, signal_cols: Sequence[str]) -> tuple:
+    p = os.path.normpath(os.path.abspath(dataset_path))
+    try:
+        st = os.stat(p)
+        mtime_ns = int(getattr(st, "st_mtime_ns", int(st.st_mtime * 1e9)))
+        size = int(st.st_size)
+    except Exception:
+        mtime_ns = 0
+        size = 0
+    return (p, mtime_ns, size, tuple(str(c) for c in signal_cols))
+
+
+def _load_plot_payload(dataset_path: str, signal_cols: Sequence[str]) -> dict:
+    key = _dataset_cache_key(dataset_path, signal_cols)
+    cached = _PLOT_DATA_CACHE.get(key)
+    if cached is not None:
+        return cached
+
+    wanted = {str(c) for c in (signal_cols or [])}
+    wanted.add("kit_label")
+    try:
+        df = pd.read_csv(
+            dataset_path,
+            usecols=lambda c: c in wanted,
+            low_memory=False,
+        )
+    except Exception:
+        # Fallback for unusual CSV dialect / parser issues.
+        df = pd.read_csv(dataset_path, low_memory=False)
+
+    kit_names, signals, kit_to_mean, kit_to_std, total_rows = _normalized_kit_signal_stats(df, signal_cols)
+    payload = {
+        "kit_names": kit_names,
+        "signals": signals,
+        "kit_to_mean": kit_to_mean,
+        "kit_to_std": kit_to_std,
+        "total_rows": int(total_rows),
+        "dataset_path": dataset_path,
+    }
+    if len(_PLOT_DATA_CACHE) >= 4:
+        # Keep a tiny cache to avoid stale growth.
+        oldest_key = next(iter(_PLOT_DATA_CACHE.keys()))
+        _PLOT_DATA_CACHE.pop(oldest_key, None)
+    _PLOT_DATA_CACHE[key] = payload
+    return payload
+
+
 def _draw_signal_grid(
     fig: Figure,
     *,
@@ -162,16 +276,13 @@ def _draw_signal_grid(
     fig.clf()
     grid_cols = 5
     grid_rows = max(3, int(math.ceil(len(signals) / float(grid_cols))))
-    try:
-        fig.set_size_inches(grid_cols * 3.0, grid_rows * 2.8, forward=True)
-    except Exception:
-        pass
     n_kits = len(kit_names)
     if n_kits <= 0:
         return
     kit_angles = [(2.0 * math.pi * i) / n_kits for i in range(n_kits)]
     closed_angles = kit_angles + [kit_angles[0]]
     signal_labels = _short_signal_labels(signals)
+    kit_labels = _kit_slice_labels(kit_names)
 
     if matplotlib is not None and hasattr(matplotlib, "colormaps"):
         cmap = matplotlib.colormaps.get_cmap("tab10")
@@ -211,7 +322,7 @@ def _draw_signal_grid(
         ax.set_yticks([0.25, 0.5, 0.75, 1.0])
         ax.set_yticklabels([])
         ax.set_xticks(kit_angles)
-        ax.set_xticklabels([])
+        ax.set_xticklabels(kit_labels, fontsize=7)
         ax.grid(True, alpha=0.35)
         ax.set_title(signal_labels[sig_idx], fontsize=10, pad=10)
 
@@ -220,7 +331,7 @@ def _draw_signal_grid(
         ax = fig.add_subplot(grid_rows, grid_cols, extra_idx + 1)
         ax.axis("off")
     try:
-        fig.tight_layout()
+        fig.subplots_adjust(left=0.03, right=0.98, top=0.96, bottom=0.05, wspace=0.22, hspace=0.28)
     except Exception:
         pass
 
@@ -236,9 +347,12 @@ def create_polar_dialog(
     if not dataset_path or not os.path.exists(dataset_path):
         raise FileNotFoundError(f"Dataset not found: {dataset_path}")
 
-    df = pd.read_csv(dataset_path)
-    dataset_rows = int(len(df))
-    kit_names, signals, kit_to_mean, kit_to_std, total_rows = _normalized_kit_signal_stats(df, signal_cols)
+    payload = _load_plot_payload(dataset_path, signal_cols)
+    kit_names = payload.get("kit_names", [])
+    signals = payload.get("signals", [])
+    kit_to_mean = payload.get("kit_to_mean", {})
+    kit_to_std = payload.get("kit_to_std", {})
+    total_rows = int(payload.get("total_rows", 0))
     if not kit_names or not signals:
         raise RuntimeError("Dataset has no usable kit/signal rows to plot.")
 
@@ -256,24 +370,6 @@ def create_polar_dialog(
     header.setTextInteractionFlags(Qt.TextSelectableByMouse)
     layout.addWidget(header)
 
-    controls = QHBoxLayout()
-    controls.setSpacing(8)
-    controls.addWidget(QLabel("Rows used:"))
-    row_spin = QSpinBox(dialog)
-    row_spin.setMinimum(1)
-    row_spin.setMaximum(max(1, dataset_rows))
-    row_spin.setValue(max(1, dataset_rows))
-    row_spin.setSingleStep(1)
-    controls.addWidget(row_spin)
-    play_btn = QPushButton("Replay", dialog)
-    play_btn.setCheckable(True)
-    controls.addWidget(play_btn)
-    full_btn = QPushButton("Full", dialog)
-    controls.addWidget(full_btn)
-    status_lbl = QLabel(f"Showing rows: {row_spin.value()}/{max(1, dataset_rows)}")
-    controls.addWidget(status_lbl, 1)
-    layout.addLayout(controls)
-
     fig = Figure(figsize=(15.0, 8.4), dpi=100, tight_layout=True)
     _draw_signal_grid(
         fig,
@@ -286,61 +382,24 @@ def create_polar_dialog(
     # Preferred: interactive Qt canvas. Fallback: static PNG if Qt backend unavailable.
     if FigureCanvasQTAgg is not None:
         canvas = FigureCanvasQTAgg(fig)
-        layout.addWidget(canvas, 1)
+        sc = QScrollArea(dialog)
+        sc.setWidgetResizable(False)
+        sc.setAlignment(Qt.AlignCenter)
+        sc.setWidget(canvas)
+        layout.addWidget(sc, 1)
+
+        def _sync_canvas_size() -> None:
+            try:
+                px_w = int(max(920, fig.get_figwidth() * fig.get_dpi()))
+                px_h = int(max(620, fig.get_figheight() * fig.get_dpi()))
+                canvas.setMinimumSize(px_w, px_h)
+                canvas.resize(px_w, px_h)
+            except Exception:
+                pass
+
+        _sync_canvas_size()
         canvas.draw_idle()
-
-        timer = QTimer(dialog)
-        timer.setInterval(80)
-
-        def _render_rows(n_rows: int) -> None:
-            n = max(1, min(int(n_rows), max(1, dataset_rows)))
-            sub = df.iloc[:n]
-            k2, s2, m2, sd2, _ = _normalized_kit_signal_stats(sub, signal_cols)
-            if not k2 or not s2:
-                status_lbl.setText(f"Showing rows: {n}/{max(1, dataset_rows)} (no kit/signal data yet)")
-                return
-            _draw_signal_grid(
-                fig,
-                kit_names=k2,
-                signals=s2,
-                kit_to_mean=m2,
-                kit_to_std=sd2,
-            )
-            status_lbl.setText(f"Showing rows: {n}/{max(1, dataset_rows)}")
-            canvas.draw_idle()
-
-        def _tick() -> None:
-            cur = int(row_spin.value())
-            max_rows = max(1, dataset_rows)
-            if cur >= max_rows:
-                timer.stop()
-                play_btn.setChecked(False)
-                return
-            row_spin.setValue(cur + 1)
-
-        def _toggle_play(on: bool) -> None:
-            if on:
-                if int(row_spin.value()) >= max(1, dataset_rows):
-                    row_spin.setValue(1)
-                play_btn.setText("Stop")
-                timer.start()
-            else:
-                play_btn.setText("Replay")
-                timer.stop()
-
-        def _set_full() -> None:
-            if play_btn.isChecked():
-                play_btn.setChecked(False)
-            row_spin.setValue(max(1, dataset_rows))
-
-        timer.timeout.connect(_tick)
-        play_btn.toggled.connect(_toggle_play)
-        full_btn.clicked.connect(_set_full)
-        row_spin.valueChanged.connect(lambda v: _render_rows(int(v)))
     else:
-        row_spin.setEnabled(False)
-        play_btn.setEnabled(False)
-        full_btn.setEnabled(False)
         if FigureCanvasAgg is None:
             raise RuntimeError("No matplotlib Qt/Agg backend available for rendering.")
         canvas = FigureCanvasAgg(fig)

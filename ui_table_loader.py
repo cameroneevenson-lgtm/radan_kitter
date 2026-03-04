@@ -18,7 +18,15 @@ def hook_selection_model(table: QTableView, on_current_changed: Callable[[], Non
         sm.currentChanged.disconnect()
     except Exception:
         pass
-    sm.currentChanged.connect(lambda *_: on_current_changed())
+    def _on_current_changed(current, _previous) -> None:
+        try:
+            if current is not None and current.isValid():
+                table.scrollTo(current, QTableView.PositionAtCenter)
+        except Exception:
+            pass
+        on_current_changed()
+
+    sm.currentChanged.connect(_on_current_changed)
 
 
 def load_rpd_into_table(
