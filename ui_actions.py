@@ -199,7 +199,7 @@ def run_build_packet(
         page_cap=(int(page_cap) if page_cap is not None else 0),
         output_dir=effective_out_dir,
         suppress_layer_0=True,
-        workers=1,
+        workers=2,
         mode=mode,
     )
     if not _require_rpd_loaded(parent, tree, rpd_path):
@@ -260,7 +260,7 @@ def run_build_packet(
             resolve_asset_fn=resolve_asset_fn,
             progress_cb=on_progress,
             should_cancel_cb=progress.wasCanceled,
-            max_workers=1,
+            max_workers=2,
             render_mode=mode,
         )
         ticker.stop()
@@ -429,8 +429,11 @@ def run_ml_recompute_all(
     parent: QWidget,
     dataset_path: str,
     signal_cols: Sequence[str],
+    max_workers: int = 2,
 ) -> None:
-    span = rt.begin("ml_recompute_all", dataset_path=dataset_path)
+    workers = max(1, min(8, int(max_workers)))
+    span = rt.begin("ml_recompute_all", dataset_path=dataset_path, workers=workers)
+    ticker: Optional[QTimer] = None
     try:
         confirm = QMessageBox.question(
             parent,
@@ -450,22 +453,53 @@ def run_ml_recompute_all(
         progress.setMinimumDuration(0)
         progress.setAutoClose(True)
         progress.setAutoReset(True)
+        started_at = time.perf_counter()
+        last_done = 0
+        last_total = 1
+
+        def _fmt_elapsed(seconds: float) -> str:
+            sec = max(0, int(seconds))
+            h = sec // 3600
+            m = (sec % 3600) // 60
+            s = sec % 60
+            if h > 0:
+                return f"{h:02d}:{m:02d}:{s:02d}"
+            return f"{m:02d}:{s:02d}"
+
+        def _refresh_progress_label() -> None:
+            progress.setMaximum(max(1, int(last_total)))
+            progress.setValue(max(0, int(last_done)))
+            elapsed_txt = _fmt_elapsed(time.perf_counter() - started_at)
+            progress.setLabelText(
+                f"ML: recomputing dataset...\n"
+                f"{int(last_done)}/{int(last_total)} | {elapsed_txt} | Threads: {workers}"
+            )
+
+        ticker = QTimer(progress)
+        ticker.setInterval(250)
+        ticker.timeout.connect(_refresh_progress_label)
+        ticker.start()
 
         def on_progress(done: int, total: int) -> None:
-            progress.setMaximum(max(1, int(total)))
-            progress.setValue(max(0, int(done)))
-            progress.setLabelText(f"ML: recomputing dataset...\n{int(done)}/{int(total)}")
+            nonlocal last_done, last_total
+            last_done = int(done)
+            last_total = max(1, int(total))
+            _refresh_progress_label()
             span.progress(done, total, "ml_recompute")
             QApplication.processEvents()
+
+        _refresh_progress_label()
 
         summary = ml_pipeline.recompute_dataset_signals(
             dataset_path=dataset_path,
             signal_cols=list(signal_cols),
             should_stop=progress.wasCanceled,
             on_progress=on_progress,
-            max_workers=2,
+            max_workers=workers,
         )
+        ticker.stop()
         progress.setValue(progress.maximum())
+        elapsed_txt = _fmt_elapsed(time.perf_counter() - started_at)
         stopped = bool(summary.get("stopped", False))
         title = "ML recompute stopped" if stopped else "ML recompute complete"
         QMessageBox.information(
@@ -478,6 +512,7 @@ def run_ml_recompute_all(
                 f"Rows missing PDF path/file: {int(summary.get('missing_pdf_rows', 0))}\n"
                 f"Rows missing DXF path/file: {int(summary.get('missing_dxf_rows', 0))}\n"
                 f"Workers: {int(summary.get('workers', 1))}\n"
+                f"Elapsed: {elapsed_txt}\n"
                 f"Dataset: {summary.get('dataset_path', '')}"
             ),
         )
@@ -489,6 +524,11 @@ def run_ml_recompute_all(
         )
     except Exception as exc:
         span.fail(exc)
+        if ticker is not None:
+            try:
+                ticker.stop()
+            except Exception:
+                pass
         QMessageBox.critical(parent, "ML recompute failed", traceback.format_exc())
 
 

@@ -72,19 +72,24 @@ DXF_SIGNAL_COLS = [
     "dxf_concavity_ratio",
     "dxf_internal_void_area_ratio",
     "dxf_entity_count",
+    "dxf_arc_count",
+    "dxf_longest_edge_ratio",
+    "dxf_bbox_aspect_ratio",
+    "dxf_fill_ratio",
+    "dxf_hole_count",
+    "dxf_edge_length_cv",
     "dxf_arc_length_ratio",
     "dxf_exterior_notch_count",
     "dxf_has_interior_polylines",
     "dxf_color_count",
-    "dxf_has_nondefault_color",
 ]
 
 PDF_SIGNAL_COLS = [
     "pdf_dim_density",
+    "pdf_red_dim_density",
     "pdf_text_to_geom_ratio",
     "pdf_bendline_score",
-    "pdf_ink_gradient_mean",
-    "pdf_ink_gradient_std",
+    "pdf_bendline_entity_density",
 ]
 
 DXF_FUTURE_COLS = [f"dxf_future_{i:02d}" for i in range(1, 16)]
@@ -95,9 +100,9 @@ FEATURE_COLS = DXF_SIGNAL_COLS + PDF_SIGNAL_COLS + DXF_FUTURE_COLS + PDF_FUTURE_
 ALL_COLS = TRACKING_COLS + FEATURE_COLS
 
 # ML log extraction workers (feature compute only). File write remains single-writer.
-ML_LOG_MAX_WORKERS = max(1, min(8, int(os.environ.get("RK_ML_LOG_WORKERS", "2"))))
+ML_LOG_MAX_WORKERS = 2
 # ML recompute workers (feature compute only). File write remains single-writer.
-ML_RECOMPUTE_MAX_WORKERS = max(1, min(8, int(os.environ.get("RK_ML_RECOMPUTE_WORKERS", "4"))))
+ML_RECOMPUTE_MAX_WORKERS = 2
 
 
 def _nan() -> float:
@@ -470,13 +475,11 @@ def run_scan_and_log(
 
     rows_to_upsert: List[Dict[str, Any]] = []
     submitted = 0
-    processed_nondup = 0
     total_tasks = len(tasks)
     workers = max(1, min(workers, max(1, total_tasks)))
 
     def _handle_task_result(task: Dict[str, Any], res: Optional[Dict[str, Any]], err: str = "") -> None:
-        nonlocal done, processed_nondup
-        processed_nondup += 1
+        nonlocal done
         counts["processed_rows"] += 1
         done += 1
 
@@ -855,23 +858,6 @@ def _entity_effective_color_key(e, doc) -> Optional[str]:
     return f"aci:{abs(int(aci))}"
 
 
-def _color_key_is_nondefault(color_key: str) -> bool:
-    if color_key.startswith("rgb:"):
-        try:
-            rgb = int(color_key.split(":", 1)[1], 16)
-        except Exception:
-            return False
-        # Treat white / black / gray as default-ish; anything else counts as non-default.
-        return rgb not in (0x000000, 0xFFFFFF, 0xBFBFBF, 0xC0C0C0, 0x808080)
-    if color_key.startswith("aci:"):
-        try:
-            aci = int(color_key.split(":", 1)[1])
-        except Exception:
-            return False
-        return aci not in (0, 7, 256)
-    return False
-
-
 def _polyline_points(e) -> Optional[List[Tuple[float, float]]]:
     t = e.dxftype()
     try:
@@ -1095,19 +1081,17 @@ def _compute_dxf_features(dxf_path: str) -> Dict[str, float]:
     entities = list(_iter_dxf_entities(doc))
     out["dxf_entity_count"] = _safe_int(len(entities))
 
+    arc_entity_count = 0
+    max_line_seg_len = 0.0
+    all_line_seg_lens: List[float] = []
+
     colors: set[str] = set()
-    nondefault_entity_count = 0
     for e in entities:
         ck = _entity_effective_color_key(e, doc)
         if ck is None:
             continue
         colors.add(ck)
-        if _color_key_is_nondefault(ck):
-            nondefault_entity_count += 1
     out["dxf_color_count"] = _safe_int(len(colors))
-    # Legacy column name retained for backward compatibility, but value is now
-    # the COUNT of entities with non-default color (not a boolean).
-    out["dxf_has_nondefault_color"] = _safe_int(nondefault_entity_count)
 
     closed_loops: List[List[Tuple[float, float]]] = []
     open_polys: List[List[Tuple[float, float]]] = []
@@ -1133,6 +1117,7 @@ def _compute_dxf_features(dxf_path: str) -> Dict[str, float]:
             continue
 
         if t == "ARC":
+            arc_entity_count += 1
             try:
                 r = abs(float(e.dxf.radius))
                 if r > 1e-9:
@@ -1158,7 +1143,13 @@ def _compute_dxf_features(dxf_path: str) -> Dict[str, float]:
             is_closed = False
 
         segs_here = _segments_from_points(pts, closed=is_closed and len(pts) >= 3)
-        total_geom_len += sum(_seg_len(a, b) for (a, b) in segs_here)
+        for (a, b) in segs_here:
+            seg_len = _seg_len(a, b)
+            total_geom_len += seg_len
+            if seg_len > 1e-9:
+                all_line_seg_lens.append(seg_len)
+            if seg_len > max_line_seg_len:
+                max_line_seg_len = seg_len
 
         if is_closed and len(pts) >= 3:
             closed_loops.append(pts)
@@ -1169,6 +1160,20 @@ def _compute_dxf_features(dxf_path: str) -> Dict[str, float]:
         out["dxf_arc_length_ratio"] = _safe_float(arc_geom_len / total_geom_len)
     else:
         out["dxf_arc_length_ratio"] = _safe_float(0.0)
+    out["dxf_arc_count"] = _safe_int(arc_entity_count)
+    out["dxf_longest_edge_ratio"] = _safe_float(0.0)
+    out["dxf_bbox_aspect_ratio"] = _safe_float(0.0)
+    out["dxf_fill_ratio"] = _safe_float(0.0)
+    out["dxf_hole_count"] = _safe_int(0)
+    out["dxf_edge_length_cv"] = _safe_float(0.0)
+    if len(cloud_points) >= 2:
+        bx0, by0, bx1, by1 = _bbox_from_points(cloud_points)
+        out["dxf_bbox_aspect_ratio"] = _safe_float(_bbox_aspect(bx0, by0, bx1, by1))
+    if all_line_seg_lens:
+        mean_len = sum(all_line_seg_lens) / max(1, len(all_line_seg_lens))
+        if mean_len > 1e-9:
+            var = sum((x - mean_len) ** 2 for x in all_line_seg_lens) / max(1, len(all_line_seg_lens))
+            out["dxf_edge_length_cv"] = _safe_float(math.sqrt(var) / mean_len)
 
     if not closed_loops and open_polys:
         closed_loops = _stitch_open_paths_to_closed_loops(open_polys)
@@ -1184,6 +1189,11 @@ def _compute_dxf_features(dxf_path: str) -> Dict[str, float]:
             out["dxf_internal_void_area_ratio"] = _safe_float(0.0)
             out["dxf_has_interior_polylines"] = _safe_int(0)
             out["dxf_exterior_notch_count"] = _safe_int(0)
+            out["dxf_longest_edge_ratio"] = _safe_float(_clamp01(max_line_seg_len / hull_perim))
+            hx0, hy0, hx1, hy1 = _bbox_from_points(hull)
+            hbbox_area = max(0.0, hx1 - hx0) * max(0.0, hy1 - hy0)
+            if hbbox_area > 1e-9:
+                out["dxf_fill_ratio"] = _safe_float(_clamp01(hull_area / hbbox_area))
             return out
 
     # Last-chance fallback for very thin/degenerate geometry: bbox proxy ratio.
@@ -1199,6 +1209,7 @@ def _compute_dxf_features(dxf_path: str) -> Dict[str, float]:
             out["dxf_internal_void_area_ratio"] = _safe_float(0.0)
             out["dxf_has_interior_polylines"] = _safe_int(0)
             out["dxf_exterior_notch_count"] = _safe_int(0)
+            out["dxf_longest_edge_ratio"] = _safe_float(_clamp01(max_line_seg_len / bbox_perim))
             return out
 
     if not closed_loops:
@@ -1207,6 +1218,8 @@ def _compute_dxf_features(dxf_path: str) -> Dict[str, float]:
         out["dxf_internal_void_area_ratio"] = _safe_float(0.0)
         out["dxf_has_interior_polylines"] = _safe_int(0)
         out["dxf_exterior_notch_count"] = _safe_int(0)
+        if total_geom_len > 1e-9:
+            out["dxf_longest_edge_ratio"] = _safe_float(_clamp01(max_line_seg_len / total_geom_len))
         return out
 
     loop_areas = [(float(_poly_area_abs(lp)), lp) for lp in closed_loops]
@@ -1226,11 +1239,19 @@ def _compute_dxf_features(dxf_path: str) -> Dict[str, float]:
             if outer_area > 1e-9 and abs(area_i - outer_area) / outer_area <= 0.01:
                 continue
             interior_loop_areas.append(float(area_i))
+    out["dxf_hole_count"] = _safe_int(len(interior_loop_areas))
 
     if outer_area > 1e-9:
         out["dxf_perimeter_area_ratio"] = _safe_float(outer_perim / outer_area)
         void_area = sum(interior_loop_areas)
         out["dxf_internal_void_area_ratio"] = _safe_float(void_area / outer_area)
+        if outer_perim > 1e-9:
+            out["dxf_longest_edge_ratio"] = _safe_float(_clamp01(max_line_seg_len / outer_perim))
+        bx0, by0, bx1, by1 = _bbox_from_points(outer_loop)
+        bbox_area = max(0.0, bx1 - bx0) * max(0.0, by1 - by0)
+        out["dxf_bbox_aspect_ratio"] = _safe_float(_bbox_aspect(bx0, by0, bx1, by1))
+        if bbox_area > 1e-9:
+            out["dxf_fill_ratio"] = _safe_float(_clamp01(outer_area / bbox_area))
     else:
         # Degenerate "closed" loop; fall back to hull proxy if possible.
         hull = _convex_hull(cloud_points)
@@ -1238,17 +1259,57 @@ def _compute_dxf_features(dxf_path: str) -> Dict[str, float]:
         hull_perim = _poly_perimeter(hull)
         if hull_area > 1e-9 and hull_perim > 1e-9:
             out["dxf_perimeter_area_ratio"] = _safe_float(hull_perim / hull_area)
+            out["dxf_longest_edge_ratio"] = _safe_float(_clamp01(max_line_seg_len / hull_perim))
+            if len(hull) >= 2:
+                hx0, hy0, hx1, hy1 = _bbox_from_points(hull)
+                hbbox_area = max(0.0, hx1 - hx0) * max(0.0, hy1 - hy0)
+                out["dxf_bbox_aspect_ratio"] = _safe_float(_bbox_aspect(hx0, hy0, hx1, hy1))
+                if hbbox_area > 1e-9:
+                    out["dxf_fill_ratio"] = _safe_float(_clamp01(hull_area / hbbox_area))
         else:
             out["dxf_perimeter_area_ratio"] = _safe_float(0.0)
         out["dxf_internal_void_area_ratio"] = _safe_float(0.0)
 
     hull = _convex_hull(cloud_points)
     hull_area = _poly_area_abs(hull)
-    if outer_area > 1e-9 and hull_area > 1e-9:
+    hull_perim = _poly_perimeter(hull)
+
+    # Concavity discriminator:
+    # - Primary: concave-vertex density on outer loop (less saturation).
+    # - Secondary: perimeter deficit vs convex hull.
+    # Keep output in [0,1] for backward compatibility.
+    perim_deficit = 0.0
+    if outer_perim > 1e-9 and hull_perim > 1e-9:
+        perim_deficit = float(_clamp01((outer_perim - hull_perim) / outer_perim))
+    elif outer_area > 1e-9 and hull_area > 1e-9:
         convexity = outer_area / hull_area
-        out["dxf_concavity_ratio"] = _safe_float(_clamp01(1.0 - convexity))
-    else:
-        out["dxf_concavity_ratio"] = _safe_float(0.0)
+        perim_deficit = float(_clamp01(1.0 - convexity))
+
+    concave_vertex_ratio = 0.0
+    signed_area = _poly_area_signed(outer_loop)
+    if abs(signed_area) > 1e-12 and len(outer_loop) >= 4:
+        ccw = signed_area > 0.0
+        concave_count = 0
+        m = len(outer_loop)
+        for i in range(m):
+            p_prev = outer_loop[i - 1]
+            p_cur = outer_loop[i]
+            p_next = outer_loop[(i + 1) % m]
+            v1x = p_cur[0] - p_prev[0]
+            v1y = p_cur[1] - p_prev[1]
+            v2x = p_next[0] - p_cur[0]
+            v2y = p_next[1] - p_cur[1]
+            if math.hypot(v1x, v1y) <= 1e-9 or math.hypot(v2x, v2y) <= 1e-9:
+                continue
+            cross = v1x * v2y - v1y * v2x
+            is_concave = (cross < -1e-12) if ccw else (cross > 1e-12)
+            if is_concave:
+                concave_count += 1
+        concave_vertex_ratio = float(concave_count) / float(max(1, len(outer_loop)))
+
+    out["dxf_concavity_ratio"] = _safe_float(
+        _clamp01(0.70 * concave_vertex_ratio + 0.30 * perim_deficit)
+    )
 
     # Legacy column name retained for backward compatibility, but value is now
     # an interior polyline COUNT (not boolean):
@@ -1275,6 +1336,12 @@ def _compute_dxf_features(dxf_path: str) -> Dict[str, float]:
     short_thr = 0.03 * bbox_diag if bbox_diag > 1e-9 else 0.0
     notch_count = 0
     segs = _segments_from_points(outer_loop, closed=True)
+    outer_edge_lens = [_seg_len(a, b) for (a, b) in segs if _seg_len(a, b) > 1e-9]
+    if outer_edge_lens:
+        mean_len = sum(outer_edge_lens) / max(1, len(outer_edge_lens))
+        if mean_len > 1e-9:
+            var = sum((x - mean_len) ** 2 for x in outer_edge_lens) / max(1, len(outer_edge_lens))
+            out["dxf_edge_length_cv"] = _safe_float(math.sqrt(var) / mean_len)
     n = len(segs)
     for i in range(n):
         a0, b0 = segs[i - 1]
@@ -1321,78 +1388,31 @@ def _compute_dxf_features(dxf_path: str) -> Dict[str, float]:
     out["dxf_exterior_notch_count"] = _safe_int(notch_count)
 
     # Keep core geometry ratios numeric for downstream tooling / CSV inspection.
-    for col in ("dxf_perimeter_area_ratio", "dxf_concavity_ratio", "dxf_internal_void_area_ratio"):
+    for col in (
+        "dxf_perimeter_area_ratio",
+        "dxf_concavity_ratio",
+        "dxf_internal_void_area_ratio",
+        "dxf_bbox_aspect_ratio",
+        "dxf_fill_ratio",
+        "dxf_edge_length_cv",
+    ):
         v = _safe_float(out.get(col))
         out[col] = float(v) if math.isfinite(v) else 0.0
     # Void area ratio should be bounded [0, 1].
     out["dxf_internal_void_area_ratio"] = _safe_float(_clamp01(float(out["dxf_internal_void_area_ratio"])))
+    out["dxf_fill_ratio"] = _safe_float(_clamp01(float(out["dxf_fill_ratio"])))
 
     return out
 
 
 # -----------------------------
-# PDF features (vector, OCG filter internal)
+# PDF features (vector)
 # -----------------------------
-
-_LAYER_KEEP_PATTERNS = [
-    re.compile(r"\bvisible\b", re.IGNORECASE),
-    re.compile(r"\bdimension\b", re.IGNORECASE),
-    re.compile(r"\bsymbol\b", re.IGNORECASE),
-    re.compile(r"\bbend\b", re.IGNORECASE),
-    re.compile(r"\bcenterline\b", re.IGNORECASE),
-    re.compile(r"\bcentreline\b", re.IGNORECASE),
-]
 
 
 def _page_area(page) -> float:
     r = page.rect
     return max(1e-9, float(r.width) * float(r.height))
-
-
-def _bbox_union(boxes: List[Tuple[float, float, float, float]]) -> Optional[Tuple[float, float, float, float]]:
-    if not boxes:
-        return None
-    x0 = min(b[0] for b in boxes)
-    y0 = min(b[1] for b in boxes)
-    x1 = max(b[2] for b in boxes)
-    y1 = max(b[3] for b in boxes)
-    return (x0, y0, x1, y1)
-
-
-def _bbox_aspect_from_box(b: Tuple[float, float, float, float]) -> float:
-    w = max(1e-9, b[2] - b[0])
-    h = max(1e-9, b[3] - b[1])
-    return w / h if w >= h else h / w
-
-
-def _enable_only_kept_layers(doc) -> None:
-    try:
-        oc = doc.get_oc()
-    except Exception:
-        return
-    if not oc:
-        return
-    try:
-        ocgs = oc.get("ocgs", None)
-        if not ocgs:
-            return
-        keep_ids = set()
-        for g in ocgs:
-            name = str(g.get("name", "") or "")
-            if any(p.search(name) for p in _LAYER_KEEP_PATTERNS):
-                if "xref" in g:
-                    keep_ids.add(int(g["xref"]))
-        if not keep_ids:
-            return
-        state = {}
-        for g in ocgs:
-            xref = int(g.get("xref", 0) or 0)
-            if xref <= 0:
-                continue
-            state[xref] = (xref in keep_ids)
-        doc.set_oc(state)
-    except Exception:
-        return
 
 
 def _compute_pdf_features_vector(pdf_path: str) -> Dict[str, float]:
@@ -1410,12 +1430,38 @@ def _compute_pdf_features_vector(pdf_path: str) -> Dict[str, float]:
         if doc.page_count < 1:
             return out
         page = doc.load_page(0)
-        page_rect = page.rect
         page_area = _page_area(page)
 
         def _layer_matches(layer: str, *tokens: str) -> bool:
             s = str(layer or "").lower()
             return any(t in s for t in tokens)
+
+        def _to_rgb255(color_val: Any) -> Optional[Tuple[float, float, float]]:
+            if color_val is None:
+                return None
+            # PyMuPDF texttrace color is often an int 0xRRGGBB.
+            if isinstance(color_val, int):
+                iv = int(color_val) & 0xFFFFFF
+                return (float((iv >> 16) & 0xFF), float((iv >> 8) & 0xFF), float(iv & 0xFF))
+            # Drawings can expose tuples in 0..1 or 0..255 ranges.
+            if isinstance(color_val, (list, tuple)) and len(color_val) >= 3:
+                try:
+                    r = float(color_val[0])
+                    g = float(color_val[1])
+                    b = float(color_val[2])
+                except Exception:
+                    return None
+                if max(r, g, b) <= 1.2:
+                    return (255.0 * r, 255.0 * g, 255.0 * b)
+                return (r, g, b)
+            return None
+
+        def _is_red(color_val: Any) -> bool:
+            rgb = _to_rgb255(color_val)
+            if rgb is None:
+                return False
+            r, g, b = rgb
+            return bool(r >= 150.0 and g <= 125.0 and b <= 125.0 and r >= (g + 24.0) and r >= (b + 24.0))
 
         drawings = []
         try:
@@ -1425,8 +1471,9 @@ def _compute_pdf_features_vector(pdf_path: str) -> Dict[str, float]:
 
         total_geom = 0
         dim_geom = 0
+        red_dim_geom = 0
         bend_geom = 0
-        geom_boxes: List[Tuple[float, float, float, float]] = []
+        bend_geom_area = 0.0
 
         for d in drawings:
             items = d.get("items", []) or []
@@ -1435,17 +1482,25 @@ def _compute_pdf_features_vector(pdf_path: str) -> Dict[str, float]:
             layer = str(d.get("layer") or "")
             if _layer_matches(layer, "dimension", "dim"):
                 dim_geom += geom_count
+                if _is_red(d.get("color")) or _is_red(d.get("fill")):
+                    red_dim_geom += geom_count
             if _layer_matches(layer, "bend", "centerline", "centreline"):
                 bend_geom += geom_count
-            r = d.get("rect", None)
-            if r is not None:
-                try:
-                    geom_boxes.append((float(r.x0), float(r.y0), float(r.x1), float(r.y1)))
-                except Exception:
-                    pass
-
+                r_b = d.get("rect", None)
+                if r_b is not None:
+                    try:
+                        bx0 = float(r_b.x0)
+                        by0 = float(r_b.y0)
+                        bx1 = float(r_b.x1)
+                        by1 = float(r_b.y1)
+                        bw = max(0.0, bx1 - bx0)
+                        bh = max(0.0, by1 - by0)
+                        bend_geom_area += (bw * bh)
+                    except Exception:
+                        pass
         total_chars = 0
         dim_chars = 0
+        red_dim_chars = 0
         try:
             traces = page.get_texttrace()
         except Exception:
@@ -1462,47 +1517,21 @@ def _compute_pdf_features_vector(pdf_path: str) -> Dict[str, float]:
             layer = str(t.get("layer") or "")
             if _layer_matches(layer, "dimension", "dim"):
                 dim_chars += n_chars
+                if _is_red(t.get("color")):
+                    red_dim_chars += n_chars
 
         out["pdf_text_to_geom_ratio"] = _safe_float(total_chars / max(1.0, float(total_geom)))
         out["pdf_bendline_score"] = _safe_float(bend_geom / max(1.0, float(total_geom)))
+        # Keep column name, but use bend-occupied-area normalization to reduce
+        # coupling with global geometry complexity.
+        bend_norm_area = float(bend_geom_area) if bend_geom_area > 1e-9 else float(page_area)
+        bend_density_raw = float(bend_geom) / max(1.0, bend_norm_area / 1000.0)
+        out["pdf_bendline_entity_density"] = _safe_float(math.log1p(max(0.0, bend_density_raw)))
 
         dim_weight = float(dim_geom) + float(dim_chars)
         out["pdf_dim_density"] = _safe_float(dim_weight / max(1.0, page_area / 1000.0))
-
-        grid_n = 12
-        grads: List[float] = []
-        if geom_boxes and float(page_rect.width) > 1e-9 and float(page_rect.height) > 1e-9:
-            cell_w = float(page_rect.width) / grid_n
-            cell_h = float(page_rect.height) / grid_n
-            dens = [[0.0 for _ in range(grid_n)] for _ in range(grid_n)]
-
-            for bb in geom_boxes:
-                x0 = max(float(page_rect.x0), min(float(page_rect.x1), bb[0]))
-                y0 = max(float(page_rect.y0), min(float(page_rect.y1), bb[1]))
-                x1 = max(float(page_rect.x0), min(float(page_rect.x1), bb[2]))
-                y1 = max(float(page_rect.y0), min(float(page_rect.y1), bb[3]))
-                if x1 <= x0 or y1 <= y0:
-                    continue
-                ix0 = max(0, min(grid_n - 1, int((x0 - float(page_rect.x0)) / cell_w)))
-                iy0 = max(0, min(grid_n - 1, int((y0 - float(page_rect.y0)) / cell_h)))
-                ix1 = max(0, min(grid_n - 1, int((x1 - float(page_rect.x0)) / cell_w)))
-                iy1 = max(0, min(grid_n - 1, int((y1 - float(page_rect.y0)) / cell_h)))
-                for iy in range(iy0, iy1 + 1):
-                    for ix in range(ix0, ix1 + 1):
-                        dens[iy][ix] += 1.0
-
-            for iy in range(grid_n):
-                for ix in range(grid_n):
-                    v = dens[iy][ix]
-                    if ix + 1 < grid_n:
-                        grads.append(abs(dens[iy][ix + 1] - v))
-                    if iy + 1 < grid_n:
-                        grads.append(abs(dens[iy + 1][ix] - v))
-
-        if grads:
-            g = np.asarray(grads, dtype=float)
-            out["pdf_ink_gradient_mean"] = _safe_float(float(np.mean(g)))
-            out["pdf_ink_gradient_std"] = _safe_float(float(np.std(g, ddof=1 if g.size > 1 else 0)))
+        red_dim_weight = float(red_dim_geom) + float(red_dim_chars)
+        out["pdf_red_dim_density"] = _safe_float(red_dim_weight / max(1.0, page_area / 1000.0))
     finally:
         doc.close()
 

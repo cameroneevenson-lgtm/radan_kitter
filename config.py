@@ -60,12 +60,6 @@ PACKET_TEMP_FIRST_PAGE_ONLY = False
 # Temporary packet page cap for debug iteration. Set <=0 to disable cap.
 PACKET_TEMP_MAX_PAGES = 0
 
-# Packet layer-0 preserve window (bottom-right), as page fractions.
-# Keeps only this zone from layer 0 (e.g., company logo in title block).
-PACKET_LAYER0_KEEP_BR_ENABLED = True
-PACKET_LAYER0_KEEP_BR_WIDTH_FRAC = 0.23
-PACKET_LAYER0_KEEP_BR_HEIGHT_FRAC = 0.18
-
 DONOR_TEMPLATE_PATH = os.path.join(APP_DIR, "KitDonor-100Instances.sym")
 if not os.path.exists(DONOR_TEMPLATE_PATH):
     legacy_tools = os.path.join(TOOLS_DIR, "KitDonor-100Instances.sym")
@@ -84,16 +78,21 @@ ML_SIGNAL_COLS = [
     "dxf_concavity_ratio",
     "dxf_internal_void_area_ratio",
     "dxf_entity_count",
+    "dxf_arc_count",
+    "dxf_longest_edge_ratio",
+    "dxf_bbox_aspect_ratio",
+    "dxf_fill_ratio",
+    "dxf_hole_count",
+    "dxf_edge_length_cv",
     "dxf_arc_length_ratio",
     "dxf_exterior_notch_count",
     "dxf_has_interior_polylines",
     "dxf_color_count",
-    "dxf_has_nondefault_color",
     "pdf_dim_density",
+    "pdf_red_dim_density",
     "pdf_text_to_geom_ratio",
     "pdf_bendline_score",
-    "pdf_ink_gradient_mean",
-    "pdf_ink_gradient_std",
+    "pdf_bendline_entity_density",
 ]
 
 # Backward-compat aliases

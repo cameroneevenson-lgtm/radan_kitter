@@ -20,6 +20,7 @@ from __future__ import annotations
 import json
 import math
 import os
+import subprocess
 import sys
 import time
 import traceback
@@ -97,6 +98,7 @@ class Main(QMainWindow):
             canon_kits=CANON_KITS,
             company_logo_path=COMPANY_LOGO_PATH,
             on_open_rpd=self.open_rpd,
+            on_open_rpd_file=self.open_current_rpd_file,
             on_prepare_kits=self.prepare_kits_only,
             on_write_rpd=self.write_rpd_only,
             on_build_packet=self.build_packet_only,
@@ -196,6 +198,21 @@ class Main(QMainWindow):
         except Exception as exc:
             span.fail(exc, rpd_path=path)
             raise
+
+    def open_current_rpd_file(self) -> None:
+        p = os.path.normpath(str(self.rpd_path or "").strip())
+        if not p or not os.path.exists(p):
+            QMessageBox.information(self, "Open RPD File", "No loaded RPD file.")
+            return
+        try:
+            os.startfile(p)  # type: ignore[attr-defined]
+            return
+        except Exception:
+            pass
+        try:
+            subprocess.Popen(["explorer.exe", f"/select,{p}"])
+        except Exception:
+            QMessageBox.warning(self, "Open RPD File", f"Could not open:\n{p}")
 
     def _load_rpd_path(self, path: str) -> None:
         span = rt.begin("load_rpd_path", rpd_path=path)
@@ -331,6 +348,7 @@ class Main(QMainWindow):
             parent=self,
             dataset_path=GLOBAL_DATASET_PATH,
             signal_cols=RF_FEATURES,
+            max_workers=2,
         )
 
     def run_ml_signal_plot(self):

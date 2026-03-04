@@ -48,30 +48,13 @@ def _make_tiled_banner_pixmap(logo_path: str, *, height_px: int, width_px: int) 
     return out
 
 
-def apply_company_logo(logo_label: QLabel, company_logo_path: str) -> None:
-    if not company_logo_path:
-        logo_label.clear()
-        logo_label.setVisible(False)
-        return
-    pm = QPixmap(company_logo_path)
-    if pm.isNull():
-        logo_label.clear()
-        logo_label.setVisible(False)
-        return
-    target_h = 24
-    scaled = pm.scaled(220, target_h, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-    logo_label.setPixmap(scaled)
-    logo_label.setMaximumWidth(230)
-    logo_label.setFixedHeight(target_h + 2)
-    logo_label.setVisible(True)
-
-
 def build_main_layout(
     window: QMainWindow,
     *,
     canon_kits: Sequence[str],
     company_logo_path: str,
     on_open_rpd: Callable[[], None],
+    on_open_rpd_file: Callable[[], None],
     on_prepare_kits: Callable[[], None],
     on_write_rpd: Callable[[], None],
     on_build_packet: Callable[[], None],
@@ -84,8 +67,6 @@ def build_main_layout(
     on_hot_reload_accept: Callable[[], None],
     on_hot_reload_reject: Callable[[], None],
 ) -> None:
-    accent = "#3b82f6"
-
     table = QTableView()
     window.table = table  # type: ignore[attr-defined]
     table.setAlternatingRowColors(True)

@@ -53,10 +53,27 @@ except Exception:
 _PLOT_DATA_CACHE: Dict[tuple, dict] = {}
 _COUNT_LIKE_SIGNALS = {
     "dxf_entity_count",
+    "dxf_arc_count",
+    "dxf_hole_count",
     "dxf_exterior_notch_count",
     "dxf_has_interior_polylines",
     "dxf_color_count",
-    "dxf_has_nondefault_color",
+}
+# Plot-only override: show sparse count signals as presence rate by kit.
+# This makes very sparse signals (like notch count) visually readable.
+_PRESENCE_RATE_SIGNALS = {
+    "dxf_exterior_notch_count",
+}
+# Plot-only log scaling for weak low-range signals.
+# value -> log1p(k*value)/log1p(k), k > 0
+_LOG_SCALE_BY_SIGNAL = {
+    "dxf_concavity_ratio": 40.0,  # dxf2
+}
+# Plot-only shaping so specific signals stay readable:
+# - gamma < 1.0 boosts low values
+# - gamma > 1.0 compresses high values
+_PLOT_GAMMA_BY_SIGNAL = {
+    "dxf_longest_edge_ratio": 1.35,    # dxf8
 }
 
 
@@ -155,12 +172,32 @@ def _normalized_kit_signal_stats(
     transformed = work[[kit_col] + present_signals].copy()
     for s in present_signals:
         col = pd.to_numeric(transformed[s], errors="coerce")
+        if s in _PRESENCE_RATE_SIGNALS:
+            col_out = pd.Series(float("nan"), index=col.index, dtype=float)
+            mask = col.notna()
+            if bool(mask.any()):
+                col_out.loc[mask] = (col.loc[mask] > 0.0).astype(float)
+            transformed[s] = col_out
+            continue
         if s in _COUNT_LIKE_SIGNALS:
             col = col.clip(lower=0)
             if np is not None:
                 col = np.log1p(col)
             else:
                 col = col.map(lambda v: math.log1p(float(v)) if _finite(v) and float(v) >= 0.0 else float("nan"))
+        log_k = _LOG_SCALE_BY_SIGNAL.get(s)
+        if log_k is not None:
+            k = max(1e-6, float(log_k))
+            den = math.log1p(k)
+            col = col.clip(lower=0)
+            if np is not None:
+                col = np.log1p(k * col) / den
+            else:
+                col = col.map(
+                    lambda v: (math.log1p(k * float(v)) / den)
+                    if _finite(v) and float(v) >= 0.0
+                    else float("nan")
+                )
         transformed[s] = col
 
     mins: Dict[str, float] = {}
@@ -196,11 +233,48 @@ def _normalized_kit_signal_stats(
             norm[s] = 0.5
             continue
         norm[s] = ((norm[s] - lo) / (hi - lo)).clip(0.0, 1.0)
+        if s in _PRESENCE_RATE_SIGNALS:
+            # Visual boost for sparse presence-rate signals (plot-only).
+            # Keeps ordering but makes low non-zero rates easier to interpret.
+            norm[s] = norm[s].pow(0.5)
+        gamma = _PLOT_GAMMA_BY_SIGNAL.get(s)
+        if gamma is not None:
+            # Plot-only shaping; raw dataset values stay unchanged.
+            norm[s] = norm[s].pow(float(gamma))
 
     mean_df = norm.groupby(kit_col, dropna=False)[present_signals].mean(numeric_only=True)
     std_df = norm.groupby(kit_col, dropna=False)[present_signals].std(numeric_only=True).fillna(0.0)
     if mean_df.empty:
         return [], [], {}, {}, total_rows
+
+    # Second-stage normalization for sparse presence-rate signals:
+    # normalize across kits (between-kit spread), not across rows.
+    # This makes low-rate but discriminative signals visually readable.
+    for s in present_signals:
+        if s not in _PRESENCE_RATE_SIGNALS:
+            continue
+        try:
+            mcol = pd.to_numeric(mean_df[s], errors="coerce")
+            finite = mcol[np.isfinite(mcol)] if np is not None else mcol.dropna()
+            if len(finite) <= 0:
+                continue
+            try:
+                lo = float(finite.quantile(0.05))
+                hi = float(finite.quantile(0.95))
+            except Exception:
+                lo = float(finite.min())
+                hi = float(finite.max())
+            if not (_finite(lo) and _finite(hi)) or abs(hi - lo) < 1e-12:
+                lo = float(finite.min())
+                hi = float(finite.max())
+            if not (_finite(lo) and _finite(hi)) or abs(hi - lo) < 1e-12:
+                continue
+            den = float(hi - lo)
+            mean_df[s] = ((mcol - lo) / den).clip(0.0, 1.0)
+            scol = pd.to_numeric(std_df[s], errors="coerce").fillna(0.0)
+            std_df[s] = (scol / den).clip(lower=0.0)
+        except Exception:
+            continue
 
     kit_to_mean: Dict[str, List[float]] = {}
     kit_to_std: Dict[str, List[float]] = {}
@@ -290,7 +364,7 @@ def _draw_signal_grid(
         import matplotlib.cm as _cm
         cmap = _cm.get_cmap("tab10")
 
-    for sig_idx, _sig_name in enumerate(signals):
+    for sig_idx, sig_name in enumerate(signals):
         ax = fig.add_subplot(grid_rows, grid_cols, sig_idx + 1, projection="polar")
         means: List[float] = []
         stds: List[float] = []
@@ -324,14 +398,16 @@ def _draw_signal_grid(
         ax.set_xticks(kit_angles)
         ax.set_xticklabels(kit_labels, fontsize=7)
         ax.grid(True, alpha=0.35)
-        ax.set_title(signal_labels[sig_idx], fontsize=10, pad=10)
+        full_name = str(sig_name or "").strip()
+        ax.set_title(f"{signal_labels[sig_idx]} - {full_name}", fontsize=9, pad=10)
 
     total_cells = grid_rows * grid_cols
     for extra_idx in range(len(signals), total_cells):
         ax = fig.add_subplot(grid_rows, grid_cols, extra_idx + 1)
         ax.axis("off")
     try:
-        fig.subplots_adjust(left=0.03, right=0.98, top=0.96, bottom=0.05, wspace=0.22, hspace=0.28)
+        fig.suptitle("ML Signal Distribution (Polar)", fontsize=12, y=0.995)
+        fig.subplots_adjust(left=0.03, right=0.98, top=0.95, bottom=0.05, wspace=0.22, hspace=0.28)
     except Exception:
         pass
 

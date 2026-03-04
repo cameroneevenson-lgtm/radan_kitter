@@ -26,28 +26,25 @@ def build_numpad_legend_html(
         # Keep full kit name visible in legend (3-letter abbreviations were ambiguous).
         label = kit.strip() or kit_abbr.get(kit, kit[:3].upper())
         base = (
-            "min-width:108px; border:1px solid #9eb1c2; border-radius:5px;"
+            "width:108px; min-width:108px; border:2px solid #9eb1c2; border-radius:5px;"
             "background:#f6f9fc; color:#16222d; padding:0;"
         )
-        inner_pad = "padding:4px 6px;"
+        inner_pad = "padding:3px 5px;"
         if kit_idx == selected_idx and kit_idx == highlight_idx:
             base = (
-                "min-width:108px; border:2px solid #d8ba5a; border-radius:5px;"
+                "width:108px; min-width:108px; border:2px solid #d8ba5a; border-radius:5px;"
                 "background:#2c4f7b; color:#f4f8ff; padding:0;"
             )
-            inner_pad = "padding:3px 5px;"
         elif kit_idx == selected_idx:
             base = (
-                "min-width:108px; border:2px solid #7db2ff; border-radius:5px;"
+                "width:108px; min-width:108px; border:2px solid #7db2ff; border-radius:5px;"
                 "background:#2f6feb; color:#f4f8ff; padding:0;"
             )
-            inner_pad = "padding:3px 5px;"
         elif kit_idx == highlight_idx:
             base = (
-                "min-width:108px; border:2px solid #8f7800; border-radius:5px;"
+                "width:108px; min-width:108px; border:2px solid #8f7800; border-radius:5px;"
                 "background:#ffe16b; color:#121212; padding:0;"
             )
-            inner_pad = "padding:3px 5px;"
         link = (
             f'<a href="assign:{kit_idx}" '
             f'style="display:block; width:100%; text-decoration:none; color:inherit; {inner_pad}">'

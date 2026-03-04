@@ -65,6 +65,16 @@ def load_rpd_into_table(
     except Exception:
         pass
 
+    # Keep priority in the model/workflows, but hide it from table view.
+    try:
+        pri_col = next(
+            i for i, h in enumerate(PartsModel.HEADERS)
+            if str(h or "").strip().lower() == "priority"
+        )
+        table.setColumnHidden(int(pri_col), True)
+    except Exception:
+        pass
+
     if model.rowCount() > 0 and not table.currentIndex().isValid():
         table.setCurrentIndex(model.index(0, 0))
     return tree, parts, model
