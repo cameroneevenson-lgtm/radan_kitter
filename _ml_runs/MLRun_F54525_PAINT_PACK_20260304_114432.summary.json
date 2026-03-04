@@ -1,0 +1,16 @@
+{
+  "total_rows": 152,
+  "processed_rows": 152,
+  "written_rows": 0,
+  "skipped_duplicate_rows": 152,
+  "missing_pdf_rows": 0,
+  "missing_dxf_rows": 0,
+  "append_error_rows": 0,
+  "stopped": false,
+  "workers": 1,
+  "run_name": "MLRun_F54525_PAINT_PACK_20260304_114432",
+  "dataset_path": "C:\\Tools\\radan_kitter_controlled_migration\\ml_dataset.csv",
+  "run_dir": "C:\\Tools\\radan_kitter_controlled_migration\\_ml_runs",
+  "timestamp_utc": "2026-03-04T16:44:32+00:00",
+  "duration_sec": 0.557
+}

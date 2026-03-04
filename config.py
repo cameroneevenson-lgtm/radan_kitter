@@ -36,15 +36,27 @@ OUT_DIRNAME = "_out"
 KITS_DIRNAME = "_kits"
 ML_RUNS_DIRNAME = "_ml_runs"
 ML_MODELS_DIRNAME = "_ml_models"
+RUNTIME_DIRNAME = "_runtime"
 
 # Paths
 TOOLS_DIR = r"C:\Tools"
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 COMPANY_LOGO_PATH = os.path.join(APP_DIR, "bs-logo.png")
 
-GLOBAL_DATASET_PATH = os.path.join(TOOLS_DIR, "ml_dataset.csv")
-GLOBAL_RUNS_DIR = os.path.join(TOOLS_DIR, ML_RUNS_DIRNAME)
-GLOBAL_MODELS_DIR = os.path.join(TOOLS_DIR, ML_MODELS_DIRNAME)
+# ML artifacts are project-local.
+GLOBAL_DATASET_PATH = os.path.join(APP_DIR, "ml_dataset.csv")
+GLOBAL_RUNS_DIR = os.path.join(APP_DIR, ML_RUNS_DIRNAME)
+GLOBAL_MODELS_DIR = os.path.join(APP_DIR, ML_MODELS_DIRNAME)
+GLOBAL_RUNTIME_DIR = os.path.join(APP_DIR, RUNTIME_DIRNAME)
+GLOBAL_RUNTIME_LOG_PATH = os.path.join(GLOBAL_RUNTIME_DIR, "runtime_trace.jsonl")
+HOT_RELOAD_REQUEST_PATH = os.path.join(GLOBAL_RUNTIME_DIR, "hot_reload_request.json")
+HOT_RELOAD_RESPONSE_PATH = os.path.join(GLOBAL_RUNTIME_DIR, "hot_reload_response.json")
+
+# Temporary packet debug controls.
+# Enabled now to keep packet output local/visible during layer-0 debugging.
+PACKET_TEMP_LOCAL_OUTPUT_ENABLED = True
+PACKET_TEMP_LOCAL_OUTPUT_DIR = os.path.join(APP_DIR, "_packet_debug_out")
+PACKET_TEMP_FIRST_PAGE_ONLY = False
 
 DONOR_TEMPLATE_PATH = os.path.join(APP_DIR, "KitDonor-100Instances.sym")
 if not os.path.exists(DONOR_TEMPLATE_PATH):
@@ -61,9 +73,10 @@ ENG_RELEASE_MAP: List[Tuple[str, str]] = [
 # ML feature schema
 ML_SIGNAL_COLS = [
     "dxf_perimeter_area_ratio",
-    "dxf_convexity_ratio",
+    "dxf_concavity_ratio",
     "dxf_internal_void_area_ratio",
     "dxf_entity_count",
+    "dxf_arc_length_ratio",
     "dxf_exterior_notch_count",
     "dxf_has_interior_polylines",
     "dxf_color_count",

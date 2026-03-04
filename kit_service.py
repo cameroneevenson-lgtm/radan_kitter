@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from typing import Dict, List
+from typing import Callable, Dict, List, Optional
 
 import rpd_io
 import sym_io
@@ -54,7 +54,16 @@ def prepare_kits(
     bak_dirname: str,
     kits_dirname: str,
     kit_to_priority: Dict[str, str],
+    progress_cb: Optional[Callable[[int, int, str], None]] = None,
 ) -> int:
+    def _emit(done: int, total: int, status: str) -> None:
+        if progress_cb is None:
+            return
+        try:
+            progress_cb(int(done), int(total), str(status))
+        except Exception:
+            return
+
     apply_balance_and_update_kit_texts(
         parts,
         kits_dirname=kits_dirname,
@@ -67,6 +76,7 @@ def prepare_kits(
     parts_backup_dir = os.path.join(base_dir, bak_dirname, "parts")
     ensure_dir(parts_backup_dir)
     touched: set[str] = set()
+    part_sym_rows: List[tuple[str, str]] = []
     for p in parts:
         kit_name = sanitize_kit_name(p.kit_label)
         if not kit_name:
@@ -77,9 +87,7 @@ def prepare_kits(
         if f"\\{kits_dirname}\\" in sym_path.lower():
             continue
         touched.add(sym_path.lower())
-        if os.path.exists(sym_path):
-            backup_file(sym_path, parts_backup_dir)
-            sym_io.set_sym_attr_109_comment(sym_path, kit_name)
+        part_sym_rows.append((sym_path, kit_name))
 
     # Build kit .sym files from donor.
     if not os.path.exists(donor_template_path):
@@ -93,22 +101,32 @@ def prepare_kits(
         is_valid_kit_name=is_valid_kit_name,
     )
 
+    total_steps = max(1, len(part_sym_rows) + len(kits_to_parts))
+    done_steps = 0
+    _emit(done_steps, total_steps, "Preparing kits...")
+
+    for sym_path, kit_name in part_sym_rows:
+        if os.path.exists(sym_path):
+            backup_file(sym_path, parts_backup_dir)
+            sym_io.set_sym_attr_109_comment(sym_path, kit_name)
+        done_steps += 1
+        _emit(done_steps, total_steps, f"Updating Attr109: {os.path.basename(sym_path)}")
+
     for kit_label, plist in kits_to_parts.items():
-        kit_label = sanitize_kit_name(kit_label)
-        if not kit_label:
-            continue
-        if not is_valid_kit_name(kit_label):
-            kit_label = sanitize_kit_name(kit_label)
-            if not kit_label:
-                continue
-        member_syms = [force_l_drive_path(p.sym) for p in plist]
-        out_path = kit_file_path_for_part_sym(plist[0].sym, kit_label, kits_dirname)
-        sym_io.build_kit_sym_from_donor(
-            donor_path=donor_template_path,
-            member_part_syms=member_syms,
-            out_kit_sym_path=out_path,
-            backup_dir=kits_backup_dir,
-        )
+        status = "Skipping invalid kit label"
+        clean_kit = sanitize_kit_name(kit_label)
+        if clean_kit and is_valid_kit_name(clean_kit):
+            member_syms = [force_l_drive_path(p.sym) for p in plist]
+            out_path = kit_file_path_for_part_sym(plist[0].sym, clean_kit, kits_dirname)
+            sym_io.build_kit_sym_from_donor(
+                donor_path=donor_template_path,
+                member_part_syms=member_syms,
+                out_kit_sym_path=out_path,
+                backup_dir=kits_backup_dir,
+            )
+            status = f"Building kit: {clean_kit}"
+        done_steps += 1
+        _emit(done_steps, total_steps, status)
     return len(kits_to_parts)
 
 

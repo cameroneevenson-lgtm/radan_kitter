@@ -1,104 +1,69 @@
-# ui_preview_pane.py
 from __future__ import annotations
 
-from typing import Dict, List, Optional, Tuple
+import os
+from typing import Callable, Dict, List, Optional, Sequence
 
-from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QKeySequence
-from PySide6.QtWidgets import QShortcut
-from PySide6.QtWidgets import QWidget, QLabel, QPushButton, QGridLayout, QVBoxLayout, QHBoxLayout
+from PySide6.QtWidgets import QLabel, QTableView
 
 from pdf_preview import PdfPreviewView
+from rpd_io import PartRow
+from ui_parts_table import PartsModel
+from ui_numpad_legend import build_numpad_legend_html
 
 
-class PreviewPaneWidget(QWidget):
-    kit_override_requested = Signal(str)  # kit_name
-
-    def __init__(self, kit_names: List[str], kit_to_priority: Dict[str, int], parent=None):
-        super().__init__(parent)
-        self.kit_names = kit_names
-        self.kit_to_priority = kit_to_priority
-
-        self.lbl_header = QLabel("SUGGEST: —      ASSIGNED: —")
-        self.lbl_header.setTextInteractionFlags(Qt.TextSelectableByMouse)
-
-        self.lbl_outlier = QLabel("")
-        self.lbl_outlier.setVisible(False)
-
-        # 3x3 kit buttons
-        self.btns: Dict[str, QPushButton] = {}
-        grid = QGridLayout()
-        grid.setHorizontalSpacing(6)
-        grid.setVerticalSpacing(6)
-
-        for idx, kit in enumerate(self.kit_names):
-            r, c = divmod(idx, 3)
-            b = QPushButton(kit)
-            b.setCheckable(True)
-            b.clicked.connect(lambda _=False, k=kit: self.kit_override_requested.emit(k))
-            self.btns[kit] = b
-            grid.addWidget(b, r, c)
-
-        # Numpad mapping for 3x3 kit buttons (physical numpad layout):
-        # 7 8 9 -> row 0 (kits 1..3)
-        # 4 5 6 -> row 1 (kits 4..6)
-        # 1 2 3 -> row 2 (kits 7..9)
-        key_to_index = {
-            Qt.Key_7: 0, Qt.Key_8: 1, Qt.Key_9: 2,
-            Qt.Key_4: 3, Qt.Key_5: 4, Qt.Key_6: 5,
-            Qt.Key_1: 6, Qt.Key_2: 7, Qt.Key_3: 8,
-        }
-
-        for key, idx in key_to_index.items():
-            if 0 <= idx < len(self.kit_names):
-                kit = self.kit_names[idx]
-                for keypad_only in (True, False):
-                    seq = QKeySequence(key | (Qt.KeypadModifier if keypad_only else 0))
-                    sc = QShortcut(seq, self)
-                    sc.setContext(Qt.WidgetWithChildrenShortcut)
-                    sc.activated.connect(lambda k=kit: self.kit_override_requested.emit(k))
-
-        # Renderer-only view
-        self.pdf_view = PdfPreviewView()
-
-        layout = QVBoxLayout(self)
-        layout.addWidget(self.lbl_header)
-        layout.addWidget(self.lbl_outlier)
-        layout.addLayout(grid)
-        layout.addWidget(self.pdf_view, stretch=1)
-
-        self.setLayout(layout)
-
-    # --- Public API ---
-
-    def set_pdf(self, pdf_path: Optional[str]) -> None:
-        self.pdf_view.set_pdf(pdf_path)
-
-    def set_header(
+class PreviewCoordinator:
+    def __init__(
         self,
-        suggested: Optional[Tuple[str, float]],   # (kit, conf 0..1) or None
-        assigned_kit: Optional[str],
-        assigned_priority: Optional[int],
+        *,
+        table: QTableView,
+        pdf_view: PdfPreviewView,
+        numpad_legend: QLabel,
+        resolve_asset_fn: Callable[[str, str], Optional[str]],
+        canon_kits: Sequence[str],
+        kit_abbr: Dict[str, str],
+        sanitize_kit_name_fn: Callable[[str], str],
     ) -> None:
-        if suggested and suggested[0]:
-            sk, conf = suggested
-            sug_txt = f"{sk} ({conf:.2f})"
-        else:
-            sug_txt = "—"
+        self._table = table
+        self._pdf_view = pdf_view
+        self._numpad_legend = numpad_legend
+        self._resolve_asset = resolve_asset_fn
+        self._canon_kits = list(canon_kits)
+        self._kit_abbr = dict(kit_abbr)
+        self._sanitize_kit_name = sanitize_kit_name_fn
 
-        a = assigned_kit or "—"
-        p = assigned_priority if assigned_priority is not None else "—"
+    def update_numpad_legend(self, model: Optional[PartsModel], row: Optional[int]) -> None:
+        highlight_idx = None
+        if model is not None and row is not None and 0 <= row < len(model.rows):
+            sug = self._sanitize_kit_name(model.rows[row].suggested_kit)
+            if sug in self._canon_kits:
+                highlight_idx = self._canon_kits.index(sug)
+        self._numpad_legend.setText(
+            build_numpad_legend_html(
+                canon_kits=self._canon_kits,
+                kit_abbr=self._kit_abbr,
+                highlight_idx=highlight_idx,
+            )
+        )
 
-        self.lbl_header.setText(f"SUGGEST: {sug_txt}      ASSIGNED: {a}   PRI: {p}")
+    def preview_current(self, model: Optional[PartsModel], parts: List[PartRow]) -> None:
+        if model is None or not parts:
+            self._pdf_view.set_pdf(None)
+            self.update_numpad_legend(model, None)
+            return
 
-        # highlight assigned kit
-        for kit, b in self.btns.items():
-            b.setChecked(kit == assigned_kit)
+        idx = self._table.currentIndex()
+        if not idx.isValid():
+            idx = model.index(0, 0)
+            self._table.setCurrentIndex(idx)
+        row = idx.row()
+        if row < 0 or row >= len(parts):
+            self.update_numpad_legend(model, None)
+            return
 
-    def set_outlier_warning(self, text: str) -> None:
-        if text:
-            self.lbl_outlier.setText(text)
-            self.lbl_outlier.setVisible(True)
-        else:
-            self.lbl_outlier.setText("")
-            self.lbl_outlier.setVisible(False)
+        self.update_numpad_legend(model, row)
+        part = parts[row]
+        pdf_path = self._resolve_asset(part.sym, ".pdf")
+        if not pdf_path or not os.path.exists(pdf_path):
+            self._pdf_view.set_pdf(None)
+            return
+        self._pdf_view.set_pdf(pdf_path)

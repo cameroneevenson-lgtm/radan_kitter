@@ -4,8 +4,16 @@
 *.py text eol=lf
 *.md text eol=lf
 *.txt text eol=lf
+*.json text eol=lf
 
 # Windows launch / shell scripts
 *.bat text eol=crlf
 *.cmd text eol=crlf
 *.ps1 text eol=crlf
+
+# Generated runtime/model data (written by app on Windows)
+_ml_models/*.json text eol=crlf
+_ml_runs/*.json text eol=crlf
+_ml_runs/*.jsonl text eol=crlf
+_runtime/*.jsonl text eol=crlf
+ml_dataset.csv text eol=crlf

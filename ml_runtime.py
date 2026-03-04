@@ -111,7 +111,7 @@ def rf_features_for_part(
 class MlWorkerSignals(QObject):
     progress = Signal(int, int)
     stats = Signal(object)
-    done = Signal(str, str, str, str)  # run_name, dataset_path, run_dir, video_path
+    done = Signal(str, str, str)  # run_name, dataset_path, run_dir
     error = Signal(str)
 
 
@@ -206,7 +206,6 @@ class MlScanWorker(QRunnable):
                 str(summary.get("run_name", "")),
                 str(summary.get("dataset_path", "")),
                 str(summary.get("run_dir", self.global_runs_dir)),
-                "",
             )
         except Exception:
             self.signals.error.emit(traceback.format_exc())

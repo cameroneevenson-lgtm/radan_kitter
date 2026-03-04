@@ -5,12 +5,10 @@ import os
 import re
 from typing import List, Optional, Tuple
 
+from config import ENG_RELEASE_MAP as CFG_ENG_RELEASE_MAP, W_RELEASE_ROOT as CFG_W_RELEASE_ROOT
 
-W_RELEASE_ROOT = r"W:\LASER\For Battleshield Fabrication"
-ENG_RELEASE_MAP: List[Tuple[str, str]] = [
-    (r"L:\BATTLESHIELD\F-LARGE FLEET", W_RELEASE_ROOT),
-    (r"L:\BATTLESHIELD", W_RELEASE_ROOT),
-]
+W_RELEASE_ROOT = CFG_W_RELEASE_ROOT
+ENG_RELEASE_MAP: List[Tuple[str, str]] = list(CFG_ENG_RELEASE_MAP)
 
 
 def configure_release_mapping(

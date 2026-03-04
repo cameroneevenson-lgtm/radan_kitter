@@ -10,7 +10,7 @@
 # - Deterministic, restart-safe: per-row feature failures become NaN; logging continues.
 #
 # Output dataset:
-#   C:\Tools\ml_dataset.csv
+#   <project>\ml_dataset.csv
 
 from __future__ import annotations
 
@@ -20,11 +20,13 @@ import re
 import csv
 import json
 import time
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from datetime import datetime, timezone
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple
 
 import pandas as pd
 import numpy as np
+from config import GLOBAL_DATASET_PATH
 
 try:
     from PySide6.QtCore import QObject, QRunnable, Signal
@@ -54,7 +56,7 @@ except Exception:
 # Paths / schema
 # -----------------------------
 
-DATASET_PATH = os.path.join(r"C:\Tools", "ml_dataset.csv")
+DATASET_PATH = GLOBAL_DATASET_PATH
 
 TRACKING_COLS = [
     "timestamp_utc",
@@ -67,9 +69,10 @@ TRACKING_COLS = [
 
 DXF_SIGNAL_COLS = [
     "dxf_perimeter_area_ratio",
-    "dxf_convexity_ratio",
+    "dxf_concavity_ratio",
     "dxf_internal_void_area_ratio",
     "dxf_entity_count",
+    "dxf_arc_length_ratio",
     "dxf_exterior_notch_count",
     "dxf_has_interior_polylines",
     "dxf_color_count",
@@ -91,6 +94,9 @@ PDF_FUTURE_COLS = [f"pdf_future_{i:02d}" for i in range(1, 16)]
 FEATURE_COLS = DXF_SIGNAL_COLS + PDF_SIGNAL_COLS + DXF_FUTURE_COLS + PDF_FUTURE_COLS
 
 ALL_COLS = TRACKING_COLS + FEATURE_COLS
+
+# ML log extraction workers (feature compute only). File write remains single-writer.
+ML_LOG_MAX_WORKERS = max(1, min(8, int(os.environ.get("RK_ML_LOG_WORKERS", "2"))))
 
 
 def _nan() -> float:
@@ -275,6 +281,71 @@ def _safe_emit(cb: Optional[Callable], *args) -> None:
         return
 
 
+def _load_dataset_df(path: str) -> pd.DataFrame:
+    if not path:
+        path = DATASET_PATH
+    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+    if not os.path.exists(path):
+        return pd.DataFrame(columns=ALL_COLS)
+    try:
+        df = pd.read_csv(path)
+    except Exception:
+        df = pd.DataFrame(columns=ALL_COLS)
+    for c in ALL_COLS:
+        if c not in df.columns:
+            df[c] = _nan()
+    return df
+
+
+def _part_keys_from_df(df: pd.DataFrame) -> set[str]:
+    out: set[str] = set()
+    if "part_name" not in df.columns or len(df) == 0:
+        return out
+    for v in df["part_name"]:
+        if pd.isna(v):
+            continue
+        part = str(v).strip()
+        if part:
+            out.add(part.upper())
+    return out
+
+
+def _compute_ml_log_row(
+    task: Dict[str, Any],
+    *,
+    rpd_token: str,
+    signals: List[str],
+) -> Dict[str, Any]:
+    part_name = str(task.get("part_name") or "").strip()
+    kit = str(task.get("kit_label") or "").strip()
+    pdf = str(task.get("pdf_path") or "").strip()
+    dxf = str(task.get("dxf_path") or "").strip()
+
+    feats = compute_phase2_signals(pdf, dxf)
+    row = {
+        "timestamp_utc": _utc_now_iso(),
+        "rpd_token": str(rpd_token or "").strip(),
+        "part_name": part_name,
+        "kit_label": kit,
+        "pdf_path": pdf,
+        "dxf_path": dxf,
+    }
+    row.update(feats)
+    for c in ALL_COLS:
+        if c not in row:
+            row[c] = _nan()
+
+    sig_vals: Dict[str, float] = {}
+    for s in signals:
+        v = _safe_float(feats.get(s, 0.0))
+        sig_vals[s] = float(v) if math.isfinite(v) else 0.0
+
+    return {
+        "row": row,
+        "signals": sig_vals,
+    }
+
+
 def run_scan_and_log(
     parts: Iterable[Any],
     rpd_path: str,
@@ -288,6 +359,7 @@ def run_scan_and_log(
     on_progress: Optional[Callable[[int, int], None]] = None,
     on_part: Optional[Callable[[Dict[str, Any]], None]] = None,
     meta_extra: Optional[Dict[str, Any]] = None,
+    max_workers: Optional[int] = None,
 ) -> Dict[str, Any]:
     """
     Scan parts, append labels/features to dataset, and log run artifacts.
@@ -303,7 +375,10 @@ def run_scan_and_log(
     dataset_path = DATASET_PATH
     signals = list(signal_cols or (DXF_SIGNAL_COLS + PDF_SIGNAL_COLS))
     rpd_token = os.path.basename(rpd_path or "")
-    existing_parts = load_existing_part_names(dataset_path)
+    base_df = _load_dataset_df(dataset_path)
+    existing_parts = _part_keys_from_df(base_df)
+    workers = int(max_workers if max_workers is not None else ML_LOG_MAX_WORKERS)
+    workers = max(1, min(8, workers))
 
     logger = ScanLogger(run_dir, run_name)
     meta = {
@@ -312,6 +387,7 @@ def run_scan_and_log(
         "rpd_token": rpd_token,
         "dataset_path": dataset_path,
         "signal_cols": signals,
+        "compute_workers": int(workers),
         "global_dedupe_by_part": True,
         "artificial_delay_ms": int(delay_ms),
     }
@@ -329,9 +405,11 @@ def run_scan_and_log(
         "append_error_rows": 0,
     }
     stopped = False
-    _safe_emit(on_progress, 0, total)
+    done = 0
+    _safe_emit(on_progress, done, total)
 
-    for i, p in enumerate(part_rows, start=1):
+    tasks: List[Dict[str, Any]] = []
+    for p in part_rows:
         if should_stop is not None:
             try:
                 if should_stop():
@@ -349,6 +427,7 @@ def run_scan_and_log(
         if key and key in existing_parts:
             counts["processed_rows"] += 1
             counts["skipped_duplicate_rows"] += 1
+            done += 1
             item = {
                 "status": "skipped_duplicate",
                 "part_name": part_name,
@@ -357,7 +436,9 @@ def run_scan_and_log(
             }
             logger.log_part(item)
             _safe_emit(on_part, item)
-            _safe_emit(on_progress, i, total)
+            _safe_emit(on_progress, done, total)
+            if delay_ms > 0:
+                time.sleep(int(delay_ms) / 1000.0)
             continue
         if key:
             existing_parts.add(key)
@@ -371,56 +452,256 @@ def run_scan_and_log(
         if not dxf_exists:
             counts["missing_dxf_rows"] += 1
 
-        feat_all = compute_phase2_signals(pdf, dxf)
-        signal_vals: Dict[str, float] = {}
-        for s in signals:
-            v = _safe_float(feat_all.get(s, 0.0))
-            signal_vals[s] = float(v) if math.isfinite(v) else 0.0
+        tasks.append(
+            {
+                "part_name": part_name,
+                "kit_label": kit,
+                "pdf_path": pdf,
+                "dxf_path": dxf,
+                "pdf_exists": pdf_exists,
+                "dxf_exists": dxf_exists,
+            }
+        )
 
-        status = "written"
-        err = ""
-        try:
-            append_labeled_row(
-                part_name=part_name,
-                kit_label=kit,
-                pdf_path=pdf,
-                dxf_path=dxf,
-                rpd_token=rpd_token,
-            )
-            counts["written_rows"] += 1
-        except Exception as e:
+    rows_to_upsert: List[Dict[str, Any]] = []
+    submitted = 0
+    processed_nondup = 0
+    total_tasks = len(tasks)
+    workers = max(1, min(workers, max(1, total_tasks)))
+
+    def _handle_task_result(task: Dict[str, Any], res: Optional[Dict[str, Any]], err: str = "") -> None:
+        nonlocal done, processed_nondup
+        processed_nondup += 1
+        counts["processed_rows"] += 1
+        done += 1
+
+        status = "computed"
+        signal_vals: Dict[str, float] = {s: 0.0 for s in signals}
+        if not err and res is not None:
+            try:
+                row = dict(res.get("row") or {})
+                if row:
+                    rows_to_upsert.append(row)
+            except Exception:
+                err = "row_build_failed"
+            try:
+                sig_obj = res.get("signals")
+                if isinstance(sig_obj, dict):
+                    signal_vals = {}
+                    for s in signals:
+                        v = _safe_float(sig_obj.get(s, 0.0))
+                        signal_vals[s] = float(v) if math.isfinite(v) else 0.0
+            except Exception:
+                signal_vals = {s: 0.0 for s in signals}
+        if err:
             status = "append_error"
-            err = str(e)
             counts["append_error_rows"] += 1
 
-        counts["processed_rows"] += 1
         item = {
             "status": status,
-            "part_name": part_name,
-            "kit_label": kit,
-            "pdf_path": pdf,
-            "dxf_path": dxf,
-            "pdf_exists": pdf_exists,
-            "dxf_exists": dxf_exists,
+            "part_name": str(task.get("part_name") or ""),
+            "kit_label": str(task.get("kit_label") or ""),
+            "pdf_path": str(task.get("pdf_path") or ""),
+            "dxf_path": str(task.get("dxf_path") or ""),
+            "pdf_exists": bool(task.get("pdf_exists", False)),
+            "dxf_exists": bool(task.get("dxf_exists", False)),
             "signals": signal_vals,
-            "error": err,
+            "error": str(err or ""),
         }
         logger.log_part(item)
         _safe_emit(on_part, item)
-        _safe_emit(on_progress, i, total)
-
+        _safe_emit(on_progress, done, total)
         if delay_ms > 0:
             time.sleep(int(delay_ms) / 1000.0)
+
+    if not stopped and total_tasks > 0:
+        if workers <= 1:
+            for task in tasks:
+                if should_stop is not None:
+                    try:
+                        if should_stop():
+                            stopped = True
+                            break
+                    except Exception:
+                        pass
+                err = ""
+                res = None
+                try:
+                    res = _compute_ml_log_row(task, rpd_token=rpd_token, signals=signals)
+                except Exception as e:
+                    err = str(e)
+                _handle_task_result(task, res, err)
+                submitted += 1
+        else:
+            with ThreadPoolExecutor(max_workers=workers) as pool:
+                in_flight: Dict[Any, Dict[str, Any]] = {}
+
+                def _submit_next() -> bool:
+                    nonlocal submitted
+                    if submitted >= total_tasks:
+                        return False
+                    task = tasks[submitted]
+                    submitted += 1
+                    fut = pool.submit(_compute_ml_log_row, task, rpd_token=rpd_token, signals=signals)
+                    in_flight[fut] = task
+                    return True
+
+                for _ in range(min(workers, total_tasks)):
+                    _submit_next()
+
+                while in_flight:
+                    if should_stop is not None:
+                        try:
+                            if should_stop():
+                                stopped = True
+                                break
+                        except Exception:
+                            pass
+
+                    done_set, _ = wait(set(in_flight.keys()), timeout=0.2, return_when=FIRST_COMPLETED)
+                    if not done_set:
+                        continue
+                    for fut in done_set:
+                        task = in_flight.pop(fut)
+                        err = ""
+                        res = None
+                        try:
+                            res = fut.result()
+                        except Exception as e:
+                            err = str(e)
+                        _handle_task_result(task, res, err)
+                        if not stopped:
+                            _submit_next()
+
+    if rows_to_upsert:
+        try:
+            part_names = {
+                str(r.get("part_name") or "").strip()
+                for r in rows_to_upsert
+                if str(r.get("part_name") or "").strip()
+            }
+            if part_names and "part_name" in base_df.columns and len(base_df) > 0:
+                base_df = base_df[
+                    ~base_df["part_name"].astype(str).isin(part_names)
+                ].copy()
+            up_df = pd.DataFrame(rows_to_upsert, columns=ALL_COLS)
+            merged = pd.concat([base_df, up_df], ignore_index=True)
+            merged.to_csv(dataset_path, index=False)
+            counts["written_rows"] = int(len(rows_to_upsert))
+        except Exception as e:
+            counts["append_error_rows"] += int(len(rows_to_upsert))
+            logger.log_part(
+                {
+                    "status": "append_error",
+                    "part_name": "",
+                    "kit_label": "",
+                    "reason": "dataset_write_failed",
+                    "error": str(e),
+                }
+            )
 
     summary = {
         **counts,
         "stopped": bool(stopped),
+        "workers": int(workers),
         "run_name": run_name,
         "dataset_path": dataset_path,
         "run_dir": run_dir,
     }
     logger.write_summary(summary)
     return summary
+
+
+def recompute_dataset_signals(
+    dataset_path: str = DATASET_PATH,
+    signal_cols: Optional[List[str]] = None,
+    should_stop: Optional[Callable[[], bool]] = None,
+    on_progress: Optional[Callable[[int, int], None]] = None,
+) -> Dict[str, Any]:
+    """
+    Recompute ML feature columns for every existing row in dataset_path.
+
+    Uses each row's stored pdf_path and dxf_path so rows outside the active
+    project are included.
+    """
+    if not dataset_path:
+        dataset_path = DATASET_PATH
+    os.makedirs(os.path.dirname(dataset_path) or ".", exist_ok=True)
+    if not os.path.exists(dataset_path):
+        pd.DataFrame(columns=ALL_COLS).to_csv(dataset_path, index=False)
+
+    df = pd.read_csv(dataset_path)
+    if len(df) == 0:
+        return {
+            "dataset_path": dataset_path,
+            "total_rows": 0,
+            "processed_rows": 0,
+            "updated_rows": 0,
+            "error_rows": 0,
+            "missing_pdf_rows": 0,
+            "missing_dxf_rows": 0,
+            "stopped": False,
+        }
+
+    for c in ALL_COLS:
+        if c not in df.columns:
+            df[c] = _nan()
+
+    signals = list(signal_cols or (DXF_SIGNAL_COLS + PDF_SIGNAL_COLS))
+    signals = [s for s in signals if s in FEATURE_COLS]
+    if not signals:
+        signals = list(DXF_SIGNAL_COLS + PDF_SIGNAL_COLS)
+
+    total = int(len(df))
+    processed = 0
+    updated = 0
+    errors = 0
+    missing_pdf = 0
+    missing_dxf = 0
+    stopped = False
+    _safe_emit(on_progress, 0, total)
+
+    for idx in range(total):
+        if should_stop is not None:
+            try:
+                if should_stop():
+                    stopped = True
+                    break
+            except Exception:
+                pass
+
+        pdf_raw = df.at[idx, "pdf_path"] if "pdf_path" in df.columns else ""
+        dxf_raw = df.at[idx, "dxf_path"] if "dxf_path" in df.columns else ""
+        pdf_path = "" if pd.isna(pdf_raw) else str(pdf_raw).strip()
+        dxf_path = "" if pd.isna(dxf_raw) else str(dxf_raw).strip()
+        if not (pdf_path and os.path.exists(pdf_path)):
+            missing_pdf += 1
+        if not (dxf_path and os.path.exists(dxf_path)):
+            missing_dxf += 1
+
+        try:
+            feats = compute_phase2_signals(pdf_path, dxf_path)
+            for s in signals:
+                df.at[idx, s] = _safe_float(feats.get(s, _nan()))
+            updated += 1
+        except Exception:
+            errors += 1
+
+        processed += 1
+        _safe_emit(on_progress, processed, total)
+
+    # Persist partial progress if canceled.
+    df.to_csv(dataset_path, index=False)
+    return {
+        "dataset_path": dataset_path,
+        "total_rows": total,
+        "processed_rows": processed,
+        "updated_rows": updated,
+        "error_rows": errors,
+        "missing_pdf_rows": missing_pdf,
+        "missing_dxf_rows": missing_dxf,
+        "stopped": bool(stopped),
+    }
 
 
 
@@ -454,14 +735,68 @@ def _iter_dxf_entities(doc) -> Iterable:
         yield e
 
 
-def _dxf_entity_color_key(e) -> Optional[int]:
+def _layer_aci_color(doc, layer_name: str) -> Optional[int]:
     try:
-        c = int(e.dxf.color) if hasattr(e.dxf, "color") else None
-        if c is None:
+        if not layer_name:
             return None
-        return c
+        layer = doc.layers.get(layer_name)
+        if layer is None:
+            return None
+        if not layer.dxf.hasattr("color"):
+            return None
+        return abs(int(layer.dxf.color))
     except Exception:
         return None
+
+
+def _entity_effective_color_key(e, doc) -> Optional[str]:
+    # Prefer true-color when present.
+    try:
+        if hasattr(e, "dxf") and e.dxf.hasattr("true_color"):
+            tc = int(e.dxf.true_color) & 0xFFFFFF
+            if tc > 0:
+                return f"rgb:{tc:06X}"
+    except Exception:
+        pass
+
+    aci: Optional[int] = None
+    try:
+        if hasattr(e, "dxf") and e.dxf.hasattr("color"):
+            aci = int(e.dxf.color)
+    except Exception:
+        aci = None
+
+    # Resolve BYLAYER / BYBLOCK through layer color when possible.
+    if aci in (None, 0, 256):
+        layer_name = ""
+        try:
+            layer_name = str(e.dxf.layer or "")
+        except Exception:
+            layer_name = ""
+        layer_aci = _layer_aci_color(doc, layer_name)
+        if layer_aci is not None:
+            aci = layer_aci
+
+    if aci is None:
+        return None
+    return f"aci:{abs(int(aci))}"
+
+
+def _color_key_is_nondefault(color_key: str) -> bool:
+    if color_key.startswith("rgb:"):
+        try:
+            rgb = int(color_key.split(":", 1)[1], 16)
+        except Exception:
+            return False
+        # Treat white / black / gray as default-ish; anything else counts as non-default.
+        return rgb not in (0x000000, 0xFFFFFF, 0xBFBFBF, 0xC0C0C0, 0x808080)
+    if color_key.startswith("aci:"):
+        try:
+            aci = int(color_key.split(":", 1)[1])
+        except Exception:
+            return False
+        return aci not in (0, 7, 256)
+    return False
 
 
 def _polyline_points(e) -> Optional[List[Tuple[float, float]]]:
@@ -493,6 +828,81 @@ def _segments_from_points(pts: List[Tuple[float, float]], closed: bool) -> List[
     return segs
 
 
+def _arc_span_deg(start_deg: float, end_deg: float) -> float:
+    span = (float(end_deg) - float(start_deg)) % 360.0
+    if span <= 1e-9:
+        span = 360.0
+    return span
+
+
+def _points_close(a: Tuple[float, float], b: Tuple[float, float], tol: float) -> bool:
+    return abs(a[0] - b[0]) <= tol and abs(a[1] - b[1]) <= tol
+
+
+def _dedupe_consecutive_points(pts: List[Tuple[float, float]], tol: float) -> List[Tuple[float, float]]:
+    if not pts:
+        return []
+    out = [pts[0]]
+    for p in pts[1:]:
+        if not _points_close(out[-1], p, tol):
+            out.append(p)
+    return out
+
+
+def _stitch_open_paths_to_closed_loops(open_polys: List[List[Tuple[float, float]]]) -> List[List[Tuple[float, float]]]:
+    segs: List[Tuple[Tuple[float, float], Tuple[float, float]]] = []
+    cloud: List[Tuple[float, float]] = []
+    for p in open_polys:
+        if len(p) < 2:
+            continue
+        cloud.extend(p)
+        segs.extend(_segments_from_points(p, closed=False))
+    segs = [(a, b) for (a, b) in segs if _seg_len(a, b) > 1e-9]
+    if not segs:
+        return []
+
+    if len(cloud) >= 2:
+        x0, y0, x1, y1 = _bbox_from_points(cloud)
+        diag = math.hypot(x1 - x0, y1 - y0)
+    else:
+        diag = 0.0
+    tol = max(1e-4, 1e-4 * diag)
+
+    loops: List[List[Tuple[float, float]]] = []
+    unused = list(segs)
+    while unused:
+        a, b = unused.pop()
+        path: List[Tuple[float, float]] = [a, b]
+
+        made_progress = True
+        while made_progress and unused:
+            made_progress = False
+            for idx, (p0, p1) in enumerate(unused):
+                if _points_close(path[-1], p0, tol):
+                    path.append(p1)
+                elif _points_close(path[-1], p1, tol):
+                    path.append(p0)
+                elif _points_close(path[0], p1, tol):
+                    path.insert(0, p0)
+                elif _points_close(path[0], p0, tol):
+                    path.insert(0, p1)
+                else:
+                    continue
+                unused.pop(idx)
+                made_progress = True
+                break
+
+        if len(path) < 4:
+            continue
+        if not _points_close(path[0], path[-1], tol):
+            continue
+        path = path[:-1]
+        path = _dedupe_consecutive_points(path, tol)
+        if len(path) >= 3:
+            loops.append(path)
+    return loops
+
+
 def _seg_len(a: Tuple[float, float], b: Tuple[float, float]) -> float:
     return math.hypot(b[0] - a[0], b[1] - a[1])
 
@@ -519,6 +929,15 @@ def _bbox_aspect(x0: float, y0: float, x1: float, y1: float) -> float:
     return w / h if w >= h else h / w
 
 
+def _circle_points(cx: float, cy: float, r: float, steps: int = 48) -> List[Tuple[float, float]]:
+    out: List[Tuple[float, float]] = []
+    n = max(12, int(steps))
+    for i in range(n):
+        t = 2.0 * math.pi * (i / n)
+        out.append((cx + r * math.cos(t), cy + r * math.sin(t)))
+    return out
+
+
 def _poly_area_abs(pts: List[Tuple[float, float]]) -> float:
     if len(pts) < 3:
         return 0.0
@@ -529,6 +948,24 @@ def _poly_area_abs(pts: List[Tuple[float, float]]) -> float:
         x2, y2 = pts[(i + 1) % n]
         s += x1 * y2 - x2 * y1
     return abs(0.5 * s)
+
+
+def _poly_perimeter(pts: List[Tuple[float, float]]) -> float:
+    if len(pts) < 2:
+        return 0.0
+    return sum(_seg_len(a, b) for (a, b) in _segments_from_points(pts, closed=True))
+
+
+def _poly_area_signed(pts: List[Tuple[float, float]]) -> float:
+    if len(pts) < 3:
+        return 0.0
+    s = 0.0
+    n = len(pts)
+    for i in range(n):
+        x1, y1 = pts[i]
+        x2, y2 = pts[(i + 1) % n]
+        s += x1 * y2 - x2 * y1
+    return 0.5 * s
 
 
 def _convex_hull(points: List[Tuple[float, float]]) -> List[Tuple[float, float]]:
@@ -585,14 +1022,14 @@ def _compute_dxf_features(dxf_path: str) -> Dict[str, float]:
     entities = list(_iter_dxf_entities(doc))
     out["dxf_entity_count"] = _safe_int(len(entities))
 
-    colors: set[int] = set()
+    colors: set[str] = set()
     has_nondefault_color = 0
     for e in entities:
-        ck = _dxf_entity_color_key(e)
+        ck = _entity_effective_color_key(e, doc)
         if ck is None:
             continue
-        colors.add(int(ck))
-        if int(ck) not in (0, 256):
+        colors.add(ck)
+        if _color_key_is_nondefault(ck):
             has_nondefault_color = 1
     out["dxf_color_count"] = _safe_int(len(colors))
     out["dxf_has_nondefault_color"] = _safe_int(has_nondefault_color)
@@ -600,13 +1037,42 @@ def _compute_dxf_features(dxf_path: str) -> Dict[str, float]:
     closed_loops: List[List[Tuple[float, float]]] = []
     open_polys: List[List[Tuple[float, float]]] = []
     cloud_points: List[Tuple[float, float]] = []
+    total_geom_len = 0.0
+    arc_geom_len = 0.0
 
     for e in entities:
+        t = e.dxftype()
+        if t == "CIRCLE":
+            try:
+                c = e.dxf.center
+                r = abs(float(e.dxf.radius))
+                if r > 1e-9:
+                    cpts = _circle_points(float(c.x), float(c.y), r)
+                    cloud_points.extend(cpts)
+                    closed_loops.append(cpts)
+                    circ_len = 2.0 * math.pi * r
+                    total_geom_len += circ_len
+                    arc_geom_len += circ_len
+            except Exception:
+                pass
+            continue
+
+        if t == "ARC":
+            try:
+                r = abs(float(e.dxf.radius))
+                if r > 1e-9:
+                    span_deg = _arc_span_deg(float(e.dxf.start_angle), float(e.dxf.end_angle))
+                    alen = math.radians(span_deg) * r
+                    total_geom_len += alen
+                    arc_geom_len += alen
+            except Exception:
+                pass
+            continue
+
         pts = _polyline_points(e)
         if not pts or len(pts) < 2:
             continue
         cloud_points.extend(pts)
-        t = e.dxftype()
         is_closed = False
         try:
             if t == "LWPOLYLINE":
@@ -616,35 +1082,97 @@ def _compute_dxf_features(dxf_path: str) -> Dict[str, float]:
         except Exception:
             is_closed = False
 
+        segs_here = _segments_from_points(pts, closed=is_closed and len(pts) >= 3)
+        total_geom_len += sum(_seg_len(a, b) for (a, b) in segs_here)
+
         if is_closed and len(pts) >= 3:
             closed_loops.append(pts)
         else:
             open_polys.append(pts)
 
+    if total_geom_len > 1e-9:
+        out["dxf_arc_length_ratio"] = _safe_float(arc_geom_len / total_geom_len)
+    else:
+        out["dxf_arc_length_ratio"] = _safe_float(0.0)
+
+    if not closed_loops and open_polys:
+        closed_loops = _stitch_open_paths_to_closed_loops(open_polys)
+
+    # Fallback when no closed loops are available: estimate using convex hull.
+    if not closed_loops and len(cloud_points) >= 3:
+        hull = _convex_hull(cloud_points)
+        hull_area = _poly_area_abs(hull)
+        hull_perim = _poly_perimeter(hull)
+        if hull_area > 1e-9 and hull_perim > 1e-9:
+            out["dxf_perimeter_area_ratio"] = _safe_float(hull_perim / hull_area)
+            out["dxf_concavity_ratio"] = _safe_float(0.0)  # hull is fully convex by definition
+            out["dxf_internal_void_area_ratio"] = _safe_float(0.0)
+            out["dxf_has_interior_polylines"] = _safe_int(0)
+            out["dxf_exterior_notch_count"] = _safe_int(0)
+            return out
+
+    # Last-chance fallback for very thin/degenerate geometry: bbox proxy ratio.
+    if not closed_loops and len(cloud_points) >= 2:
+        x0, y0, x1, y1 = _bbox_from_points(cloud_points)
+        w = max(0.0, x1 - x0)
+        h = max(0.0, y1 - y0)
+        bbox_area = w * h
+        bbox_perim = 2.0 * (w + h)
+        if bbox_area > 1e-9 and bbox_perim > 1e-9:
+            out["dxf_perimeter_area_ratio"] = _safe_float(bbox_perim / bbox_area)
+            out["dxf_concavity_ratio"] = _safe_float(0.0)
+            out["dxf_internal_void_area_ratio"] = _safe_float(0.0)
+            out["dxf_has_interior_polylines"] = _safe_int(0)
+            out["dxf_exterior_notch_count"] = _safe_int(0)
+            return out
+
     if not closed_loops:
+        out["dxf_perimeter_area_ratio"] = _safe_float(0.0)
+        out["dxf_concavity_ratio"] = _safe_float(0.0)
+        out["dxf_internal_void_area_ratio"] = _safe_float(0.0)
         out["dxf_has_interior_polylines"] = _safe_int(0)
+        out["dxf_exterior_notch_count"] = _safe_int(0)
         return out
 
     loop_areas = [(float(_poly_area_abs(lp)), lp) for lp in closed_loops]
     loop_areas.sort(key=lambda t: t[0], reverse=True)
     outer_area, outer_loop = loop_areas[0]
-    outer_perim = sum(_seg_len(a, b) for (a, b) in _segments_from_points(outer_loop, closed=True))
+    outer_perim = _poly_perimeter(outer_loop)
 
     if outer_area > 1e-9:
         out["dxf_perimeter_area_ratio"] = _safe_float(outer_perim / outer_area)
         void_area = sum(a for (a, _lp) in loop_areas[1:])
         out["dxf_internal_void_area_ratio"] = _safe_float(void_area / outer_area)
+    else:
+        # Degenerate "closed" loop; fall back to hull proxy if possible.
+        hull = _convex_hull(cloud_points)
+        hull_area = _poly_area_abs(hull)
+        hull_perim = _poly_perimeter(hull)
+        if hull_area > 1e-9 and hull_perim > 1e-9:
+            out["dxf_perimeter_area_ratio"] = _safe_float(hull_perim / hull_area)
+        else:
+            out["dxf_perimeter_area_ratio"] = _safe_float(0.0)
+        out["dxf_internal_void_area_ratio"] = _safe_float(0.0)
 
     hull = _convex_hull(cloud_points)
     hull_area = _poly_area_abs(hull)
     if outer_area > 1e-9 and hull_area > 1e-9:
-        out["dxf_convexity_ratio"] = _safe_float(outer_area / hull_area)
+        convexity = outer_area / hull_area
+        out["dxf_concavity_ratio"] = _safe_float(_clamp01(1.0 - convexity))
+    else:
+        out["dxf_concavity_ratio"] = _safe_float(0.0)
 
     interior_flag = 1 if len(loop_areas) > 1 else 0
     if interior_flag == 0 and outer_loop:
         for p in open_polys:
-            cx = sum(pt[0] for pt in p) / len(p)
-            cy = sum(pt[1] for pt in p) / len(p)
+            if len(p) < 2:
+                continue
+            if len(p) >= 3:
+                cx = sum(pt[0] for pt in p) / len(p)
+                cy = sum(pt[1] for pt in p) / len(p)
+            else:
+                cx = 0.5 * (p[0][0] + p[-1][0])
+                cy = 0.5 * (p[0][1] + p[-1][1])
             if _point_in_poly((cx, cy), outer_loop):
                 interior_flag = 1
                 break
@@ -669,7 +1197,41 @@ def _compute_dxf_features(dxf_path: str) -> Dict[str, float]:
         diff = min(diff, 180.0 - diff)
         if 70.0 <= diff <= 110.0:
             notch_count += 1
+    if notch_count == 0:
+        # Fallback proxy: count concave near-90 corners and fold pairs into notch count.
+        signed_area = _poly_area_signed(outer_loop)
+        if abs(signed_area) > 1e-12 and len(outer_loop) >= 4:
+            ccw = signed_area > 0.0
+            concave_ortho = 0
+            m = len(outer_loop)
+            for i in range(m):
+                p_prev = outer_loop[i - 1]
+                p_cur = outer_loop[i]
+                p_next = outer_loop[(i + 1) % m]
+                v1x = p_cur[0] - p_prev[0]
+                v1y = p_cur[1] - p_prev[1]
+                v2x = p_next[0] - p_cur[0]
+                v2y = p_next[1] - p_cur[1]
+                if math.hypot(v1x, v1y) <= 1e-9 or math.hypot(v2x, v2y) <= 1e-9:
+                    continue
+                cross = v1x * v2y - v1y * v2x
+                is_concave = (cross < -1e-12) if ccw else (cross > 1e-12)
+                if not is_concave:
+                    continue
+                ang0 = _seg_angle_deg(p_prev, p_cur)
+                ang1 = _seg_angle_deg(p_cur, p_next)
+                diff = abs(ang1 - ang0) % 180.0
+                diff = min(diff, 180.0 - diff)
+                if 70.0 <= diff <= 110.0:
+                    concave_ortho += 1
+            if concave_ortho >= 2:
+                notch_count = max(notch_count, concave_ortho // 2)
     out["dxf_exterior_notch_count"] = _safe_int(notch_count)
+
+    # Keep core geometry ratios numeric for downstream tooling / CSV inspection.
+    for col in ("dxf_perimeter_area_ratio", "dxf_concavity_ratio", "dxf_internal_void_area_ratio"):
+        v = _safe_float(out.get(col))
+        out[col] = float(v) if math.isfinite(v) else 0.0
 
     return out
 

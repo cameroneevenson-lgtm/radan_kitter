@@ -15,6 +15,9 @@ def build_packet(
     out_dirname: str,
     resolve_asset_fn: Callable[[str, str], Optional[str]],
     progress_cb: Optional[Callable[[int, int, str], None]] = None,
+    should_cancel_cb: Optional[Callable[[], bool]] = None,
+    max_workers: Optional[int] = None,
+    render_mode: str = "raster",
 ) -> Tuple[str, int, int]:
     base_dir = os.path.dirname(rpd_path)
     out_dir = os.path.join(base_dir, out_dirname)
@@ -25,5 +28,11 @@ def build_packet(
         packet_path,
         resolve_asset_fn=resolve_asset_fn,
         progress_cb=progress_cb,
+        should_cancel_cb=should_cancel_cb,
+        max_workers=max_workers,
+        render_mode=render_mode,
     )
     return packet_path, pages, missing
+
+
+PacketBuildCanceled = pdf_packet.PacketBuildCanceled
