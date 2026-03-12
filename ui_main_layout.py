@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import os
 from typing import Callable, Sequence
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor, QImage, QPainter, QPixmap
+from PySide6.QtGui import QBrush, QColor, QImage, QPainter, QPixmap, QTransform
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QHBoxLayout,
@@ -29,59 +30,102 @@ def _build_legend_text(canon_kits: Sequence[str]) -> str:
     )
 
 
-def _enhance_logo_tile(tile: QPixmap) -> QPixmap:
-    if tile.isNull():
-        return tile
+def _clamp8(v: float) -> int:
+    return max(0, min(255, int(round(v))))
+
+
+def _boost_logo_tile(tile: QPixmap, *, saturation: float, contrast: float) -> QPixmap:
     img = tile.toImage().convertToFormat(QImage.Format_ARGB32)
-    w = int(img.width())
-    h = int(img.height())
+    w = img.width()
+    h = img.height()
     for y in range(h):
         for x in range(w):
             c = img.pixelColor(x, y)
-            a = int(c.alpha())
+            a = c.alpha()
             if a <= 0:
                 continue
+            r = float(c.red())
+            g = float(c.green())
+            b = float(c.blue())
 
-            # Contrast lift around midtone.
-            r = int(max(0, min(255, ((int(c.red()) - 128) * 1.18) + 128)))
-            g = int(max(0, min(255, ((int(c.green()) - 128) * 1.18) + 128)))
-            b = int(max(0, min(255, ((int(c.blue()) - 128) * 1.18) + 128)))
-            c2 = QColor(r, g, b, a)
+            # Push chroma and contrast so red/gray remain visible on black.
+            gray = 0.299 * r + 0.587 * g + 0.114 * b
+            r = gray + (r - gray) * saturation
+            g = gray + (g - gray) * saturation
+            b = gray + (b - gray) * saturation
+            r = (r - 128.0) * contrast + 128.0
+            g = (g - 128.0) * contrast + 128.0
+            b = (b - 128.0) * contrast + 128.0
 
-            # Saturation/value boost so red and neutral metallic tones pop.
-            h_hsv, s_hsv, v_hsv, _ = c2.getHsv()
-            if h_hsv >= 0:
-                s_hsv = int(max(0, min(255, (s_hsv * 1.28) + 4)))
-                v_hsv = int(max(0, min(255, v_hsv * 1.08)))
-                c2.setHsv(h_hsv, s_hsv, v_hsv, a)
-            img.setPixelColor(x, y, c2)
+            img.setPixelColor(x, y, QColor(_clamp8(r), _clamp8(g), _clamp8(b), a))
     return QPixmap.fromImage(img)
 
 
-def _make_tiled_banner_pixmap(logo_path: str, *, height_px: int, width_px: int) -> QPixmap:
+def _make_tiled_banner_pixmap(
+    logo_path: str,
+    *,
+    height_px: int,
+    width_px: int,
+    opacity: float = 0.90,
+    saturation: float = 1.55,
+    contrast: float = 1.30,
+) -> QPixmap:
     pm = QPixmap(logo_path) if logo_path else QPixmap()
     if pm.isNull():
         return QPixmap()
     tile = pm.scaledToHeight(max(1, height_px), Qt.SmoothTransformation)
     if tile.isNull():
         return QPixmap()
-    tile = _enhance_logo_tile(tile)
+    tile = _boost_logo_tile(tile, saturation=saturation, contrast=contrast)
     out_w = max(tile.width(), width_px)
     out = QPixmap(out_w, max(1, height_px))
     out.fill(QColor("#000000"))
     p = QPainter(out)
-    p.setRenderHint(QPainter.SmoothPixmapTransform, True)
-    p.setOpacity(0.64)
+    p.setOpacity(max(0.05, min(1.0, float(opacity))))
     x = 0
     while x < out_w:
         p.drawPixmap(x, 0, tile)
         x += max(1, tile.width())
-    p.setCompositionMode(QPainter.CompositionMode_Screen)
-    p.setOpacity(0.22)
+    p.end()
+    return out
+
+
+def _make_letterbox_texture_pixmap(
+    logo_path: str,
+    *,
+    tile_width_px: int = 3200,
+    tile_height_px: int = 220,
+    stripe_height_px: int = 108,
+) -> QPixmap:
+    pm = QPixmap(logo_path) if logo_path else QPixmap()
+    if pm.isNull():
+        return QPixmap()
+    base_tile = pm.scaledToHeight(max(8, int(stripe_height_px)), Qt.SmoothTransformation)
+    if base_tile.isNull():
+        return QPixmap()
+    base_tile = _boost_logo_tile(base_tile, saturation=1.70, contrast=1.38)
+
+    t45 = base_tile.transformed(QTransform().rotate(45.0), Qt.SmoothTransformation)
+    t225 = base_tile.transformed(QTransform().rotate(225.0), Qt.SmoothTransformation)
+    if t45.isNull():
+        t45 = base_tile
+    if t225.isNull():
+        t225 = base_tile
+
+    stripe_h = max(base_tile.height(), t45.height(), t225.height())
+
+    out = QPixmap(max(64, int(tile_width_px)), max(int(tile_height_px), stripe_h + 12))
+    out.fill(QColor("#000000"))
+    p = QPainter(out)
+    p.setOpacity(0.98)
     x = 0
-    while x < out_w:
-        p.drawPixmap(x, 0, tile)
-        x += max(1, tile.width())
+    alt = False
+    while x < out.width():
+        tile = t45 if not alt else t225
+        y = max(0, (out.height() - tile.height()) // 2)
+        p.drawPixmap(x, y, tile)
+        x += max(10, int(tile.width() * 0.55))
+        alt = not alt
     p.end()
     return out
 
@@ -93,7 +137,9 @@ def build_main_layout(
     company_logo_path: str,
     on_open_rpd: Callable[[], None],
     on_open_rpd_file: Callable[[], None],
-    on_commit_all: Callable[[], None],
+    on_prepare_kits: Callable[[], None],
+    on_write_rpd: Callable[[], None],
+    on_build_packet: Callable[[], None],
     on_ml_log: Callable[[], None],
     on_ml_plot: Callable[[], None],
     on_ml_recompute: Callable[[], None],
@@ -109,7 +155,9 @@ def build_main_layout(
     table.setSortingEnabled(True)
     table.setSelectionBehavior(QTableView.SelectRows)
     table.setSelectionMode(QAbstractItemView.ExtendedSelection)
-    table.setMinimumWidth(460)
+    left_pane_width = 760
+    table.setMinimumWidth(left_pane_width)
+    table.setMaximumWidth(left_pane_width)
     table.installEventFilter(window)
     table.viewport().installEventFilter(window)
     table.setStyleSheet(
@@ -121,6 +169,7 @@ def build_main_layout(
         " alternate-background-color: #f4f6f8;"
         " gridline-color: #dde3ea;"
         " border: 1px solid #d1d8e0;"
+        " border-right: 0px;"
         " selection-background-color: #3b82f6;"
         " selection-color: #ffffff;"
         " }"
@@ -140,22 +189,30 @@ def build_main_layout(
 
     pdf_view = PdfPreviewView()
     pdf_view.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-    pdf_view.setStyleSheet("QGraphicsView { background: #2b3038; }")
+    pdf_view.setStyleSheet("QGraphicsView { background: #000000; }")
+    if company_logo_path and os.path.exists(company_logo_path):
+        letterbox_texture = _make_letterbox_texture_pixmap(company_logo_path)
+        if not letterbox_texture.isNull():
+            pdf_view.setBackgroundBrush(QBrush(letterbox_texture))
+    else:
+        pdf_view.setBackgroundBrush(QColor("#000000"))
     window.pdf_view = pdf_view  # type: ignore[attr-defined]
 
     numpad_legend = QLabel(_build_legend_text(canon_kits))
     numpad_legend.setWordWrap(True)
-    numpad_legend.setAlignment(Qt.AlignTop | Qt.AlignLeft)
-    numpad_legend.setMinimumHeight(112)
-    numpad_legend.setMinimumWidth(260)
-    numpad_legend.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+    numpad_legend.setAlignment(Qt.AlignCenter)
+    top_pane_height = max(112, int(numpad_legend.sizeHint().height()))
+    numpad_legend.setMinimumHeight(top_pane_height)
+    numpad_legend.setMinimumWidth(240)
+    numpad_legend.setMaximumWidth(340)
+    numpad_legend.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
     numpad_legend.setStyleSheet(
         "QLabel {"
         " color: #0f1720;"
         " background: #ecf2fa;"
         " border: 1px solid #c6d6ea;"
         " border-radius: 6px;"
-        " padding: 4px;"
+        " padding: 10px 12px;"
         " }"
     )
     numpad_legend.setTextInteractionFlags(Qt.TextBrowserInteraction)
@@ -165,7 +222,7 @@ def build_main_layout(
 
     ml_plot_image = QLabel("Run Plot to populate this pane.")
     ml_plot_image.setAlignment(Qt.AlignCenter)
-    ml_plot_image.setMinimumHeight(132)
+    ml_plot_image.setMinimumHeight(top_pane_height)
     ml_plot_image.setStyleSheet(
         "QLabel {"
         " color: #475569;"
@@ -179,35 +236,46 @@ def build_main_layout(
     ml_plot_scroll.setWidgetResizable(True)
     ml_plot_scroll.setAlignment(Qt.AlignCenter)
     ml_plot_scroll.setFrameShape(QScrollArea.NoFrame)
+    ml_plot_scroll.setMinimumHeight(top_pane_height)
+    ml_plot_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+    ml_plot_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+    ml_plot_scroll.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
     ml_plot_scroll.setWidget(ml_plot_image)
     window.ml_plot_image_label = ml_plot_image  # type: ignore[attr-defined]
     window.ml_plot_scroll = ml_plot_scroll  # type: ignore[attr-defined]
 
+
     open_btn = QPushButton("Open RPD")
     open_btn.clicked.connect(on_open_rpd)
-    commit_btn = QPushButton("Commit")
-    commit_btn.clicked.connect(on_commit_all)
-    ml_log_btn = QPushButton("Log")
+    prep_kits_btn = QPushButton("Prepare Kits")
+    prep_kits_btn.clicked.connect(on_prepare_kits)
+    write_rpd_btn = QPushButton("Write RPD")
+    write_rpd_btn.clicked.connect(on_write_rpd)
+    packet_btn = QPushButton("Build Packet")
+    packet_btn.clicked.connect(on_build_packet)
+    ml_log_btn = QPushButton("ML Log")
     ml_log_btn.clicked.connect(on_ml_log)
-    ml_plot_btn = QPushButton("Plot")
+    ml_plot_btn = QPushButton("ML Plot")
     ml_plot_btn.clicked.connect(on_ml_plot)
-    ml_recompute_btn = QPushButton("Recompute All")
+    ml_recompute_btn = QPushButton("ML Recompute All")
     ml_recompute_btn.clicked.connect(on_ml_recompute)
-    rf_suggest_btn = QPushButton("Suggest")
+    rf_suggest_btn = QPushButton("RF Suggest")
     rf_suggest_btn.clicked.connect(on_rf_suggest)
     clear_btn = QPushButton("Clear kits (selected)")
     clear_btn.clicked.connect(on_clear_selected)
 
     action_buttons = [
         open_btn,
+        prep_kits_btn,
+        write_rpd_btn,
+        packet_btn,
         ml_log_btn,
         ml_plot_btn,
         ml_recompute_btn,
         rf_suggest_btn,
         clear_btn,
-        commit_btn,
     ]
-    primary_buttons = {open_btn, commit_btn}
+    primary_buttons = {open_btn, write_rpd_btn, packet_btn}
     for b in action_buttons:
         b.setMinimumHeight(34)
         b.setMaximumHeight(34)
@@ -242,12 +310,14 @@ def build_main_layout(
     top.setContentsMargins(0, 0, 0, 0)
     top.setSpacing(6)
     top.addWidget(open_btn)
+    top.addWidget(write_rpd_btn)
+    top.addWidget(packet_btn)
+    top.addWidget(prep_kits_btn)
     top.addWidget(ml_log_btn)
     top.addWidget(ml_plot_btn)
     top.addWidget(ml_recompute_btn)
     top.addWidget(rf_suggest_btn)
     top.addWidget(clear_btn)
-    top.addWidget(commit_btn)
     top.addWidget(logo_banner, 1, Qt.AlignRight | Qt.AlignVCenter)
     window.top_bar = top_bar  # type: ignore[attr-defined]
 
@@ -295,6 +365,8 @@ def build_main_layout(
 
     splitter = QSplitter()
     splitter.setChildrenCollapsible(False)
+    splitter.setHandleWidth(0)
+    splitter.setStyleSheet("QSplitter::handle { background: transparent; width: 0px; }")
     splitter.addWidget(table)
     right = QWidget()
     right_lay = QVBoxLayout(right)
@@ -304,19 +376,26 @@ def build_main_layout(
     top_right_lay = QHBoxLayout(top_right)
     top_right_lay.setContentsMargins(0, 0, 0, 0)
     top_right_lay.setSpacing(6)
-    top_right_lay.addWidget(numpad_legend, 2)
+    top_right_lay.addWidget(numpad_legend, 1)
     ml_plot_box = QWidget()
+    ml_plot_box.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
     ml_plot_box_lay = QVBoxLayout(ml_plot_box)
     ml_plot_box_lay.setContentsMargins(0, 0, 0, 0)
     ml_plot_box_lay.setSpacing(4)
     ml_plot_box_lay.addWidget(ml_plot_scroll, 1)
-    top_right_lay.addWidget(ml_plot_box, 3)
-    right_lay.addWidget(top_right, 1)
-    right_lay.addWidget(pdf_view, 2)
+    top_right_lay.addWidget(ml_plot_box, 4)
+    right_lay.addWidget(top_right, 0)
+    right_lay.addWidget(pdf_view, 1)
     splitter.addWidget(right)
     splitter.setStretchFactor(0, 2)
     splitter.setStretchFactor(1, 3)
     splitter.setSizes([760, 1140])
+    try:
+        handle = splitter.handle(1)
+        handle.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+        handle.hide()
+    except Exception:
+        pass
     window.splitter = splitter  # type: ignore[attr-defined]
 
     root = QWidget()
