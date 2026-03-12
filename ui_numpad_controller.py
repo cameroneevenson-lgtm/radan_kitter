@@ -64,6 +64,8 @@ class NumpadController:
         add_shortcut(QKeySequence(Qt.Key_Minus | Qt.KeypadModifier), lambda: self.on_move(-1))
         add_shortcut(QKeySequence(Qt.Key_Plus), lambda: self.on_move(+1))
         add_shortcut(QKeySequence(Qt.Key_Plus | Qt.KeypadModifier), lambda: self.on_move(+1))
+        add_shortcut(QKeySequence(Qt.Key_Up), lambda: self.on_move(-1))
+        add_shortcut(QKeySequence(Qt.Key_Down), lambda: self.on_move(+1))
 
     def handle_key(self, key: int) -> bool:
         if key in (Qt.Key_Return, Qt.Key_Enter):
@@ -75,6 +77,10 @@ class NumpadController:
         if key == Qt.Key_Minus:
             return self.on_move(-1)
         if key == Qt.Key_Plus:
+            return self.on_move(+1)
+        if key == Qt.Key_Up:
+            return self.on_move(-1)
+        if key == Qt.Key_Down:
             return self.on_move(+1)
         return False
 
@@ -137,9 +143,11 @@ class NumpadController:
         kit_idx = model.index(row, 1)
         model.setData(kit_idx, sug, Qt.EditRole)
         model.rows[row].approved = True
+        model.rows[row].pending_suggest = False
         ok_idx = model.index(row, 5)
         rv_idx = model.index(row, 6)
-        model.dataChanged.emit(ok_idx, rv_idx)
+        tl = model.index(row, 0)
+        model.dataChanged.emit(tl, rv_idx)
         self._preview_current()
         return True
 
@@ -147,6 +155,10 @@ class NumpadController:
         model = self._model()
         if model is None or self._table_is_editing():
             return False
+        try:
+            self._table.setFocus(Qt.ShortcutFocusReason)
+        except Exception:
+            pass
         row = self._current_row(model)
         if row < 0:
             return False

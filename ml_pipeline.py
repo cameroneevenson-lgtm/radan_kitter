@@ -69,15 +69,13 @@ TRACKING_COLS = [
 
 DXF_SIGNAL_COLS = [
     "dxf_perimeter_area_ratio",
-    "dxf_concavity_ratio",
     "dxf_internal_void_area_ratio",
     "dxf_entity_count",
     "dxf_arc_count",
-    "dxf_longest_edge_ratio",
     "dxf_bbox_aspect_ratio",
     "dxf_fill_ratio",
-    "dxf_hole_count",
     "dxf_edge_length_cv",
+    "dxf_edge_band_entity_ratio",
     "dxf_arc_length_ratio",
     "dxf_exterior_notch_count",
     "dxf_has_interior_polylines",
@@ -87,7 +85,6 @@ DXF_SIGNAL_COLS = [
 PDF_SIGNAL_COLS = [
     "pdf_dim_density",
     "pdf_red_dim_density",
-    "pdf_text_to_geom_ratio",
     "pdf_bendline_score",
     "pdf_bendline_entity_density",
 ]
@@ -966,6 +963,26 @@ def _seg_len(a: Tuple[float, float], b: Tuple[float, float]) -> float:
     return math.hypot(b[0] - a[0], b[1] - a[1])
 
 
+def _point_to_segment_distance(
+    p: Tuple[float, float],
+    a: Tuple[float, float],
+    b: Tuple[float, float],
+) -> float:
+    ax, ay = float(a[0]), float(a[1])
+    bx, by = float(b[0]), float(b[1])
+    px, py = float(p[0]), float(p[1])
+    vx = bx - ax
+    vy = by - ay
+    den = (vx * vx) + (vy * vy)
+    if den <= 1e-18:
+        return math.hypot(px - ax, py - ay)
+    t = ((px - ax) * vx + (py - ay) * vy) / den
+    t = 0.0 if t < 0.0 else 1.0 if t > 1.0 else t
+    cx = ax + t * vx
+    cy = ay + t * vy
+    return math.hypot(px - cx, py - cy)
+
+
 def _seg_angle_deg(a: Tuple[float, float], b: Tuple[float, float]) -> float:
     ang = math.degrees(math.atan2(b[1] - a[1], b[0] - a[0]))
     ang = abs(ang) % 180.0
@@ -993,6 +1010,26 @@ def _circle_points(cx: float, cy: float, r: float, steps: int = 48) -> List[Tupl
     n = max(12, int(steps))
     for i in range(n):
         t = 2.0 * math.pi * (i / n)
+        out.append((cx + r * math.cos(t), cy + r * math.sin(t)))
+    return out
+
+
+def _arc_points(
+    cx: float,
+    cy: float,
+    r: float,
+    start_deg: float,
+    end_deg: float,
+    steps: int = 24,
+) -> List[Tuple[float, float]]:
+    out: List[Tuple[float, float]] = []
+    if r <= 1e-9:
+        return out
+    span = _arc_span_deg(start_deg, end_deg)
+    n = max(6, int(max(6.0, float(steps) * (span / 360.0))))
+    for i in range(n + 1):
+        t_deg = float(start_deg) + (float(span) * (float(i) / float(n)))
+        t = math.radians(t_deg)
         out.append((cx + r * math.cos(t), cy + r * math.sin(t)))
     return out
 
@@ -1082,7 +1119,6 @@ def _compute_dxf_features(dxf_path: str) -> Dict[str, float]:
     out["dxf_entity_count"] = _safe_int(len(entities))
 
     arc_entity_count = 0
-    max_line_seg_len = 0.0
     all_line_seg_lens: List[float] = []
 
     colors: set[str] = set()
@@ -1096,6 +1132,7 @@ def _compute_dxf_features(dxf_path: str) -> Dict[str, float]:
     closed_loops: List[List[Tuple[float, float]]] = []
     open_polys: List[List[Tuple[float, float]]] = []
     cloud_points: List[Tuple[float, float]] = []
+    entity_samples: List[List[Tuple[float, float]]] = []
     total_geom_len = 0.0
     arc_geom_len = 0.0
 
@@ -1108,6 +1145,7 @@ def _compute_dxf_features(dxf_path: str) -> Dict[str, float]:
                 if r > 1e-9:
                     cpts = _circle_points(float(c.x), float(c.y), r)
                     cloud_points.extend(cpts)
+                    entity_samples.append(cpts)
                     closed_loops.append(cpts)
                     circ_len = 2.0 * math.pi * r
                     total_geom_len += circ_len
@@ -1119,12 +1157,19 @@ def _compute_dxf_features(dxf_path: str) -> Dict[str, float]:
         if t == "ARC":
             arc_entity_count += 1
             try:
+                c = e.dxf.center
                 r = abs(float(e.dxf.radius))
                 if r > 1e-9:
-                    span_deg = _arc_span_deg(float(e.dxf.start_angle), float(e.dxf.end_angle))
+                    start_a = float(e.dxf.start_angle)
+                    end_a = float(e.dxf.end_angle)
+                    span_deg = _arc_span_deg(start_a, end_a)
                     alen = math.radians(span_deg) * r
                     total_geom_len += alen
                     arc_geom_len += alen
+                    apts = _arc_points(float(c.x), float(c.y), r, start_a, end_a)
+                    if apts:
+                        cloud_points.extend(apts)
+                        entity_samples.append(apts)
             except Exception:
                 pass
             continue
@@ -1133,6 +1178,7 @@ def _compute_dxf_features(dxf_path: str) -> Dict[str, float]:
         if not pts or len(pts) < 2:
             continue
         cloud_points.extend(pts)
+        entity_samples.append(pts)
         is_closed = False
         try:
             if t == "LWPOLYLINE":
@@ -1148,8 +1194,6 @@ def _compute_dxf_features(dxf_path: str) -> Dict[str, float]:
             total_geom_len += seg_len
             if seg_len > 1e-9:
                 all_line_seg_lens.append(seg_len)
-            if seg_len > max_line_seg_len:
-                max_line_seg_len = seg_len
 
         if is_closed and len(pts) >= 3:
             closed_loops.append(pts)
@@ -1161,11 +1205,10 @@ def _compute_dxf_features(dxf_path: str) -> Dict[str, float]:
     else:
         out["dxf_arc_length_ratio"] = _safe_float(0.0)
     out["dxf_arc_count"] = _safe_int(arc_entity_count)
-    out["dxf_longest_edge_ratio"] = _safe_float(0.0)
     out["dxf_bbox_aspect_ratio"] = _safe_float(0.0)
     out["dxf_fill_ratio"] = _safe_float(0.0)
-    out["dxf_hole_count"] = _safe_int(0)
     out["dxf_edge_length_cv"] = _safe_float(0.0)
+    out["dxf_edge_band_entity_ratio"] = _safe_float(0.0)
     if len(cloud_points) >= 2:
         bx0, by0, bx1, by1 = _bbox_from_points(cloud_points)
         out["dxf_bbox_aspect_ratio"] = _safe_float(_bbox_aspect(bx0, by0, bx1, by1))
@@ -1185,11 +1228,9 @@ def _compute_dxf_features(dxf_path: str) -> Dict[str, float]:
         hull_perim = _poly_perimeter(hull)
         if hull_area > 1e-9 and hull_perim > 1e-9:
             out["dxf_perimeter_area_ratio"] = _safe_float(hull_perim / hull_area)
-            out["dxf_concavity_ratio"] = _safe_float(0.0)  # hull is fully convex by definition
             out["dxf_internal_void_area_ratio"] = _safe_float(0.0)
             out["dxf_has_interior_polylines"] = _safe_int(0)
             out["dxf_exterior_notch_count"] = _safe_int(0)
-            out["dxf_longest_edge_ratio"] = _safe_float(_clamp01(max_line_seg_len / hull_perim))
             hx0, hy0, hx1, hy1 = _bbox_from_points(hull)
             hbbox_area = max(0.0, hx1 - hx0) * max(0.0, hy1 - hy0)
             if hbbox_area > 1e-9:
@@ -1205,21 +1246,16 @@ def _compute_dxf_features(dxf_path: str) -> Dict[str, float]:
         bbox_perim = 2.0 * (w + h)
         if bbox_area > 1e-9 and bbox_perim > 1e-9:
             out["dxf_perimeter_area_ratio"] = _safe_float(bbox_perim / bbox_area)
-            out["dxf_concavity_ratio"] = _safe_float(0.0)
             out["dxf_internal_void_area_ratio"] = _safe_float(0.0)
             out["dxf_has_interior_polylines"] = _safe_int(0)
             out["dxf_exterior_notch_count"] = _safe_int(0)
-            out["dxf_longest_edge_ratio"] = _safe_float(_clamp01(max_line_seg_len / bbox_perim))
             return out
 
     if not closed_loops:
         out["dxf_perimeter_area_ratio"] = _safe_float(0.0)
-        out["dxf_concavity_ratio"] = _safe_float(0.0)
         out["dxf_internal_void_area_ratio"] = _safe_float(0.0)
         out["dxf_has_interior_polylines"] = _safe_int(0)
         out["dxf_exterior_notch_count"] = _safe_int(0)
-        if total_geom_len > 1e-9:
-            out["dxf_longest_edge_ratio"] = _safe_float(_clamp01(max_line_seg_len / total_geom_len))
         return out
 
     loop_areas = [(float(_poly_area_abs(lp)), lp) for lp in closed_loops]
@@ -1239,14 +1275,10 @@ def _compute_dxf_features(dxf_path: str) -> Dict[str, float]:
             if outer_area > 1e-9 and abs(area_i - outer_area) / outer_area <= 0.01:
                 continue
             interior_loop_areas.append(float(area_i))
-    out["dxf_hole_count"] = _safe_int(len(interior_loop_areas))
-
     if outer_area > 1e-9:
         out["dxf_perimeter_area_ratio"] = _safe_float(outer_perim / outer_area)
         void_area = sum(interior_loop_areas)
         out["dxf_internal_void_area_ratio"] = _safe_float(void_area / outer_area)
-        if outer_perim > 1e-9:
-            out["dxf_longest_edge_ratio"] = _safe_float(_clamp01(max_line_seg_len / outer_perim))
         bx0, by0, bx1, by1 = _bbox_from_points(outer_loop)
         bbox_area = max(0.0, bx1 - bx0) * max(0.0, by1 - by0)
         out["dxf_bbox_aspect_ratio"] = _safe_float(_bbox_aspect(bx0, by0, bx1, by1))
@@ -1259,7 +1291,6 @@ def _compute_dxf_features(dxf_path: str) -> Dict[str, float]:
         hull_perim = _poly_perimeter(hull)
         if hull_area > 1e-9 and hull_perim > 1e-9:
             out["dxf_perimeter_area_ratio"] = _safe_float(hull_perim / hull_area)
-            out["dxf_longest_edge_ratio"] = _safe_float(_clamp01(max_line_seg_len / hull_perim))
             if len(hull) >= 2:
                 hx0, hy0, hx1, hy1 = _bbox_from_points(hull)
                 hbbox_area = max(0.0, hx1 - hx0) * max(0.0, hy1 - hy0)
@@ -1269,47 +1300,6 @@ def _compute_dxf_features(dxf_path: str) -> Dict[str, float]:
         else:
             out["dxf_perimeter_area_ratio"] = _safe_float(0.0)
         out["dxf_internal_void_area_ratio"] = _safe_float(0.0)
-
-    hull = _convex_hull(cloud_points)
-    hull_area = _poly_area_abs(hull)
-    hull_perim = _poly_perimeter(hull)
-
-    # Concavity discriminator:
-    # - Primary: concave-vertex density on outer loop (less saturation).
-    # - Secondary: perimeter deficit vs convex hull.
-    # Keep output in [0,1] for backward compatibility.
-    perim_deficit = 0.0
-    if outer_perim > 1e-9 and hull_perim > 1e-9:
-        perim_deficit = float(_clamp01((outer_perim - hull_perim) / outer_perim))
-    elif outer_area > 1e-9 and hull_area > 1e-9:
-        convexity = outer_area / hull_area
-        perim_deficit = float(_clamp01(1.0 - convexity))
-
-    concave_vertex_ratio = 0.0
-    signed_area = _poly_area_signed(outer_loop)
-    if abs(signed_area) > 1e-12 and len(outer_loop) >= 4:
-        ccw = signed_area > 0.0
-        concave_count = 0
-        m = len(outer_loop)
-        for i in range(m):
-            p_prev = outer_loop[i - 1]
-            p_cur = outer_loop[i]
-            p_next = outer_loop[(i + 1) % m]
-            v1x = p_cur[0] - p_prev[0]
-            v1y = p_cur[1] - p_prev[1]
-            v2x = p_next[0] - p_cur[0]
-            v2y = p_next[1] - p_cur[1]
-            if math.hypot(v1x, v1y) <= 1e-9 or math.hypot(v2x, v2y) <= 1e-9:
-                continue
-            cross = v1x * v2y - v1y * v2x
-            is_concave = (cross < -1e-12) if ccw else (cross > 1e-12)
-            if is_concave:
-                concave_count += 1
-        concave_vertex_ratio = float(concave_count) / float(max(1, len(outer_loop)))
-
-    out["dxf_concavity_ratio"] = _safe_float(
-        _clamp01(0.70 * concave_vertex_ratio + 0.30 * perim_deficit)
-    )
 
     # Legacy column name retained for backward compatibility, but value is now
     # an interior polyline COUNT (not boolean):
@@ -1387,20 +1377,55 @@ def _compute_dxf_features(dxf_path: str) -> Dict[str, float]:
                 notch_count = max(notch_count, concave_ortho // 2)
     out["dxf_exterior_notch_count"] = _safe_int(notch_count)
 
+    # Edge-band entity ratio:
+    # geometry entities with >=50% sampled points near the exterior profile.
+    if bbox_diag > 1e-9 and segs and entity_samples:
+        band_w = 0.03 * bbox_diag
+        near_entities = 0
+        used_entities = 0
+        for pts in entity_samples:
+            if not pts:
+                continue
+            sample_pts = pts
+            if len(sample_pts) > 24:
+                step = max(1, int(len(sample_pts) / 24))
+                sample_pts = sample_pts[::step]
+            near_pts = 0
+            valid_pts = 0
+            for p in sample_pts:
+                valid_pts += 1
+                is_near = False
+                for (a, b) in segs:
+                    if _point_to_segment_distance(p, a, b) <= band_w:
+                        is_near = True
+                        break
+                if is_near:
+                    near_pts += 1
+            if valid_pts <= 0:
+                continue
+            used_entities += 1
+            if (float(near_pts) / float(valid_pts)) >= 0.5:
+                near_entities += 1
+        if used_entities > 0:
+            out["dxf_edge_band_entity_ratio"] = _safe_float(
+                _clamp01(float(near_entities) / float(used_entities))
+            )
+
     # Keep core geometry ratios numeric for downstream tooling / CSV inspection.
     for col in (
         "dxf_perimeter_area_ratio",
-        "dxf_concavity_ratio",
         "dxf_internal_void_area_ratio",
         "dxf_bbox_aspect_ratio",
         "dxf_fill_ratio",
         "dxf_edge_length_cv",
+        "dxf_edge_band_entity_ratio",
     ):
         v = _safe_float(out.get(col))
         out[col] = float(v) if math.isfinite(v) else 0.0
     # Void area ratio should be bounded [0, 1].
     out["dxf_internal_void_area_ratio"] = _safe_float(_clamp01(float(out["dxf_internal_void_area_ratio"])))
     out["dxf_fill_ratio"] = _safe_float(_clamp01(float(out["dxf_fill_ratio"])))
+    out["dxf_edge_band_entity_ratio"] = _safe_float(_clamp01(float(out["dxf_edge_band_entity_ratio"])))
 
     return out
 
@@ -1498,7 +1523,6 @@ def _compute_pdf_features_vector(pdf_path: str) -> Dict[str, float]:
                         bend_geom_area += (bw * bh)
                     except Exception:
                         pass
-        total_chars = 0
         dim_chars = 0
         red_dim_chars = 0
         try:
@@ -1513,14 +1537,12 @@ def _compute_pdf_features_vector(pdf_path: str) -> Dict[str, float]:
                     n_chars += 1
             if n_chars <= 0:
                 continue
-            total_chars += n_chars
             layer = str(t.get("layer") or "")
             if _layer_matches(layer, "dimension", "dim"):
                 dim_chars += n_chars
                 if _is_red(t.get("color")):
                     red_dim_chars += n_chars
 
-        out["pdf_text_to_geom_ratio"] = _safe_float(total_chars / max(1.0, float(total_geom)))
         out["pdf_bendline_score"] = _safe_float(bend_geom / max(1.0, float(total_geom)))
         # Keep column name, but use bend-occupied-area normalization to reduce
         # coupling with global geometry complexity.

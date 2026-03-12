@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Callable, Dict, List, Tuple
 
 from PySide6.QtCore import Qt, QAbstractTableModel, QModelIndex
+from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QComboBox, QSpinBox, QStyledItemDelegate
 
 from rpd_io import PartRow
@@ -96,6 +97,11 @@ class PartsModel(QAbstractTableModel):
         r = self.rows[idx.row()]
         c = idx.column()
 
+        if role == Qt.BackgroundRole:
+            if bool(getattr(r, "pending_suggest", False)):
+                return QColor("#fff2a8")
+            return None
+
         if role in (Qt.DisplayRole, Qt.EditRole):
             if c == 0:
                 return r.part
@@ -134,6 +140,7 @@ class PartsModel(QAbstractTableModel):
             if kit_label in self._kit_to_priority:
                 r.priority = self._kit_to_priority[kit_label]
             r.approved = False
+            r.pending_suggest = False
             self.dataChanged.emit(idx, idx)
             pri_idx = self.index(idx.row(), 2)
             self.dataChanged.emit(pri_idx, pri_idx)
@@ -153,8 +160,9 @@ class PartsModel(QAbstractTableModel):
         for row, (k, conf) in zip(self.rows, preds):
             row.suggested_kit = k or ""
             row.suggested_conf = float(conf or 0.0)
+            row.pending_suggest = False
         if self.rowCount():
-            tl = self.index(0, 3)
+            tl = self.index(0, 0)
             br = self.index(self.rowCount() - 1, 6)
             self.dataChanged.emit(tl, br)
 
@@ -189,4 +197,3 @@ class PartsModel(QAbstractTableModel):
         self.layoutAboutToBeChanged.emit()
         self.rows.sort(key=key, reverse=reverse)
         self.layoutChanged.emit()
-

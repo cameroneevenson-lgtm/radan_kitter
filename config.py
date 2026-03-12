@@ -27,7 +27,18 @@ KIT_ABBR = {
     "Flat Parts": "FLT",
     "Balance": "BAL",
 }
-KIT_TO_PRIORITY = {k: str(i + 1) for i, k in enumerate(CANON_KITS)}  # 1..9
+# Shared priorities are allowed (for example Bottoms and Wheel Wells both = 1).
+KIT_TO_PRIORITY = {
+    "Bottoms": "1",
+    "Sides": "2",
+    "Tops": "3",
+    "Backs": "4",
+    "Tall Sides": "5",
+    "Brackets": "6",
+    "Wheel Wells": "1",
+    "Walls": "8",
+    "Flat Parts": "9",
+}
 BALANCE_KIT = "Balance"
 
 # Directory naming
@@ -53,9 +64,9 @@ HOT_RELOAD_REQUEST_PATH = os.path.join(GLOBAL_RUNTIME_DIR, "hot_reload_request.j
 HOT_RELOAD_RESPONSE_PATH = os.path.join(GLOBAL_RUNTIME_DIR, "hot_reload_response.json")
 
 # Temporary packet debug controls.
-# Enabled now to keep packet output local/visible during layer-0 debugging.
-PACKET_TEMP_LOCAL_OUTPUT_ENABLED = True
-PACKET_TEMP_LOCAL_OUTPUT_DIR = os.path.join(APP_DIR, "_packet_debug_out")
+# Keep local output override disabled in normal operation.
+PACKET_TEMP_LOCAL_OUTPUT_ENABLED = False
+PACKET_TEMP_LOCAL_OUTPUT_DIR = "_packet_debug_out"
 PACKET_TEMP_FIRST_PAGE_ONLY = False
 # Temporary packet page cap for debug iteration. Set <=0 to disable cap.
 PACKET_TEMP_MAX_PAGES = 0
@@ -75,22 +86,19 @@ ENG_RELEASE_MAP: List[Tuple[str, str]] = [
 # ML feature schema
 ML_SIGNAL_COLS = [
     "dxf_perimeter_area_ratio",
-    "dxf_concavity_ratio",
     "dxf_internal_void_area_ratio",
     "dxf_entity_count",
     "dxf_arc_count",
-    "dxf_longest_edge_ratio",
     "dxf_bbox_aspect_ratio",
     "dxf_fill_ratio",
-    "dxf_hole_count",
     "dxf_edge_length_cv",
+    "dxf_edge_band_entity_ratio",
     "dxf_arc_length_ratio",
     "dxf_exterior_notch_count",
     "dxf_has_interior_polylines",
     "dxf_color_count",
     "pdf_dim_density",
     "pdf_red_dim_density",
-    "pdf_text_to_geom_ratio",
     "pdf_bendline_score",
     "pdf_bendline_entity_density",
 ]

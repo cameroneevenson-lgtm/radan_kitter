@@ -26,23 +26,23 @@ def build_numpad_legend_html(
         # Keep full kit name visible in legend (3-letter abbreviations were ambiguous).
         label = kit.strip() or kit_abbr.get(kit, kit[:3].upper())
         base = (
-            "width:108px; min-width:108px; border:2px solid #9eb1c2; border-radius:5px;"
+            "width:25%; border:2px solid #9eb1c2; border-radius:5px;"
             "background:#f6f9fc; color:#16222d; padding:0;"
         )
-        inner_pad = "padding:3px 5px;"
+        inner_pad = "padding:6px 6px;"
         if kit_idx == selected_idx and kit_idx == highlight_idx:
             base = (
-                "width:108px; min-width:108px; border:2px solid #d8ba5a; border-radius:5px;"
+                "width:25%; border:2px solid #d8ba5a; border-radius:5px;"
                 "background:#2c4f7b; color:#f4f8ff; padding:0;"
             )
         elif kit_idx == selected_idx:
             base = (
-                "width:108px; min-width:108px; border:2px solid #7db2ff; border-radius:5px;"
+                "width:25%; border:2px solid #7db2ff; border-radius:5px;"
                 "background:#2f6feb; color:#f4f8ff; padding:0;"
             )
         elif kit_idx == highlight_idx:
             base = (
-                "width:108px; min-width:108px; border:2px solid #8f7800; border-radius:5px;"
+                "width:25%; border:2px solid #8f7800; border-radius:5px;"
                 "background:#ffe16b; color:#121212; padding:0;"
             )
         link = (
@@ -59,7 +59,7 @@ def build_numpad_legend_html(
         )
 
     op = (
-        "min-width:74px; border:1px solid #9eb1c2; border-radius:5px;"
+        "width:25%; border:1px solid #9eb1c2; border-radius:5px;"
         "background:#eef3f8; color:#16222d; padding:0;"
     )
 
@@ -73,8 +73,8 @@ def build_numpad_legend_html(
         )
 
     return (
-        "<div style=\"text-align:center;\">"
-        "<table style=\"margin:4px auto; border-collapse:separate; border-spacing:4px;\">"
+        "<div style=\"width:100%; height:100%; text-align:center;\">"
+        "<table style=\"width:100%; height:100%; margin:0; border-collapse:separate; border-spacing:6px; table-layout:fixed;\">"
         f"<tr>{cell(0)}{cell(1)}{cell(2)}{op_cell('move_up', '-', 'Row Up')}</tr>"
         f"<tr>{cell(3)}{cell(4)}{cell(5)}<td rowspan=\"2\" style=\"{op}\"><a href=\"move_down\" style=\"display:block; width:100%; min-height:74px; padding:4px 6px; text-decoration:none; color:inherit;\"><b>+</b><br/><span style=\"font-size:10px;\">Row Down</span></a></td></tr>"
         f"<tr>{cell(6)}{cell(7)}{cell(8)}</tr>"

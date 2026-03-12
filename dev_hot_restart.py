@@ -201,6 +201,58 @@ def _warn_and_ask_restart(exit_code: int) -> bool:
         return False
 
 
+def _warn_and_ask_hot_relaunch(changed_count: int, timeout_sec: float) -> bool:
+    """
+    Return True to restart now, False to reject restart and keep running.
+    If the timeout dialog isn't available, default to restart to preserve
+    existing auto-reload behavior.
+    """
+    try:
+        title = "RADAN Kitter - Hot Reload Decision"
+        msg = (
+            f"{int(max(0, changed_count))} file(s) changed.\n\n"
+            "No in-app decision was received.\n"
+            "Press Retry to restart now, or Cancel to keep this session.\n\n"
+            f"Auto-restart in {int(max(1.0, timeout_sec))} seconds."
+        )
+
+        MB_RETRYCANCEL = 0x00000005
+        MB_ICONWARNING = 0x00000030
+        MB_TOPMOST = 0x00040000
+        IDRETRY = 4
+        IDTIMEOUT = 32000
+
+        # Use a timed dialog when available.
+        fn = getattr(ctypes.windll.user32, "MessageBoxTimeoutW", None)
+        if fn is not None:
+            res = fn(
+                0,
+                msg,
+                title,
+                MB_RETRYCANCEL | MB_ICONWARNING | MB_TOPMOST,
+                0,
+                int(max(1.0, timeout_sec) * 1000),
+            )
+            if int(res) == IDRETRY:
+                return True
+            if int(res) in (0, 2):
+                return False
+            if int(res) == IDTIMEOUT:
+                return True
+
+        # Fallback non-timed dialog.
+        res = ctypes.windll.user32.MessageBoxW(
+            0,
+            msg,
+            title,
+            MB_RETRYCANCEL | MB_ICONWARNING | MB_TOPMOST,
+        )
+        return int(res) == IDRETRY
+    except Exception:
+        # Preserve old behavior if warning UI cannot be shown.
+        return True
+
+
 def _acquire_single_instance_lock(root: str):
     """
     Acquire a process-wide mutex so only one hot-reload launcher runs per app root.
@@ -344,13 +396,14 @@ def main() -> int:
                 waited_for = max(0.0, now - request_posted_at)
                 if awaiting_user_decision and request_posted_at > 0.0 and waited_for >= decision_timeout:
                     batch_count = len(pending_changes)
-                    print(
-                        f"No in-app decision after {decision_timeout:.0f}s; "
-                        f"forcing reload ({batch_count} file(s))."
-                    )
-                    _terminate_process(proc)
-                    proc = _spawn_app(py_exe, main_py, app_args, cwd=root)
-                    last_spawn_at = time.time()
+                    print(f"No in-app decision after {decision_timeout:.0f}s ({batch_count} file(s)).")
+                    if _warn_and_ask_hot_relaunch(batch_count, decision_timeout):
+                        print(f"Hot relaunch accepted in launcher; restarting app ({batch_count} file(s)).")
+                        _terminate_process(proc)
+                        proc = _spawn_app(py_exe, main_py, app_args, cwd=root)
+                        last_spawn_at = time.time()
+                    else:
+                        print("Hot relaunch rejected in launcher; keeping current session.")
                     pending_restart = False
                     awaiting_user_decision = False
                     current_request_id = ""

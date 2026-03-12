@@ -3,6 +3,8 @@
 Date: 2026-03-04  
 Repo: `c:\Tools\radan_kitter_controlled_migration`
 
+Related doc: see [RADAN_API_QUICK_INDEX.md](RADAN_API_QUICK_INDEX.md) for a topic-by-page index of `RADAN API Programming Help.pdf`.
+
 ## Scope
 
 Inspected local COM/registry registration to identify what RADAN automation interfaces are available.

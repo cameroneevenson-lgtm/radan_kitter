@@ -3,13 +3,14 @@ from __future__ import annotations
 from typing import Callable, Sequence
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor, QPainter, QPixmap
+from PySide6.QtGui import QColor, QImage, QPainter, QPixmap
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QHBoxLayout,
     QLabel,
     QMainWindow,
     QPushButton,
+    QScrollArea,
     QSizePolicy,
     QSplitter,
     QTableView,
@@ -28,6 +29,35 @@ def _build_legend_text(canon_kits: Sequence[str]) -> str:
     )
 
 
+def _enhance_logo_tile(tile: QPixmap) -> QPixmap:
+    if tile.isNull():
+        return tile
+    img = tile.toImage().convertToFormat(QImage.Format_ARGB32)
+    w = int(img.width())
+    h = int(img.height())
+    for y in range(h):
+        for x in range(w):
+            c = img.pixelColor(x, y)
+            a = int(c.alpha())
+            if a <= 0:
+                continue
+
+            # Contrast lift around midtone.
+            r = int(max(0, min(255, ((int(c.red()) - 128) * 1.18) + 128)))
+            g = int(max(0, min(255, ((int(c.green()) - 128) * 1.18) + 128)))
+            b = int(max(0, min(255, ((int(c.blue()) - 128) * 1.18) + 128)))
+            c2 = QColor(r, g, b, a)
+
+            # Saturation/value boost so red and neutral metallic tones pop.
+            h_hsv, s_hsv, v_hsv, _ = c2.getHsv()
+            if h_hsv >= 0:
+                s_hsv = int(max(0, min(255, (s_hsv * 1.28) + 4)))
+                v_hsv = int(max(0, min(255, v_hsv * 1.08)))
+                c2.setHsv(h_hsv, s_hsv, v_hsv, a)
+            img.setPixelColor(x, y, c2)
+    return QPixmap.fromImage(img)
+
+
 def _make_tiled_banner_pixmap(logo_path: str, *, height_px: int, width_px: int) -> QPixmap:
     pm = QPixmap(logo_path) if logo_path else QPixmap()
     if pm.isNull():
@@ -35,11 +65,19 @@ def _make_tiled_banner_pixmap(logo_path: str, *, height_px: int, width_px: int) 
     tile = pm.scaledToHeight(max(1, height_px), Qt.SmoothTransformation)
     if tile.isNull():
         return QPixmap()
+    tile = _enhance_logo_tile(tile)
     out_w = max(tile.width(), width_px)
     out = QPixmap(out_w, max(1, height_px))
     out.fill(QColor("#000000"))
     p = QPainter(out)
-    p.setOpacity(0.36)
+    p.setRenderHint(QPainter.SmoothPixmapTransform, True)
+    p.setOpacity(0.64)
+    x = 0
+    while x < out_w:
+        p.drawPixmap(x, 0, tile)
+        x += max(1, tile.width())
+    p.setCompositionMode(QPainter.CompositionMode_Screen)
+    p.setOpacity(0.22)
     x = 0
     while x < out_w:
         p.drawPixmap(x, 0, tile)
@@ -55,9 +93,7 @@ def build_main_layout(
     company_logo_path: str,
     on_open_rpd: Callable[[], None],
     on_open_rpd_file: Callable[[], None],
-    on_prepare_kits: Callable[[], None],
-    on_write_rpd: Callable[[], None],
-    on_build_packet: Callable[[], None],
+    on_commit_all: Callable[[], None],
     on_ml_log: Callable[[], None],
     on_ml_plot: Callable[[], None],
     on_ml_recompute: Callable[[], None],
@@ -109,15 +145,17 @@ def build_main_layout(
 
     numpad_legend = QLabel(_build_legend_text(canon_kits))
     numpad_legend.setWordWrap(True)
-    numpad_legend.setAlignment(Qt.AlignCenter)
+    numpad_legend.setAlignment(Qt.AlignTop | Qt.AlignLeft)
     numpad_legend.setMinimumHeight(112)
+    numpad_legend.setMinimumWidth(260)
+    numpad_legend.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
     numpad_legend.setStyleSheet(
         "QLabel {"
         " color: #0f1720;"
         " background: #ecf2fa;"
         " border: 1px solid #c6d6ea;"
         " border-radius: 6px;"
-        " padding: 10px 12px;"
+        " padding: 4px;"
         " }"
     )
     numpad_legend.setTextInteractionFlags(Qt.TextBrowserInteraction)
@@ -125,37 +163,51 @@ def build_main_layout(
     numpad_legend.linkActivated.connect(on_numpad_legend_action)
     window.numpad_legend = numpad_legend  # type: ignore[attr-defined]
 
+    ml_plot_image = QLabel("Run Plot to populate this pane.")
+    ml_plot_image.setAlignment(Qt.AlignCenter)
+    ml_plot_image.setMinimumHeight(132)
+    ml_plot_image.setStyleSheet(
+        "QLabel {"
+        " color: #475569;"
+        " background: #ffffff;"
+        " border: 1px solid #d7e0eb;"
+        " border-radius: 6px;"
+        " padding: 4px;"
+        " }"
+    )
+    ml_plot_scroll = QScrollArea()
+    ml_plot_scroll.setWidgetResizable(True)
+    ml_plot_scroll.setAlignment(Qt.AlignCenter)
+    ml_plot_scroll.setFrameShape(QScrollArea.NoFrame)
+    ml_plot_scroll.setWidget(ml_plot_image)
+    window.ml_plot_image_label = ml_plot_image  # type: ignore[attr-defined]
+    window.ml_plot_scroll = ml_plot_scroll  # type: ignore[attr-defined]
+
     open_btn = QPushButton("Open RPD")
     open_btn.clicked.connect(on_open_rpd)
-    prep_kits_btn = QPushButton("Prepare Kits")
-    prep_kits_btn.clicked.connect(on_prepare_kits)
-    write_rpd_btn = QPushButton("Write RPD")
-    write_rpd_btn.clicked.connect(on_write_rpd)
-    packet_btn = QPushButton("Build Packet")
-    packet_btn.clicked.connect(on_build_packet)
-    ml_log_btn = QPushButton("ML Log")
+    commit_btn = QPushButton("Commit")
+    commit_btn.clicked.connect(on_commit_all)
+    ml_log_btn = QPushButton("Log")
     ml_log_btn.clicked.connect(on_ml_log)
-    ml_plot_btn = QPushButton("ML Plot")
+    ml_plot_btn = QPushButton("Plot")
     ml_plot_btn.clicked.connect(on_ml_plot)
-    ml_recompute_btn = QPushButton("ML Recompute All")
+    ml_recompute_btn = QPushButton("Recompute All")
     ml_recompute_btn.clicked.connect(on_ml_recompute)
-    rf_suggest_btn = QPushButton("RF Suggest")
+    rf_suggest_btn = QPushButton("Suggest")
     rf_suggest_btn.clicked.connect(on_rf_suggest)
     clear_btn = QPushButton("Clear kits (selected)")
     clear_btn.clicked.connect(on_clear_selected)
 
     action_buttons = [
         open_btn,
-        prep_kits_btn,
-        write_rpd_btn,
-        packet_btn,
         ml_log_btn,
         ml_plot_btn,
         ml_recompute_btn,
         rf_suggest_btn,
         clear_btn,
+        commit_btn,
     ]
-    primary_buttons = {open_btn, write_rpd_btn, packet_btn}
+    primary_buttons = {open_btn, commit_btn}
     for b in action_buttons:
         b.setMinimumHeight(34)
         b.setMaximumHeight(34)
@@ -190,14 +242,12 @@ def build_main_layout(
     top.setContentsMargins(0, 0, 0, 0)
     top.setSpacing(6)
     top.addWidget(open_btn)
-    top.addWidget(write_rpd_btn)
-    top.addWidget(packet_btn)
-    top.addWidget(prep_kits_btn)
     top.addWidget(ml_log_btn)
     top.addWidget(ml_plot_btn)
     top.addWidget(ml_recompute_btn)
     top.addWidget(rf_suggest_btn)
     top.addWidget(clear_btn)
+    top.addWidget(commit_btn)
     top.addWidget(logo_banner, 1, Qt.AlignRight | Qt.AlignVCenter)
     window.top_bar = top_bar  # type: ignore[attr-defined]
 
@@ -250,8 +300,19 @@ def build_main_layout(
     right_lay = QVBoxLayout(right)
     right_lay.setContentsMargins(0, 0, 0, 0)
     right_lay.setSpacing(4)
-    right_lay.addWidget(numpad_legend, 0)
-    right_lay.addWidget(pdf_view, 1)
+    top_right = QWidget()
+    top_right_lay = QHBoxLayout(top_right)
+    top_right_lay.setContentsMargins(0, 0, 0, 0)
+    top_right_lay.setSpacing(6)
+    top_right_lay.addWidget(numpad_legend, 2)
+    ml_plot_box = QWidget()
+    ml_plot_box_lay = QVBoxLayout(ml_plot_box)
+    ml_plot_box_lay.setContentsMargins(0, 0, 0, 0)
+    ml_plot_box_lay.setSpacing(4)
+    ml_plot_box_lay.addWidget(ml_plot_scroll, 1)
+    top_right_lay.addWidget(ml_plot_box, 3)
+    right_lay.addWidget(top_right, 1)
+    right_lay.addWidget(pdf_view, 2)
     splitter.addWidget(right)
     splitter.setStretchFactor(0, 2)
     splitter.setStretchFactor(1, 3)

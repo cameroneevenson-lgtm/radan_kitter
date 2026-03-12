@@ -53,9 +53,11 @@ def load_rpd_into_table(
     model.dataChanged.connect(lambda *_: on_model_data_changed())
     hook_selection_model(table, on_selection_changed)
 
-    table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
+    header = table.horizontalHeader()
+    header.setSectionResizeMode(QHeaderView.ResizeToContents)
     table.resizeColumnsToContents()
-    table.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+    # Fill the table pane horizontally by stretching visible columns.
+    header.setSectionResizeMode(QHeaderView.Stretch)
 
     try:
         kit_col = 1

@@ -1,7 +1,7 @@
 @echo off
 setlocal
 
-set APPDIR=C:\Tools\radan_kitter_controlled_migration
+set APPDIR=C:\Tools\radan_kitter
 set PYC=%APPDIR%\.venv\Scripts\python.exe
 set PYW=%APPDIR%\.venv\Scripts\pythonw.exe
 if not exist "%PYC%" set PYC=C:\Tools\radan_venv\Scripts\python.exe
@@ -34,7 +34,7 @@ echo Args: %* >> "%LOG%"
 
 rem Kill stale prior instances for this app path before relaunch.
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-  "$procs = Get-CimInstance Win32_Process | Where-Object { ($_.Name -match '^pythonw?\.exe$') -and (($_.CommandLine -like '*radan_kitter_controlled_migration\\main.py*') -or ($_.CommandLine -like '*radan_kitter_controlled_migration\\dev_hot_restart.py*')) }; " ^
+  "$procs = Get-CimInstance Win32_Process | Where-Object { ($_.Name -match '^pythonw?\.exe$') -and (($_.CommandLine -like '*radan_kitter\\main.py*') -or ($_.CommandLine -like '*radan_kitter\\dev_hot_restart.py*')) }; " ^
   "foreach ($p in $procs) { try { Stop-Process -Id $p.ProcessId -Force -ErrorAction Stop } catch {} }"
 
 if "%DEV_HOT_RELOAD%"=="1" (

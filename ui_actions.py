@@ -76,11 +76,11 @@ def run_prepare_kits(
     bak_dirname: str,
     kits_dirname: str,
     kit_to_priority: Dict[str, str],
-) -> None:
+) -> bool:
     span = rt.begin("prepare_kits", rpd_path=rpd_path, part_count=len(parts))
     if not _require_rpd_loaded(parent, tree, rpd_path):
         span.skip(reason="no_rpd")
-        return
+        return False
     try:
         progress = QProgressDialog("Preparing kits...", None, 0, max(1, len(parts)), parent)
         progress.setWindowTitle("Prepare Kits")
@@ -113,9 +113,11 @@ def run_prepare_kits(
             f"Kits touched: {kit_count}",
         )
         span.success(kit_count=int(kit_count))
+        return True
     except Exception as exc:
         span.fail(exc)
         QMessageBox.critical(parent, "Prepare Kits failed", traceback.format_exc())
+        return False
 
 
 def run_write_rpd(
@@ -127,11 +129,11 @@ def run_write_rpd(
     bak_dirname: str,
     kits_dirname: str,
     kit_to_priority: Dict[str, str],
-) -> None:
+) -> bool:
     span = rt.begin("write_rpd", rpd_path=rpd_path, part_count=len(parts))
     if not _require_rpd_loaded(parent, tree, rpd_path):
         span.skip(reason="no_rpd")
-        return
+        return False
     try:
         kit_service.apply_balance_and_update_kit_texts(
             parts,
@@ -150,9 +152,11 @@ def run_write_rpd(
             f"RPD written in-place.\nBackup: {bak_path}",
         )
         span.success(backup_path=bak_path)
+        return True
     except Exception as exc:
         span.fail(exc)
         QMessageBox.critical(parent, "Write RPD failed", traceback.format_exc())
+        return False
 
 
 def run_build_packet(
@@ -164,9 +168,9 @@ def run_build_packet(
     out_dirname: str,
     resolve_asset_fn: Callable[[str, str], Optional[str]],
     packet_mode: str = "raster",
-) -> None:
+) -> bool:
     if bool(getattr(parent, "_rk_build_packet_running", False)):
-        return
+        return False
 
     page_cap: Optional[int] = None
     if bool(PACKET_TEMP_FIRST_PAGE_ONLY):
@@ -180,7 +184,7 @@ def run_build_packet(
 
     build_parts = list(parts[:page_cap]) if page_cap is not None else list(parts)
     if not build_parts:
-        return
+        return False
     effective_out_dir = (
         str(PACKET_TEMP_LOCAL_OUTPUT_DIR)
         if bool(PACKET_TEMP_LOCAL_OUTPUT_ENABLED)
@@ -204,7 +208,7 @@ def run_build_packet(
     )
     if not _require_rpd_loaded(parent, tree, rpd_path):
         span.skip(reason="no_rpd")
-        return
+        return False
     setattr(parent, "_rk_build_packet_running", True)
 
     progress: Optional[QProgressDialog] = None
@@ -268,6 +272,7 @@ def run_build_packet(
         progress.close()
         _open_output_file_when_ready(packet_path)
         span.success(packet_path=packet_path, pages=int(pages), missing=int(missing))
+        return True
     except packet_service.PacketBuildCanceled:
         span.skip(reason="user_canceled")
         if progress is not None:
@@ -276,11 +281,13 @@ def run_build_packet(
             except Exception:
                 pass
             progress.close()
+        return False
     except Exception as exc:
         span.fail(exc)
         if progress is not None:
             progress.close()
         QMessageBox.critical(parent, "Build Packet failed", traceback.format_exc())
+        return False
     finally:
         if ticker is not None:
             try:
@@ -540,6 +547,7 @@ def run_ml_signal_plot(
 ) -> None:
     span = rt.begin("ml_signal_plot", dataset_path=dataset_path)
     try:
+        # Detached labeled dialog (button action behavior).
         old = getattr(parent, "_rk_ml_signal_plot_dialog", None)
         if old is not None:
             try:
@@ -568,7 +576,7 @@ def run_ml_signal_plot(
         dlg.show()
         dlg.raise_()
         dlg.activateWindow()
-        span.success(signal_count=len(signal_cols or []))
+        span.success(signal_count=len(signal_cols or []), embedded=False, labeled=True)
     except FileNotFoundError:
         span.skip(reason="dataset_missing")
         QMessageBox.information(
@@ -579,3 +587,43 @@ def run_ml_signal_plot(
     except Exception as exc:
         span.fail(exc)
         QMessageBox.critical(parent, "ML Plot failed", traceback.format_exc())
+
+
+def refresh_ml_plot_pane(
+    *,
+    parent: QWidget,
+    dataset_path: str,
+    signal_cols: Sequence[str],
+) -> None:
+    """
+    Refresh embedded right-pane plot (no labels), without dialogs.
+    Safe to call on startup/open-RPD.
+    """
+    pane_img = getattr(parent, "ml_plot_image_label", None)
+    if pane_img is None:
+        return
+    try:
+        pane_w = int(getattr(pane_img, "width", lambda: 0)())
+        pane_h = int(getattr(pane_img, "height", lambda: 0)())
+        # Keep render aspect aligned with pane aspect so scaled output fills better.
+        target_w = max(1200, int(max(1, pane_w) * 2.2))
+        target_h = max(360, int(max(1, pane_h) * 2.2))
+        pix, _stats = ui_ml_signal_plot.render_plot_pixmap(
+            dataset_path=dataset_path,
+            signal_cols=list(signal_cols or []),
+            width_px=target_w,
+            height_px=target_h,
+            show_labels=False,
+            grid_rows=2,
+        )
+        setattr(parent, "_rk_ml_plot_pixmap", pix)
+        w = max(360, int(getattr(pane_img, "width", lambda: 0)()) - 8)
+        h = max(180, int(getattr(pane_img, "height", lambda: 0)()) - 8)
+        pane_img.setPixmap(pix.scaled(w, h, Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation))
+        pane_img.setText("")
+    except Exception:
+        # Quiet fail for auto-refresh paths.
+        try:
+            pane_img.setText("Plot unavailable.")
+        except Exception:
+            pass
