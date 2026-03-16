@@ -10,7 +10,7 @@ from typing import Optional, Tuple
 import fitz  # pip: pymupdf
 
 from PySide6.QtCore import QEvent, QTimer, Qt, Signal
-from PySide6.QtGui import QImage, QMouseEvent, QPainter, QPixmap, QWheelEvent
+from PySide6.QtGui import QColor, QImage, QMouseEvent, QPainter, QPixmap, QWheelEvent
 from PySide6.QtWidgets import QGraphicsPixmapItem, QGraphicsScene, QGraphicsView
 
 PDF_PREVIEW_MIN_W = 420
@@ -213,6 +213,8 @@ class PdfPreviewView(QGraphicsView):
         self._cache_limit_bytes = 0
         self._pdf_path: Optional[str] = None
         self._last_render_key: Optional[Tuple[str, int, int, int]] = None
+        self._viewport_background_tile = QPixmap()
+        self._viewport_background_fill = QColor("#000000")
 
         self._dpi = PDF_PREVIEW_DPI
         self._render_count = 0
@@ -348,6 +350,20 @@ class PdfPreviewView(QGraphicsView):
         self._cache_limit_bytes = cache_mb * 1024 * 1024
         self._evict_cache_if_needed()
 
+    def set_viewport_background(
+        self,
+        *,
+        tile: Optional[QPixmap] = None,
+        fill_color: Optional[QColor] = None,
+    ) -> None:
+        if fill_color is not None:
+            self._viewport_background_fill = QColor(fill_color)
+        if tile is None or tile.isNull():
+            self._viewport_background_tile = QPixmap()
+        else:
+            self._viewport_background_tile = QPixmap(tile)
+        self.viewport().update()
+
     def reset_to_fit(self) -> None:
         """
         Reset zoom to fit-to-view baseline.
@@ -443,6 +459,16 @@ class PdfPreviewView(QGraphicsView):
         self._recompute_baseline_and_apply()
         if self._pdf_path:
             self._resize_rerender_timer.start(PDF_PREVIEW_RESIZE_RERENDER_MS)
+
+    def drawBackground(self, painter: QPainter, rect) -> None:
+        del rect
+        painter.save()
+        painter.resetTransform()
+        viewport_rect = self.viewport().rect()
+        painter.fillRect(viewport_rect, self._viewport_background_fill)
+        if not self._viewport_background_tile.isNull():
+            painter.drawTiledPixmap(viewport_rect, self._viewport_background_tile)
+        painter.restore()
 
     def wheelEvent(self, event: QWheelEvent) -> None:
         # Cursor-centered zoom.

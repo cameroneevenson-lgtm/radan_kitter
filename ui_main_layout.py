@@ -4,7 +4,7 @@ import os
 from typing import Callable, Sequence
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QBrush, QColor, QImage, QPainter, QPixmap, QTransform
+from PySide6.QtGui import QColor, QImage, QPainter, QPixmap, QTransform
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QHBoxLayout,
@@ -62,6 +62,33 @@ def _boost_logo_tile(tile: QPixmap, *, saturation: float, contrast: float) -> QP
     return QPixmap.fromImage(img)
 
 
+def _trim_transparent_padding(pixmap: QPixmap) -> QPixmap:
+    if pixmap.isNull():
+        return QPixmap()
+    img = pixmap.toImage().convertToFormat(QImage.Format_ARGB32)
+    w = img.width()
+    h = img.height()
+    left = w
+    top = h
+    right = -1
+    bottom = -1
+    for y in range(h):
+        for x in range(w):
+            if img.pixelColor(x, y).alpha() <= 0:
+                continue
+            if x < left:
+                left = x
+            if y < top:
+                top = y
+            if x > right:
+                right = x
+            if y > bottom:
+                bottom = y
+    if right < left or bottom < top:
+        return pixmap
+    return pixmap.copy(left, top, right - left + 1, bottom - top + 1)
+
+
 def _make_tiled_banner_pixmap(
     logo_path: str,
     *,
@@ -94,9 +121,9 @@ def _make_tiled_banner_pixmap(
 def _make_letterbox_texture_pixmap(
     logo_path: str,
     *,
-    tile_width_px: int = 3200,
-    tile_height_px: int = 220,
-    stripe_height_px: int = 108,
+    tile_width_px: int = 2400,
+    tile_height_px: int = 140,
+    stripe_height_px: int = 42,
 ) -> QPixmap:
     pm = QPixmap(logo_path) if logo_path else QPixmap()
     if pm.isNull():
@@ -112,20 +139,24 @@ def _make_letterbox_texture_pixmap(
         t45 = base_tile
     if t225.isNull():
         t225 = base_tile
+    t45 = _trim_transparent_padding(t45)
+    t225 = _trim_transparent_padding(t225)
 
     stripe_h = max(base_tile.height(), t45.height(), t225.height())
 
-    out = QPixmap(max(64, int(tile_width_px)), max(int(tile_height_px), stripe_h + 12))
+    out = QPixmap(max(64, int(tile_width_px)), max(int(tile_height_px), stripe_h + 10))
     out.fill(QColor("#000000"))
     p = QPainter(out)
     p.setOpacity(0.98)
-    x = 0
+    first_tile = t45 if not t45.isNull() else base_tile
+    step = max(8, int(first_tile.width() * 0.36))
+    x = -(step * 2)
     alt = False
     while x < out.width():
         tile = t45 if not alt else t225
         y = max(0, (out.height() - tile.height()) // 2)
         p.drawPixmap(x, y, tile)
-        x += max(10, int(tile.width() * 0.55))
+        x += max(8, int(tile.width() * 0.36))
         alt = not alt
     p.end()
     return out
@@ -196,9 +227,11 @@ def build_main_layout(
     if company_logo_path and os.path.exists(company_logo_path):
         letterbox_texture = _make_letterbox_texture_pixmap(company_logo_path)
         if not letterbox_texture.isNull():
-            pdf_view.setBackgroundBrush(QBrush(letterbox_texture))
+            pdf_view.set_viewport_background(tile=letterbox_texture, fill_color=QColor("#000000"))
+        else:
+            pdf_view.set_viewport_background(fill_color=QColor("#000000"))
     else:
-        pdf_view.setBackgroundBrush(QColor("#000000"))
+        pdf_view.set_viewport_background(fill_color=QColor("#000000"))
     window.pdf_view = pdf_view  # type: ignore[attr-defined]
 
     numpad_legend = NumpadLegendWidget(
