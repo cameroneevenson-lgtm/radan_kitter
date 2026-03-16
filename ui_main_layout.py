@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
 )
 
 from pdf_preview import PdfPreviewView
+from ui_numpad_legend import NumpadLegendWidget
 
 
 def _build_legend_text(canon_kits: Sequence[str]) -> str:
@@ -136,6 +137,8 @@ def build_main_layout(
     canon_kits: Sequence[str],
     company_logo_path: str,
     on_open_rpd: Callable[[], None],
+    on_choose_asset_root: Callable[[], None],
+    on_reset_asset_root: Callable[[], None],
     on_open_rpd_file: Callable[[], None],
     on_prepare_kits: Callable[[], None],
     on_write_rpd: Callable[[], None],
@@ -198,26 +201,15 @@ def build_main_layout(
         pdf_view.setBackgroundBrush(QColor("#000000"))
     window.pdf_view = pdf_view  # type: ignore[attr-defined]
 
-    numpad_legend = QLabel(_build_legend_text(canon_kits))
-    numpad_legend.setWordWrap(True)
-    numpad_legend.setAlignment(Qt.AlignCenter)
+    numpad_legend = NumpadLegendWidget(
+        canon_kits=canon_kits,
+        on_action=on_numpad_legend_action,
+    )
     top_pane_height = max(112, int(numpad_legend.sizeHint().height()))
     numpad_legend.setMinimumHeight(top_pane_height)
     numpad_legend.setMinimumWidth(240)
     numpad_legend.setMaximumWidth(340)
     numpad_legend.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
-    numpad_legend.setStyleSheet(
-        "QLabel {"
-        " color: #0f1720;"
-        " background: #ecf2fa;"
-        " border: 1px solid #c6d6ea;"
-        " border-radius: 6px;"
-        " padding: 10px 12px;"
-        " }"
-    )
-    numpad_legend.setTextInteractionFlags(Qt.TextBrowserInteraction)
-    numpad_legend.setOpenExternalLinks(False)
-    numpad_legend.linkActivated.connect(on_numpad_legend_action)
     window.numpad_legend = numpad_legend  # type: ignore[attr-defined]
 
     ml_plot_image = QLabel("Run Plot to populate this pane.")
@@ -336,6 +328,48 @@ def build_main_layout(
     rpd_indicator.setTextInteractionFlags(Qt.TextSelectableByMouse)
     window.rpd_indicator_label = rpd_indicator  # type: ignore[attr-defined]
 
+    asset_root_bar = QWidget()
+    asset_root_bar.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+    asset_root_bar.setFixedHeight(36)
+    asset_root_row = QHBoxLayout(asset_root_bar)
+    asset_root_row.setContentsMargins(0, 0, 0, 0)
+    asset_root_row.setSpacing(6)
+    asset_root_label = QLabel("PDF/DXF Root: (default)")
+    asset_root_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+    asset_root_label.setMinimumHeight(24)
+    asset_root_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
+    asset_root_label.setStyleSheet(
+        "QLabel {"
+        " color: #2a3642;"
+        " background: #f2f6fa;"
+        " border: 1px solid #d5dee8;"
+        " border-radius: 5px;"
+        " padding: 2px 8px;"
+        " }"
+    )
+    asset_root_btn = QPushButton("Set PDF/DXF Folder")
+    asset_root_reset_btn = QPushButton("Use Default W: Root")
+    asset_root_btn.clicked.connect(on_choose_asset_root)
+    asset_root_reset_btn.clicked.connect(on_reset_asset_root)
+    for button in (asset_root_btn, asset_root_reset_btn):
+        button.setMinimumHeight(30)
+        button.setMaximumHeight(30)
+        button.setStyleSheet(
+            "font-size: 15px;"
+            "font-weight: 500;"
+            "padding: 3px 10px;"
+            "border: 1px solid #cbd5e1;"
+            "border-radius: 5px;"
+            "background: #f8fafc;"
+        )
+    asset_root_row.addWidget(asset_root_label, 1)
+    asset_root_row.addWidget(asset_root_btn, 0)
+    asset_root_row.addWidget(asset_root_reset_btn, 0)
+    window.asset_root_label = asset_root_label  # type: ignore[attr-defined]
+    window.asset_root_button = asset_root_btn  # type: ignore[attr-defined]
+    window.asset_root_reset_button = asset_root_reset_btn  # type: ignore[attr-defined]
+    window.asset_root_bar = asset_root_bar  # type: ignore[attr-defined]
+
     hot_reload_bar = QWidget()
     hot_reload_bar.setVisible(False)
     hot_reload_bar.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
@@ -404,12 +438,14 @@ def build_main_layout(
     lay.setSpacing(4)
     lay.addWidget(top_bar, 0)
     lay.addWidget(rpd_indicator, 0)
+    lay.addWidget(asset_root_bar, 0)
     lay.addWidget(hot_reload_bar, 0)
     lay.addWidget(splitter, 1)
     lay.setStretch(0, 0)
     lay.setStretch(1, 0)
     lay.setStretch(2, 0)
-    lay.setStretch(3, 1)
+    lay.setStretch(3, 0)
+    lay.setStretch(4, 1)
     window.setCentralWidget(root)
     window.resize(1850, 1100)
     window.setMinimumSize(1400, 860)

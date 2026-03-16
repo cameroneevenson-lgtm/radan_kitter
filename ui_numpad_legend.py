@@ -1,84 +1,151 @@
 from __future__ import annotations
 
-from html import escape
-from typing import Dict, List, Optional
+from typing import Callable, Dict, Optional, Sequence
+
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QGridLayout, QPushButton, QSizePolicy, QWidget
 
 
-def build_numpad_legend_html(
-    canon_kits: List[str],
-    kit_abbr: Dict[str, str],
-    highlight_idx: Optional[int],
-    selected_idx: Optional[int] = None,
-) -> str:
-    keys_layout = [7, 8, 9, 4, 5, 6, 1, 2, 3]
-    # Canonical priorities are 1..9 for canon_kits[0..8].
-    # Map each visible numpad key to canonical kit index.
-    idx_for_key = {
+class NumpadLegendWidget(QWidget):
+    _KEY_TO_INDEX: Dict[int, int] = {
         1: 0, 2: 1, 3: 2,
         4: 3, 5: 4, 6: 5,
         7: 6, 8: 7, 9: 8,
     }
 
-    def cell(i: int) -> str:
-        k = keys_layout[i]
-        kit_idx = idx_for_key[k]
-        kit = canon_kits[kit_idx]
-        # Keep full kit name visible in legend (3-letter abbreviations were ambiguous).
-        label = kit.strip() or kit_abbr.get(kit, kit[:3].upper())
-        base = (
-            "width:25%; border:2px solid #9eb1c2; border-radius:5px;"
-            "background:#f6f9fc; color:#16222d; padding:0;"
-        )
-        inner_pad = "padding:6px 6px;"
-        if kit_idx == selected_idx and kit_idx == highlight_idx:
-            base = (
-                "width:25%; border:2px solid #d8ba5a; border-radius:5px;"
-                "background:#2c4f7b; color:#f4f8ff; padding:0;"
-            )
-        elif kit_idx == selected_idx:
-            base = (
-                "width:25%; border:2px solid #7db2ff; border-radius:5px;"
-                "background:#2f6feb; color:#f4f8ff; padding:0;"
-            )
-        elif kit_idx == highlight_idx:
-            base = (
-                "width:25%; border:2px solid #8f7800; border-radius:5px;"
-                "background:#ffe16b; color:#121212; padding:0;"
-            )
-        link = (
-            f'<a href="assign:{kit_idx}" '
-            f'style="display:block; width:100%; text-decoration:none; color:inherit; {inner_pad}">'
-            f'<div style="font-weight:700; font-size:14px;">{k}</div>'
-            f'<div style="font-size:10px; line-height:1.15;">{escape(label)}</div>'
-            "</a>"
-        )
+    def __init__(
+        self,
+        *,
+        canon_kits: Sequence[str],
+        on_action: Callable[[str], None],
+        parent=None,
+    ) -> None:
+        super().__init__(parent)
+        self._canon_kits = list(canon_kits)
+        self._on_action = on_action
+        self._kit_buttons: Dict[int, QPushButton] = {}
+        self._op_buttons: Dict[str, QPushButton] = {}
+
+        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+        self.setStyleSheet("background: #ecf2fa; border: 1px solid #c6d6ea; border-radius: 6px;")
+
+        grid = QGridLayout(self)
+        grid.setContentsMargins(8, 8, 8, 8)
+        grid.setHorizontalSpacing(6)
+        grid.setVerticalSpacing(6)
+
+        for row, keys in enumerate(((7, 8, 9), (4, 5, 6), (1, 2, 3))):
+            for col, key in enumerate(keys):
+                kit_idx = self._KEY_TO_INDEX[key]
+                btn = self._make_button(href=f"assign:{kit_idx}")
+                self._kit_buttons[kit_idx] = btn
+                grid.addWidget(btn, row, col, 1, 1)
+
+        grid.addWidget(self._make_op_button("move_up", "-\nRow Up"), 0, 3, 1, 1)
+        grid.addWidget(self._make_op_button("move_down", "+\nRow Down"), 1, 3, 2, 1)
+        grid.addWidget(self._make_op_button("clear", "0\nClear"), 3, 0, 1, 2)
+        grid.addWidget(self._make_placeholder_button(".\n"), 3, 2, 1, 1)
+        grid.addWidget(self._make_op_button("accept", "Enter\nAccept RF"), 3, 3, 1, 1)
+
+        for col in range(4):
+            grid.setColumnStretch(col, 1)
+        for row in range(4):
+            grid.setRowStretch(row, 1)
+
+        self.set_state(highlight_idx=None, selected_idx=None)
+
+    def _make_button(self, *, href: str) -> QPushButton:
+        btn = QPushButton(self)
+        btn.setCursor(Qt.PointingHandCursor)
+        btn.setAutoDefault(False)
+        btn.setDefault(False)
+        btn.setMinimumHeight(48)
+        btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        btn.clicked.connect(lambda _checked=False, target=href: self._on_action(target))
+        return btn
+
+    def _make_op_button(self, href: str, text: str) -> QPushButton:
+        btn = self._make_button(href=href)
+        btn.setText(text)
+        self._op_buttons[href] = btn
+        return btn
+
+    def _make_placeholder_button(self, text: str) -> QPushButton:
+        btn = QPushButton(text, self)
+        btn.setEnabled(False)
+        btn.setMinimumHeight(48)
+        btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        btn.setStyleSheet(self._op_button_style(enabled=False))
+        return btn
+
+    @staticmethod
+    def _format_kit_label(label: str) -> str:
+        text = str(label or "").strip()
+        if not text:
+            return ""
+        if " " in text:
+            return "\n".join(part for part in text.split() if part)
+        return text
+
+    @staticmethod
+    def _kit_button_style(*, selected: bool, highlighted: bool) -> str:
+        border = "#9eb1c2"
+        background = "#f6f9fc"
+        color = "#16222d"
+        if selected and highlighted:
+            border = "#d8ba5a"
+            background = "#2c4f7b"
+            color = "#f4f8ff"
+        elif selected:
+            border = "#7db2ff"
+            background = "#2f6feb"
+            color = "#f4f8ff"
+        elif highlighted:
+            border = "#8f7800"
+            background = "#ffe16b"
+            color = "#121212"
         return (
-            f'<td style="{base}">'
-            f"{link}"
-            "</td>"
+            "QPushButton {"
+            f"border: 2px solid {border};"
+            "border-radius: 5px;"
+            f"background: {background};"
+            f"color: {color};"
+            "padding: 6px 4px;"
+            "font-size: 11px;"
+            "font-weight: 600;"
+            "text-align: center;"
+            "}"
         )
 
-    op = (
-        "width:25%; border:1px solid #9eb1c2; border-radius:5px;"
-        "background:#eef3f8; color:#16222d; padding:0;"
-    )
-
-    def op_cell(href: str, key_label: str, sub_label: str) -> str:
+    @staticmethod
+    def _op_button_style(*, enabled: bool) -> str:
+        background = "#eef3f8" if enabled else "#f3f6fa"
+        color = "#16222d" if enabled else "#90a0af"
+        border = "#9eb1c2" if enabled else "#c9d4df"
         return (
-            f'<td style="{op}">'
-            f'<a href="{href}" style="display:block; width:100%; padding:4px 6px; text-decoration:none; color:inherit;">'
-            f"<b>{key_label}</b><br/><span style=\"font-size:10px;\">{sub_label}</span>"
-            "</a>"
-            "</td>"
+            "QPushButton {"
+            f"border: 1px solid {border};"
+            "border-radius: 5px;"
+            f"background: {background};"
+            f"color: {color};"
+            "padding: 6px 4px;"
+            "font-size: 11px;"
+            "font-weight: 600;"
+            "text-align: center;"
+            "}"
         )
 
-    return (
-        "<div style=\"width:100%; height:100%; text-align:center;\">"
-        "<table style=\"width:100%; height:100%; margin:0; border-collapse:separate; border-spacing:6px; table-layout:fixed;\">"
-        f"<tr>{cell(0)}{cell(1)}{cell(2)}{op_cell('move_up', '-', 'Row Up')}</tr>"
-        f"<tr>{cell(3)}{cell(4)}{cell(5)}<td rowspan=\"2\" style=\"{op}\"><a href=\"move_down\" style=\"display:block; width:100%; min-height:74px; padding:4px 6px; text-decoration:none; color:inherit;\"><b>+</b><br/><span style=\"font-size:10px;\">Row Down</span></a></td></tr>"
-        f"<tr>{cell(6)}{cell(7)}{cell(8)}</tr>"
-        f"<tr><td colspan=\"2\" style=\"{op}\"><a href=\"clear\" style=\"display:block; width:100%; padding:4px 6px; text-decoration:none; color:inherit;\"><b>0</b><br/><span style=\"font-size:10px;\">Clear</span></a></td><td style=\"{op}\"><b>.</b></td><td style=\"{op}\"><a href=\"accept\" style=\"display:block; width:100%; padding:4px 6px; text-decoration:none; color:inherit;\"><b>Enter</b><br/><span style=\"font-size:10px;\">Accept RF</span></a></td></tr>"
-        "</table>"
-        "</div>"
-    )
+    def set_state(self, *, highlight_idx: Optional[int], selected_idx: Optional[int]) -> None:
+        for key, kit_idx in self._KEY_TO_INDEX.items():
+            btn = self._kit_buttons[kit_idx]
+            label = self._canon_kits[kit_idx] if 0 <= kit_idx < len(self._canon_kits) else ""
+            btn.setText(f"{key}\n{self._format_kit_label(label)}")
+            btn.setStyleSheet(
+                self._kit_button_style(
+                    selected=(kit_idx == selected_idx),
+                    highlighted=(kit_idx == highlight_idx),
+                )
+            )
+
+        for href, btn in self._op_buttons.items():
+            btn.setStyleSheet(self._op_button_style(enabled=btn.isEnabled()))

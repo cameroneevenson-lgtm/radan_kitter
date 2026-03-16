@@ -53,6 +53,7 @@ RUNTIME_DIRNAME = "_runtime"
 TOOLS_DIR = r"C:\Tools"
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 COMPANY_LOGO_PATH = os.path.join(APP_DIR, "bs-logo.png")
+DEFAULT_RPD_OPEN_DIR = r"L:\BATTLESHIELD\F-LARGE FLEET"
 
 # ML artifacts are project-local.
 GLOBAL_DATASET_PATH = os.path.join(APP_DIR, "ml_dataset.csv")
@@ -62,6 +63,7 @@ GLOBAL_RUNTIME_DIR = os.path.join(APP_DIR, RUNTIME_DIRNAME)
 GLOBAL_RUNTIME_LOG_PATH = os.path.join(GLOBAL_RUNTIME_DIR, "runtime_trace.jsonl")
 HOT_RELOAD_REQUEST_PATH = os.path.join(GLOBAL_RUNTIME_DIR, "hot_reload_request.json")
 HOT_RELOAD_RESPONSE_PATH = os.path.join(GLOBAL_RUNTIME_DIR, "hot_reload_response.json")
+ASSET_LOOKUP_SETTINGS_PATH = os.path.join(GLOBAL_RUNTIME_DIR, "asset_lookup_settings.json")
 
 # Temporary packet debug controls.
 # Keep local output override disabled in normal operation.

@@ -19,11 +19,6 @@ def hook_selection_model(table: QTableView, on_current_changed: Callable[[], Non
     except Exception:
         pass
     def _on_current_changed(current, _previous) -> None:
-        try:
-            if current is not None and current.isValid():
-                table.scrollTo(current, QTableView.PositionAtCenter)
-        except Exception:
-            pass
         on_current_changed()
 
     sm.currentChanged.connect(_on_current_changed)

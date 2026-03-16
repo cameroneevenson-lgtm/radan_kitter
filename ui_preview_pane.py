@@ -3,12 +3,12 @@ from __future__ import annotations
 import os
 from typing import Callable, Dict, List, Optional, Sequence
 
-from PySide6.QtWidgets import QLabel, QTableView
+from PySide6.QtWidgets import QTableView
 
 from pdf_preview import PdfPreviewView
 from rpd_io import PartRow
 from ui_parts_table import PartsModel
-from ui_numpad_legend import build_numpad_legend_html
+from ui_numpad_legend import NumpadLegendWidget
 
 
 class PreviewCoordinator:
@@ -17,7 +17,7 @@ class PreviewCoordinator:
         *,
         table: QTableView,
         pdf_view: PdfPreviewView,
-        numpad_legend: QLabel,
+        numpad_legend: NumpadLegendWidget,
         resolve_asset_fn: Callable[[str, str], Optional[str]],
         canon_kits: Sequence[str],
         kit_abbr: Dict[str, str],
@@ -41,13 +41,9 @@ class PreviewCoordinator:
             sug = self._sanitize_kit_name(model.rows[row].suggested_kit)
             if sug in self._canon_kits:
                 highlight_idx = self._canon_kits.index(sug)
-        self._numpad_legend.setText(
-            build_numpad_legend_html(
-                canon_kits=self._canon_kits,
-                kit_abbr=self._kit_abbr,
-                highlight_idx=highlight_idx,
-                selected_idx=selected_idx,
-            )
+        self._numpad_legend.set_state(
+            highlight_idx=highlight_idx,
+            selected_idx=selected_idx,
         )
 
     def preview_current(self, model: Optional[PartsModel], parts: List[PartRow]) -> None:
