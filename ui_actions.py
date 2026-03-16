@@ -606,8 +606,8 @@ def refresh_ml_plot_pane(
         pane_w = int(getattr(pane_img, "width", lambda: 0)())
         pane_h = int(getattr(pane_img, "height", lambda: 0)())
         # Keep render aspect aligned with pane aspect so scaled output fills better.
-        target_w = max(1200, int(max(1, pane_w) * 2.2))
-        target_h = max(360, int(max(1, pane_h) * 2.2))
+        target_w = max(640, int(max(1, pane_w) * 3.0))
+        target_h = max(140, int(max(1, pane_h) * 3.0))
         pix, _stats = ui_ml_signal_plot.render_plot_pixmap(
             dataset_path=dataset_path,
             signal_cols=list(signal_cols or []),
@@ -617,9 +617,9 @@ def refresh_ml_plot_pane(
             grid_rows=2,
         )
         setattr(parent, "_rk_ml_plot_pixmap", pix)
-        w = max(360, int(getattr(pane_img, "width", lambda: 0)()) - 8)
-        h = max(180, int(getattr(pane_img, "height", lambda: 0)()) - 8)
-        pane_img.setPixmap(pix.scaled(w, h, Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation))
+        w = max(1, int(getattr(pane_img, "width", lambda: 0)()) - 8)
+        h = max(1, int(getattr(pane_img, "height", lambda: 0)()) - 8)
+        pane_img.setPixmap(pix.scaled(w, h, Qt.KeepAspectRatio, Qt.SmoothTransformation))
         pane_img.setText("")
     except Exception:
         # Quiet fail for auto-refresh paths.

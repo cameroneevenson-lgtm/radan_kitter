@@ -634,7 +634,7 @@ def _draw_signal_grid(
             fig.subplots_adjust(left=0.03, right=0.98, top=0.95, bottom=0.05, wspace=0.22, hspace=0.28)
         else:
             # Embedded pane: maximize use of available area.
-            fig.subplots_adjust(left=0.006, right=0.998, top=0.998, bottom=0.014, wspace=0.05, hspace=0.08)
+            fig.subplots_adjust(left=0.002, right=0.998, top=0.998, bottom=0.008, wspace=0.015, hspace=0.02)
     except Exception:
         pass
 
@@ -678,12 +678,17 @@ def render_plot_pixmap(
     canvas = FigureCanvasAgg(fig)
     canvas.draw()
     bio = io.BytesIO()
-    # Keep embedded-pane aspect stable (no tight cropping), so the pixmap fills
-    # the pane without letterboxing from content-driven aspect changes.
     if show_labels:
         fig.savefig(bio, format="png", dpi=max(96, int(dpi)), bbox_inches="tight")
     else:
-        fig.savefig(bio, format="png", dpi=max(96, int(dpi)))
+        # Embedded pane: trim inert outer padding so the plot uses pane height.
+        fig.savefig(
+            bio,
+            format="png",
+            dpi=max(96, int(dpi)),
+            bbox_inches="tight",
+            pad_inches=0.01,
+        )
     pix = QPixmap()
     pix.loadFromData(bio.getvalue(), "PNG")
     return pix, {

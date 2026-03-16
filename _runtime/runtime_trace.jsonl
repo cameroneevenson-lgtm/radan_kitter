@@ -2500,3 +2500,182 @@
 {"ts_utc": "2026-03-04T18:02:19.118+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 259, "part_count": 152}
 {"ts_utc": "2026-03-04T18:02:50.887+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F54525\\PAINT PACK\\F54525 PAINT PACK\\F54525 PAINT PACK.rpd"}
 {"ts_utc": "2026-03-04T18:02:51.125+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 238, "part_count": 152}
+{"ts_utc": "2026-03-12T14:30:49.253+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PAINT PACK\\F55334 PAINT PACK\\F55334 PAINT PACK.rpd"}
+{"ts_utc": "2026-03-12T14:30:49.518+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 264, "part_count": 74}
+{"ts_utc": "2026-03-12T14:32:47.457+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PAINT PACK\\F55334 PAINT PACK\\F55334 PAINT PACK.rpd"}
+{"ts_utc": "2026-03-12T14:32:47.626+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 168, "part_count": 74}
+{"ts_utc": "2026-03-12T14:34:50.641+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PAINT PACK\\F55334 PAINT PACK\\F55334 PAINT PACK.rpd"}
+{"ts_utc": "2026-03-12T14:34:50.843+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 200, "part_count": 74}
+{"ts_utc": "2026-03-12T14:34:55.646+00:00", "feature": "rf_suggest", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PAINT PACK\\F55334 PAINT PACK\\F55334 PAINT PACK.rpd", "part_count": 74}
+{"ts_utc": "2026-03-12T14:34:55.786+00:00", "feature": "rf_suggest", "phase": "progress", "done": 1, "total": 74, "status": "RF: extracting features...\nB-1"}
+{"ts_utc": "2026-03-12T14:34:56.593+00:00", "feature": "rf_suggest", "phase": "progress", "done": 7, "total": 74, "status": "RF: extracting features...\nB-126 R1"}
+{"ts_utc": "2026-03-12T14:34:57.381+00:00", "feature": "rf_suggest", "phase": "progress", "done": 14, "total": 74, "status": "RF: extracting features...\nB-208"}
+{"ts_utc": "2026-03-12T14:34:58.141+00:00", "feature": "rf_suggest", "phase": "progress", "done": 20, "total": 74, "status": "RF: extracting features...\nB-32-R1"}
+{"ts_utc": "2026-03-12T14:34:58.934+00:00", "feature": "rf_suggest", "phase": "progress", "done": 27, "total": 74, "status": "RF: extracting features...\nB-45 R1"}
+{"ts_utc": "2026-03-12T14:34:59.772+00:00", "feature": "rf_suggest", "phase": "progress", "done": 35, "total": 74, "status": "RF: extracting features...\nB-56 R1"}
+{"ts_utc": "2026-03-12T14:35:00.589+00:00", "feature": "rf_suggest", "phase": "progress", "done": 41, "total": 74, "status": "RF: extracting features...\nF55334-B-02"}
+{"ts_utc": "2026-03-12T14:35:01.473+00:00", "feature": "rf_suggest", "phase": "progress", "done": 47, "total": 74, "status": "RF: extracting features...\nF55334-B-08"}
+{"ts_utc": "2026-03-12T14:35:02.300+00:00", "feature": "rf_suggest", "phase": "progress", "done": 52, "total": 74, "status": "RF: extracting features...\nF55334-B-14"}
+{"ts_utc": "2026-03-12T14:35:03.208+00:00", "feature": "rf_suggest", "phase": "progress", "done": 58, "total": 74, "status": "RF: extracting features...\nF55334-B-21"}
+{"ts_utc": "2026-03-12T14:35:04.029+00:00", "feature": "rf_suggest", "phase": "progress", "done": 65, "total": 74, "status": "RF: extracting features...\nF55334-B-40"}
+{"ts_utc": "2026-03-12T14:35:04.661+00:00", "feature": "rf_suggest", "phase": "progress", "done": 74, "total": 74, "status": "RF: extracting features...\nBASE SIDE (COIL WINDER 2025)"}
+{"ts_utc": "2026-03-12T14:35:04.686+00:00", "feature": "rf_suggest", "phase": "progress", "done": 74, "total": 74, "status": "RF: loading model..."}
+{"ts_utc": "2026-03-12T14:35:17.984+00:00", "feature": "rf_suggest", "phase": "success", "elapsed_ms": 22338, "pred_count": 74, "source": "trained"}
+{"ts_utc": "2026-03-12T14:35:20.723+00:00", "feature": "ml_log", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PAINT PACK\\F55334 PAINT PACK\\F55334 PAINT PACK.rpd", "part_count": 74}
+{"ts_utc": "2026-03-12T14:35:20.743+00:00", "feature": "ml_log", "phase": "progress", "done": 0, "total": 74, "status": "ml_log"}
+{"ts_utc": "2026-03-12T14:35:21.621+00:00", "feature": "ml_log", "phase": "progress", "done": 9, "total": 74, "status": "ml_log"}
+{"ts_utc": "2026-03-12T14:35:25.475+00:00", "feature": "ml_log", "phase": "success", "elapsed_ms": 4750, "stopped": true, "processed_rows": 14, "written_rows": 10, "skipped_duplicates": 4}
+{"ts_utc": "2026-03-12T14:35:26.813+00:00", "feature": "ml_signal_plot", "phase": "start", "dataset_path": "C:\\Tools\\radan_kitter\\ml_dataset.csv"}
+{"ts_utc": "2026-03-12T14:35:27.542+00:00", "feature": "ml_signal_plot", "phase": "success", "elapsed_ms": 725, "signal_count": 16, "embedded": false, "labeled": true}
+{"ts_utc": "2026-03-12T14:35:28.832+00:00", "feature": "ml_signal_plot", "phase": "start", "dataset_path": "C:\\Tools\\radan_kitter\\ml_dataset.csv"}
+{"ts_utc": "2026-03-12T14:35:29.537+00:00", "feature": "ml_signal_plot", "phase": "success", "elapsed_ms": 698, "signal_count": 16, "embedded": false, "labeled": true}
+{"ts_utc": "2026-03-12T14:35:33.340+00:00", "feature": "ml_signal_plot", "phase": "start", "dataset_path": "C:\\Tools\\radan_kitter\\ml_dataset.csv"}
+{"ts_utc": "2026-03-12T14:35:33.957+00:00", "feature": "ml_signal_plot", "phase": "success", "elapsed_ms": 614, "signal_count": 16, "embedded": false, "labeled": true}
+{"ts_utc": "2026-03-12T14:40:04.165+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PAINT PACK\\F55334 PAINT PACK\\F55334 PAINT PACK.rpd"}
+{"ts_utc": "2026-03-12T14:40:06.588+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 2411, "part_count": 74}
+{"ts_utc": "2026-03-12T14:46:17.093+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PAINT PACK\\F55334 PAINT PACK\\F55334 PAINT PACK.rpd"}
+{"ts_utc": "2026-03-12T14:46:17.296+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 207, "part_count": 74}
+{"ts_utc": "2026-03-12T14:49:23.119+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PAINT PACK\\F55334 PAINT PACK\\F55334 PAINT PACK.rpd"}
+{"ts_utc": "2026-03-12T14:49:25.874+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 2754, "part_count": 74}
+{"ts_utc": "2026-03-12T14:51:35.659+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PAINT PACK\\F55334 PAINT PACK\\F55334 PAINT PACK.rpd"}
+{"ts_utc": "2026-03-12T14:51:39.036+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 3377, "part_count": 74}
+{"ts_utc": "2026-03-12T14:55:34.172+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PAINT PACK\\F55334 PAINT PACK\\F55334 PAINT PACK.rpd"}
+{"ts_utc": "2026-03-12T14:55:37.168+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 2996, "part_count": 74}
+{"ts_utc": "2026-03-12T14:57:09.624+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PAINT PACK\\F55334 PAINT PACK\\F55334 PAINT PACK.rpd"}
+{"ts_utc": "2026-03-12T14:57:12.606+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 2982, "part_count": 74}
+{"ts_utc": "2026-03-12T15:06:10.569+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PAINT PACK\\F55334 PAINT PACK\\F55334 PAINT PACK.rpd"}
+{"ts_utc": "2026-03-12T15:06:13.652+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 3084, "part_count": 74}
+{"ts_utc": "2026-03-12T15:07:05.621+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PAINT PACK\\F55334 PAINT PACK\\F55334 PAINT PACK.rpd"}
+{"ts_utc": "2026-03-12T15:07:08.689+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 3072, "part_count": 74}
+{"ts_utc": "2026-03-12T15:08:04.096+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PAINT PACK\\F55334 PAINT PACK\\F55334 PAINT PACK.rpd"}
+{"ts_utc": "2026-03-12T15:08:07.219+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 3125, "part_count": 74}
+{"ts_utc": "2026-03-12T15:11:06.396+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PAINT PACK\\F55334 PAINT PACK\\F55334 PAINT PACK.rpd"}
+{"ts_utc": "2026-03-12T15:11:09.901+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 3505, "part_count": 74}
+{"ts_utc": "2026-03-12T15:11:26.615+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PAINT PACK\\F55334 PAINT PACK\\F55334 PAINT PACK.rpd"}
+{"ts_utc": "2026-03-12T15:11:29.701+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 3085, "part_count": 74}
+{"ts_utc": "2026-03-12T15:11:33.707+00:00", "feature": "ml_signal_plot", "phase": "start", "dataset_path": "C:\\Tools\\radan_kitter\\ml_dataset.csv"}
+{"ts_utc": "2026-03-12T15:11:34.392+00:00", "feature": "ml_signal_plot", "phase": "success", "elapsed_ms": 686, "signal_count": 16, "embedded": false, "labeled": true}
+{"ts_utc": "2026-03-12T15:12:31.437+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PAINT PACK\\F55334 PAINT PACK\\F55334 PAINT PACK.rpd"}
+{"ts_utc": "2026-03-12T15:12:34.524+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 3087, "part_count": 74}
+{"ts_utc": "2026-03-12T15:12:46.655+00:00", "feature": "ml_signal_plot", "phase": "start", "dataset_path": "C:\\Tools\\radan_kitter\\ml_dataset.csv"}
+{"ts_utc": "2026-03-12T15:12:47.336+00:00", "feature": "ml_signal_plot", "phase": "success", "elapsed_ms": 680, "signal_count": 16, "embedded": false, "labeled": true}
+{"ts_utc": "2026-03-12T16:38:20.934+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PAINT PACK\\F55334 PAINT PACK\\F55334 PAINT PACK.rpd"}
+{"ts_utc": "2026-03-12T16:38:23.798+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 2864, "part_count": 74}
+{"ts_utc": "2026-03-12T16:38:49.720+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PAINT PACK\\F55334 PAINT PACK\\F55334 PAINT PACK.rpd"}
+{"ts_utc": "2026-03-12T16:38:52.721+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 3001, "part_count": 74}
+{"ts_utc": "2026-03-12T16:41:00.711+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PAINT PACK\\F55334 PAINT PACK\\F55334 PAINT PACK.rpd"}
+{"ts_utc": "2026-03-12T16:41:03.778+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 3067, "part_count": 74}
+{"ts_utc": "2026-03-12T16:42:11.895+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PAINT PACK\\F55334 PAINT PACK\\F55334 PAINT PACK.rpd"}
+{"ts_utc": "2026-03-12T16:42:14.782+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 2887, "part_count": 74}
+{"ts_utc": "2026-03-12T17:04:32.753+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PAINT PACK\\F55334 PAINT PACK\\F55334 PAINT PACK.rpd"}
+{"ts_utc": "2026-03-12T17:04:35.684+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 2931, "part_count": 74}
+{"ts_utc": "2026-03-12T17:07:42.730+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PAINT PACK\\F55334 PAINT PACK\\F55334 PAINT PACK.rpd"}
+{"ts_utc": "2026-03-12T17:07:45.703+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 2971, "part_count": 74}
+{"ts_utc": "2026-03-12T17:08:21.594+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PAINT PACK\\F55334 PAINT PACK\\F55334 PAINT PACK.rpd"}
+{"ts_utc": "2026-03-12T17:08:24.465+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 2873, "part_count": 74}
+{"ts_utc": "2026-03-12T17:09:15.584+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PAINT PACK\\F55334 PAINT PACK\\F55334 PAINT PACK.rpd"}
+{"ts_utc": "2026-03-12T17:09:18.616+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 3032, "part_count": 74}
+{"ts_utc": "2026-03-12T17:13:21.038+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PAINT PACK\\F55334 PAINT PACK\\F55334 PAINT PACK.rpd"}
+{"ts_utc": "2026-03-12T17:13:24.185+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 3146, "part_count": 74}
+{"ts_utc": "2026-03-12T17:14:33.624+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PAINT PACK\\F55334 PAINT PACK\\F55334 PAINT PACK.rpd"}
+{"ts_utc": "2026-03-12T17:14:36.689+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 3065, "part_count": 74}
+{"ts_utc": "2026-03-13T15:43:48.625+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F54525\\GRAND REMOUS TWO\\F54525 GRAND REMOUS TWO\\F54525 GRAND REMOUS TWO.rpd"}
+{"ts_utc": "2026-03-13T15:43:51.370+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 2745, "part_count": 25}
+{"ts_utc": "2026-03-13T15:43:57.373+00:00", "feature": "build_packet", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F54525\\GRAND REMOUS TWO\\F54525 GRAND REMOUS TWO\\F54525 GRAND REMOUS TWO.rpd", "part_count": 25, "first_page_only": false, "page_cap": 0, "output_dir": "_out", "suppress_layer_0": true, "workers": 2, "mode": "vector"}
+{"ts_utc": "2026-03-13T15:43:57.396+00:00", "feature": "packet_engine", "phase": "start", "out_pdf_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F54525\\GRAND REMOUS TWO\\F54525 GRAND REMOUS TWO\\_out\\PrintPacket_QTY_20260313_114357.pdf", "total_parts": 25, "workers": 2, "dpi": 220, "jpeg_quality": 82, "suppress_layer_0": true}
+{"ts_utc": "2026-03-13T15:43:57.406+00:00", "feature": "build_packet", "phase": "progress", "done": 0, "total": 25, "status": "Starting packet build"}
+{"ts_utc": "2026-03-13T15:43:57.497+00:00", "feature": "packet_engine", "phase": "progress", "done": 1, "total": 25, "status": "F54525-B-129"}
+{"ts_utc": "2026-03-13T15:43:58.214+00:00", "feature": "build_packet", "phase": "progress", "done": 4, "total": 25, "status": "F54525-B-285"}
+{"ts_utc": "2026-03-13T15:43:58.356+00:00", "feature": "packet_engine", "phase": "progress", "done": 5, "total": 25, "status": "F54525-B-286"}
+{"ts_utc": "2026-03-13T15:43:58.987+00:00", "feature": "build_packet", "phase": "progress", "done": 9, "total": 25, "status": "F54525-B-296"}
+{"ts_utc": "2026-03-13T15:43:59.153+00:00", "feature": "packet_engine", "phase": "progress", "done": 10, "total": 25, "status": "F54525-B-297"}
+{"ts_utc": "2026-03-13T15:43:59.837+00:00", "feature": "build_packet", "phase": "progress", "done": 14, "total": 25, "status": "F54525-B-301"}
+{"ts_utc": "2026-03-13T15:44:00.003+00:00", "feature": "packet_engine", "phase": "progress", "done": 15, "total": 25, "status": "F54525-B-302"}
+{"ts_utc": "2026-03-13T15:44:00.682+00:00", "feature": "build_packet", "phase": "progress", "done": 19, "total": 25, "status": "F54525-B-313"}
+{"ts_utc": "2026-03-13T15:44:00.841+00:00", "feature": "packet_engine", "phase": "progress", "done": 20, "total": 25, "status": "F54525-B-314"}
+{"ts_utc": "2026-03-13T15:44:01.451+00:00", "feature": "build_packet", "phase": "progress", "done": 23, "total": 25, "status": "F54525-B-317"}
+{"ts_utc": "2026-03-13T15:44:01.612+00:00", "feature": "packet_engine", "phase": "progress", "done": 24, "total": 25, "status": "F54525-B-318"}
+{"ts_utc": "2026-03-13T15:44:01.709+00:00", "feature": "build_packet", "phase": "progress", "done": 25, "total": 25, "status": "F54525-B-319"}
+{"ts_utc": "2026-03-13T15:44:01.715+00:00", "feature": "packet_engine", "phase": "progress", "done": 25, "total": 25, "status": "F54525-B-319"}
+{"ts_utc": "2026-03-13T15:44:01.856+00:00", "feature": "build_packet", "phase": "progress", "done": 25, "total": 25, "status": "Writing packet file"}
+{"ts_utc": "2026-03-13T15:44:02.013+00:00", "feature": "build_packet", "phase": "progress", "done": 25, "total": 25, "status": "Packet complete"}
+{"ts_utc": "2026-03-13T15:44:02.061+00:00", "feature": "packet_engine", "phase": "success", "elapsed_ms": 4667, "pages": 25, "missing": 0, "out_size_bytes": 3150694, "avg_part_ms": 86, "max_part_ms": 211}
+{"ts_utc": "2026-03-13T15:44:02.093+00:00", "feature": "build_packet", "phase": "success", "elapsed_ms": 4711, "packet_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F54525\\GRAND REMOUS TWO\\F54525 GRAND REMOUS TWO\\_out\\PrintPacket_QTY_20260313_114357.pdf", "pages": 25, "missing": 0}
+{"ts_utc": "2026-03-16T13:53:00.536+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\INTERIOR PACK\\F55334 INTERIOR PACK\\F55334 INTERIOR PACK.rpd"}
+{"ts_utc": "2026-03-16T13:53:03.233+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 2696, "part_count": 10}
+{"ts_utc": "2026-03-16T13:54:49.447+00:00", "feature": "open_rpd_dialog", "phase": "start"}
+{"ts_utc": "2026-03-16T13:55:07.112+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:/BATTLESHIELD/F-LARGE FLEET/F55334/PAINT PACK/F55334 PAINT PACK/F55334 PAINT PACK.rpd"}
+{"ts_utc": "2026-03-16T13:55:10.002+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 2890, "part_count": 74}
+{"ts_utc": "2026-03-16T13:55:10.011+00:00", "feature": "open_rpd_dialog", "phase": "success", "elapsed_ms": 20565, "rpd_path": "L:/BATTLESHIELD/F-LARGE FLEET/F55334/PAINT PACK/F55334 PAINT PACK/F55334 PAINT PACK.rpd"}
+{"ts_utc": "2026-03-16T14:26:54.316+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\EXTERIOR PACK\\F55334 EXTERIOR PACK\\F55334 EXTERIOR PACK.rpd"}
+{"ts_utc": "2026-03-16T14:26:57.174+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 2857, "part_count": 0}
+{"ts_utc": "2026-03-16T14:27:34.963+00:00", "feature": "open_rpd_dialog", "phase": "start"}
+{"ts_utc": "2026-03-16T14:27:42.485+00:00", "feature": "open_rpd_dialog", "phase": "skip", "reason": "user_canceled", "elapsed_ms": 7521}
+{"ts_utc": "2026-03-16T14:27:58.127+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\EXTERIOR PACK\\F55334 EXTERIOR PACK\\F55334 EXTERIOR PACK.rpd"}
+{"ts_utc": "2026-03-16T14:28:01.164+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 3037, "part_count": 34}
+{"ts_utc": "2026-03-16T14:28:25.262+00:00", "feature": "build_packet", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\EXTERIOR PACK\\F55334 EXTERIOR PACK\\F55334 EXTERIOR PACK.rpd", "part_count": 34, "first_page_only": false, "page_cap": 0, "output_dir": "_out", "suppress_layer_0": true, "workers": 2, "mode": "vector"}
+{"ts_utc": "2026-03-16T14:28:25.275+00:00", "feature": "packet_engine", "phase": "start", "out_pdf_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\EXTERIOR PACK\\F55334 EXTERIOR PACK\\_out\\PrintPacket_QTY_20260316_102825.pdf", "total_parts": 34, "workers": 2, "dpi": 220, "jpeg_quality": 82, "suppress_layer_0": true}
+{"ts_utc": "2026-03-16T14:28:25.286+00:00", "feature": "build_packet", "phase": "progress", "done": 0, "total": 34, "status": "Starting packet build"}
+{"ts_utc": "2026-03-16T14:28:25.394+00:00", "feature": "packet_engine", "phase": "progress", "done": 1, "total": 34, "status": "D-543"}
+{"ts_utc": "2026-03-16T14:28:26.265+00:00", "feature": "build_packet", "phase": "progress", "done": 6, "total": 34, "status": "E-111"}
+{"ts_utc": "2026-03-16T14:28:26.380+00:00", "feature": "packet_engine", "phase": "progress", "done": 6, "total": 34, "status": "E-111"}
+{"ts_utc": "2026-03-16T14:28:27.039+00:00", "feature": "build_packet", "phase": "progress", "done": 9, "total": 34, "status": "E-14-R1"}
+{"ts_utc": "2026-03-16T14:28:27.213+00:00", "feature": "packet_engine", "phase": "progress", "done": 9, "total": 34, "status": "E-14-R1"}
+{"ts_utc": "2026-03-16T14:28:28.022+00:00", "feature": "build_packet", "phase": "progress", "done": 12, "total": 34, "status": "E-162"}
+{"ts_utc": "2026-03-16T14:28:28.119+00:00", "feature": "packet_engine", "phase": "progress", "done": 12, "total": 34, "status": "E-162"}
+{"ts_utc": "2026-03-16T14:28:28.995+00:00", "feature": "build_packet", "phase": "progress", "done": 16, "total": 34, "status": "E-23-R1"}
+{"ts_utc": "2026-03-16T14:28:29.080+00:00", "feature": "packet_engine", "phase": "progress", "done": 16, "total": 34, "status": "E-23-R1"}
+{"ts_utc": "2026-03-16T14:28:29.876+00:00", "feature": "build_packet", "phase": "progress", "done": 20, "total": 34, "status": "E-CHKR-1"}
+{"ts_utc": "2026-03-16T14:28:29.967+00:00", "feature": "packet_engine", "phase": "progress", "done": 20, "total": 34, "status": "E-CHKR-1"}
+{"ts_utc": "2026-03-16T14:28:30.648+00:00", "feature": "build_packet", "phase": "progress", "done": 23, "total": 34, "status": "F55334-B-23"}
+{"ts_utc": "2026-03-16T14:28:30.737+00:00", "feature": "packet_engine", "phase": "progress", "done": 23, "total": 34, "status": "F55334-B-23"}
+{"ts_utc": "2026-03-16T14:28:31.421+00:00", "feature": "build_packet", "phase": "progress", "done": 26, "total": 34, "status": "F55334-B-26"}
+{"ts_utc": "2026-03-16T14:28:31.526+00:00", "feature": "packet_engine", "phase": "progress", "done": 26, "total": 34, "status": "F55334-B-26"}
+{"ts_utc": "2026-03-16T14:28:32.339+00:00", "feature": "build_packet", "phase": "progress", "done": 29, "total": 34, "status": "F55334-B-29"}
+{"ts_utc": "2026-03-16T14:28:32.426+00:00", "feature": "packet_engine", "phase": "progress", "done": 29, "total": 34, "status": "F55334-B-29"}
+{"ts_utc": "2026-03-16T14:28:33.356+00:00", "feature": "build_packet", "phase": "progress", "done": 33, "total": 34, "status": "F55334-B-34"}
+{"ts_utc": "2026-03-16T14:28:33.442+00:00", "feature": "packet_engine", "phase": "progress", "done": 33, "total": 34, "status": "F55334-B-34"}
+{"ts_utc": "2026-03-16T14:28:33.617+00:00", "feature": "build_packet", "phase": "progress", "done": 34, "total": 34, "status": "F55334-B-35"}
+{"ts_utc": "2026-03-16T14:28:33.630+00:00", "feature": "packet_engine", "phase": "progress", "done": 34, "total": 34, "status": "F55334-B-35"}
+{"ts_utc": "2026-03-16T14:28:33.867+00:00", "feature": "build_packet", "phase": "progress", "done": 34, "total": 34, "status": "Writing packet file"}
+{"ts_utc": "2026-03-16T14:28:33.996+00:00", "feature": "build_packet", "phase": "progress", "done": 34, "total": 34, "status": "Packet complete"}
+{"ts_utc": "2026-03-16T14:28:34.005+00:00", "feature": "packet_engine", "phase": "success", "elapsed_ms": 8729, "pages": 34, "missing": 0, "out_size_bytes": 4553572, "avg_part_ms": 112, "max_part_ms": 173}
+{"ts_utc": "2026-03-16T14:28:34.034+00:00", "feature": "build_packet", "phase": "success", "elapsed_ms": 8771, "packet_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\EXTERIOR PACK\\F55334 EXTERIOR PACK\\_out\\PrintPacket_QTY_20260316_102825.pdf", "pages": 34, "missing": 0}
+{"ts_utc": "2026-03-16T14:34:48.383+00:00", "feature": "open_rpd_dialog", "phase": "start"}
+{"ts_utc": "2026-03-16T14:41:49.506+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\EXTERIOR PACK\\F55334 EXTERIOR PACK\\F55334 EXTERIOR PACK.rpd"}
+{"ts_utc": "2026-03-16T14:41:53.278+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 3772, "part_count": 31}
+{"ts_utc": "2026-03-16T15:30:26.003+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\EXTERIOR PACK\\F55334 EXTERIOR PACK\\F55334 EXTERIOR PACK.rpd"}
+{"ts_utc": "2026-03-16T15:30:29.106+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 3102, "part_count": 31}
+{"ts_utc": "2026-03-16T15:31:39.576+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\EXTERIOR PACK\\F55334 EXTERIOR PACK\\F55334 EXTERIOR PACK.rpd"}
+{"ts_utc": "2026-03-16T15:31:42.379+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 2802, "part_count": 31}
+{"ts_utc": "2026-03-16T15:35:48.022+00:00", "feature": "write_rpd", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\EXTERIOR PACK\\F55334 EXTERIOR PACK\\F55334 EXTERIOR PACK.rpd", "part_count": 31}
+{"ts_utc": "2026-03-16T15:35:49.912+00:00", "feature": "write_rpd", "phase": "success", "elapsed_ms": 1894, "backup_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\EXTERIOR PACK\\F55334 EXTERIOR PACK\\_bak\\F55334 EXTERIOR PACK.rpd.20260316_113548.bak"}
+{"ts_utc": "2026-03-16T15:35:52.746+00:00", "feature": "prepare_kits", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\EXTERIOR PACK\\F55334 EXTERIOR PACK\\F55334 EXTERIOR PACK.rpd", "part_count": 31}
+{"ts_utc": "2026-03-16T15:35:52.811+00:00", "feature": "prepare_kits", "phase": "progress", "done": 0, "total": 40, "status": "Preparing kits..."}
+{"ts_utc": "2026-03-16T15:35:53.563+00:00", "feature": "prepare_kits", "phase": "progress", "done": 19, "total": 40, "status": "Updating Attr109: E-CHKR-14 R1.sym"}
+{"ts_utc": "2026-03-16T15:35:54.163+00:00", "feature": "prepare_kits", "phase": "progress", "done": 40, "total": 40, "status": "Building kit: Checkers"}
+{"ts_utc": "2026-03-16T15:35:55.277+00:00", "feature": "prepare_kits", "phase": "success", "elapsed_ms": 2525, "kit_count": 9}
+{"ts_utc": "2026-03-16T15:36:47.282+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\EXTERIOR PACK\\F55334 EXTERIOR PACK\\F55334 EXTERIOR PACK.rpd"}
+{"ts_utc": "2026-03-16T15:36:51.247+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 3965, "part_count": 31}
+{"ts_utc": "2026-03-16T15:36:56.546+00:00", "feature": "build_packet", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\EXTERIOR PACK\\F55334 EXTERIOR PACK\\F55334 EXTERIOR PACK.rpd", "part_count": 31, "first_page_only": false, "page_cap": 0, "output_dir": "_out", "suppress_layer_0": true, "workers": 2, "mode": "vector"}
+{"ts_utc": "2026-03-16T15:36:56.562+00:00", "feature": "packet_engine", "phase": "start", "out_pdf_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\EXTERIOR PACK\\F55334 EXTERIOR PACK\\_out\\PrintPacket_QTY_20260316_113656.pdf", "total_parts": 31, "workers": 2, "dpi": 220, "jpeg_quality": 82, "suppress_layer_0": true}
+{"ts_utc": "2026-03-16T15:36:56.574+00:00", "feature": "build_packet", "phase": "progress", "done": 0, "total": 31, "status": "Starting packet build"}
+{"ts_utc": "2026-03-16T15:36:56.715+00:00", "feature": "packet_engine", "phase": "progress", "done": 1, "total": 31, "status": "D-543"}
+{"ts_utc": "2026-03-16T15:36:57.488+00:00", "feature": "build_packet", "phase": "progress", "done": 5, "total": 31, "status": "E-11"}
+{"ts_utc": "2026-03-16T15:36:57.501+00:00", "feature": "packet_engine", "phase": "progress", "done": 5, "total": 31, "status": "E-11"}
+{"ts_utc": "2026-03-16T15:36:58.295+00:00", "feature": "build_packet", "phase": "progress", "done": 9, "total": 31, "status": "E-15"}
+{"ts_utc": "2026-03-16T15:36:58.316+00:00", "feature": "packet_engine", "phase": "progress", "done": 9, "total": 31, "status": "E-15"}
+{"ts_utc": "2026-03-16T15:36:59.261+00:00", "feature": "build_packet", "phase": "progress", "done": 14, "total": 31, "status": "E-23-R1"}
+{"ts_utc": "2026-03-16T15:36:59.266+00:00", "feature": "packet_engine", "phase": "progress", "done": 14, "total": 31, "status": "E-23-R1"}
+{"ts_utc": "2026-03-16T15:37:00.020+00:00", "feature": "build_packet", "phase": "progress", "done": 19, "total": 31, "status": "E-CHKR-14 R1"}
+{"ts_utc": "2026-03-16T15:37:00.034+00:00", "feature": "packet_engine", "phase": "progress", "done": 19, "total": 31, "status": "E-CHKR-14 R1"}
+{"ts_utc": "2026-03-16T15:37:00.902+00:00", "feature": "build_packet", "phase": "progress", "done": 24, "total": 31, "status": "F55334-B-27"}
+{"ts_utc": "2026-03-16T15:37:00.918+00:00", "feature": "packet_engine", "phase": "progress", "done": 24, "total": 31, "status": "F55334-B-27"}
+{"ts_utc": "2026-03-16T15:37:01.709+00:00", "feature": "build_packet", "phase": "progress", "done": 28, "total": 31, "status": "F55334-B-31"}
+{"ts_utc": "2026-03-16T15:37:01.720+00:00", "feature": "packet_engine", "phase": "progress", "done": 28, "total": 31, "status": "F55334-B-31"}
+{"ts_utc": "2026-03-16T15:37:02.264+00:00", "feature": "build_packet", "phase": "progress", "done": 31, "total": 31, "status": "F55334-B-35"}
+{"ts_utc": "2026-03-16T15:37:02.272+00:00", "feature": "packet_engine", "phase": "progress", "done": 31, "total": 31, "status": "F55334-B-35"}
+{"ts_utc": "2026-03-16T15:37:02.453+00:00", "feature": "build_packet", "phase": "progress", "done": 31, "total": 31, "status": "Writing packet file"}
+{"ts_utc": "2026-03-16T15:37:02.573+00:00", "feature": "build_packet", "phase": "progress", "done": 31, "total": 31, "status": "Packet complete"}
+{"ts_utc": "2026-03-16T15:37:02.591+00:00", "feature": "packet_engine", "phase": "success", "elapsed_ms": 6028, "pages": 31, "missing": 0, "out_size_bytes": 4140998, "avg_part_ms": 54, "max_part_ms": 211}
+{"ts_utc": "2026-03-16T15:37:02.615+00:00", "feature": "build_packet", "phase": "success", "elapsed_ms": 6069, "packet_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\EXTERIOR PACK\\F55334 EXTERIOR PACK\\_out\\PrintPacket_QTY_20260316_113656.pdf", "pages": 31, "missing": 0}

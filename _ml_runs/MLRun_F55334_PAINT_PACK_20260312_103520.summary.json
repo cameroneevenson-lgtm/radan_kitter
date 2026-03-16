@@ -1,0 +1,16 @@
+{
+  "total_rows": 74,
+  "processed_rows": 14,
+  "written_rows": 10,
+  "skipped_duplicate_rows": 4,
+  "missing_pdf_rows": 6,
+  "missing_dxf_rows": 2,
+  "append_error_rows": 0,
+  "stopped": true,
+  "workers": 2,
+  "run_name": "MLRun_F55334_PAINT_PACK_20260312_103520",
+  "dataset_path": "C:\\Tools\\radan_kitter\\ml_dataset.csv",
+  "run_dir": "C:\\Tools\\radan_kitter\\_ml_runs",
+  "timestamp_utc": "2026-03-12T14:35:22+00:00",
+  "duration_sec": 1.417
+}

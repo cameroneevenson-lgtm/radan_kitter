@@ -1,0 +1,28 @@
+{
+  "run_name": "MLRun_F55334_PAINT_PACK_20260312_103520",
+  "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PAINT PACK\\F55334 PAINT PACK\\F55334 PAINT PACK.rpd",
+  "rpd_token": "F55334 PAINT PACK.rpd",
+  "dataset_path": "C:\\Tools\\radan_kitter\\ml_dataset.csv",
+  "signal_cols": [
+    "dxf_perimeter_area_ratio",
+    "dxf_internal_void_area_ratio",
+    "dxf_entity_count",
+    "dxf_arc_count",
+    "dxf_bbox_aspect_ratio",
+    "dxf_fill_ratio",
+    "dxf_edge_length_cv",
+    "dxf_edge_band_entity_ratio",
+    "dxf_arc_length_ratio",
+    "dxf_exterior_notch_count",
+    "dxf_has_interior_polylines",
+    "dxf_color_count",
+    "pdf_dim_density",
+    "pdf_red_dim_density",
+    "pdf_bendline_score",
+    "pdf_bendline_entity_density"
+  ],
+  "compute_workers": 2,
+  "global_dedupe_by_part": true,
+  "artificial_delay_ms": 0,
+  "timestamp_utc": "2026-03-12T14:35:20+00:00"
+}
