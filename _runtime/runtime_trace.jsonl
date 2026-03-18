@@ -2679,3 +2679,41 @@
 {"ts_utc": "2026-03-16T15:37:02.573+00:00", "feature": "build_packet", "phase": "progress", "done": 31, "total": 31, "status": "Packet complete"}
 {"ts_utc": "2026-03-16T15:37:02.591+00:00", "feature": "packet_engine", "phase": "success", "elapsed_ms": 6028, "pages": 31, "missing": 0, "out_size_bytes": 4140998, "avg_part_ms": 54, "max_part_ms": 211}
 {"ts_utc": "2026-03-16T15:37:02.615+00:00", "feature": "build_packet", "phase": "success", "elapsed_ms": 6069, "packet_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\EXTERIOR PACK\\F55334 EXTERIOR PACK\\_out\\PrintPacket_QTY_20260316_113656.pdf", "pages": 31, "missing": 0}
+{"ts_utc": "2026-03-16T17:11:16.207+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\EXTERIOR PACK\\F55334 EXTERIOR PACK\\F55334 EXTERIOR PACK.rpd"}
+{"ts_utc": "2026-03-16T17:11:19.191+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 2983, "part_count": 31}
+{"ts_utc": "2026-03-16T17:11:32.411+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\EXTERIOR PACK\\F55334 EXTERIOR PACK\\F55334 EXTERIOR PACK.rpd"}
+{"ts_utc": "2026-03-16T17:11:35.287+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 2876, "part_count": 31}
+{"ts_utc": "2026-03-16T17:55:30.834+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\EXTERIOR PACK\\F55334 EXTERIOR PACK\\F55334 EXTERIOR PACK.rpd"}
+{"ts_utc": "2026-03-16T17:55:33.849+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 3015, "part_count": 31}
+{"ts_utc": "2026-03-16T17:55:53.956+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\EXTERIOR PACK\\F55334 EXTERIOR PACK\\F55334 EXTERIOR PACK.rpd"}
+{"ts_utc": "2026-03-16T17:55:56.989+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 3033, "part_count": 31}
+{"ts_utc": "2026-03-16T17:58:17.954+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\EXTERIOR PACK\\F55334 EXTERIOR PACK\\F55334 EXTERIOR PACK.rpd"}
+{"ts_utc": "2026-03-16T17:58:20.931+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 2977, "part_count": 31}
+{"ts_utc": "2026-03-16T17:58:56.535+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\EXTERIOR PACK\\F55334 EXTERIOR PACK\\F55334 EXTERIOR PACK.rpd"}
+{"ts_utc": "2026-03-16T17:58:59.634+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 3098, "part_count": 31}
+{"ts_utc": "2026-03-16T18:01:13.580+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\EXTERIOR PACK\\F55334 EXTERIOR PACK\\F55334 EXTERIOR PACK.rpd"}
+{"ts_utc": "2026-03-16T18:01:16.448+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 2868, "part_count": 31}
+{"ts_utc": "2026-03-16T18:01:54.603+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\EXTERIOR PACK\\F55334 EXTERIOR PACK\\F55334 EXTERIOR PACK.rpd"}
+{"ts_utc": "2026-03-16T18:01:57.463+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 2860, "part_count": 31}
+{"ts_utc": "2026-03-17T13:02:23.660+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PUMP COVERINGS\\F55334 PUMP COVERINGS\\F55334 PUMP COVERINGS.rpd"}
+{"ts_utc": "2026-03-17T13:02:26.627+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 2966, "part_count": 19}
+{"ts_utc": "2026-03-17T13:02:48.028+00:00", "feature": "build_packet", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PUMP COVERINGS\\F55334 PUMP COVERINGS\\F55334 PUMP COVERINGS.rpd", "part_count": 19, "first_page_only": false, "page_cap": 0, "output_dir": "_out", "suppress_layer_0": true, "workers": 2, "mode": "vector"}
+{"ts_utc": "2026-03-17T13:02:48.046+00:00", "feature": "packet_engine", "phase": "start", "out_pdf_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PUMP COVERINGS\\F55334 PUMP COVERINGS\\_out\\PrintPacket_QTY_20260317_090248.pdf", "total_parts": 19, "workers": 2, "dpi": 220, "jpeg_quality": 82, "suppress_layer_0": true}
+{"ts_utc": "2026-03-17T13:02:48.056+00:00", "feature": "build_packet", "phase": "progress", "done": 0, "total": 19, "status": "Starting packet build"}
+{"ts_utc": "2026-03-17T13:02:48.134+00:00", "feature": "packet_engine", "phase": "progress", "done": 1, "total": 19, "status": "8500-F53964-4"}
+{"ts_utc": "2026-03-17T13:02:48.837+00:00", "feature": "build_packet", "phase": "progress", "done": 4, "total": 19, "status": "P-122"}
+{"ts_utc": "2026-03-17T13:02:49.229+00:00", "feature": "packet_engine", "phase": "progress", "done": 5, "total": 19, "status": "P-129"}
+{"ts_utc": "2026-03-17T13:02:49.617+00:00", "feature": "build_packet", "phase": "progress", "done": 7, "total": 19, "status": "P-145"}
+{"ts_utc": "2026-03-17T13:02:50.176+00:00", "feature": "packet_engine", "phase": "progress", "done": 9, "total": 19, "status": "P-159"}
+{"ts_utc": "2026-03-17T13:02:50.443+00:00", "feature": "build_packet", "phase": "progress", "done": 10, "total": 19, "status": "P-163"}
+{"ts_utc": "2026-03-17T13:02:51.063+00:00", "feature": "packet_engine", "phase": "progress", "done": 12, "total": 19, "status": "P-24-R2"}
+{"ts_utc": "2026-03-17T13:02:51.279+00:00", "feature": "build_packet", "phase": "progress", "done": 13, "total": 19, "status": "P-33-R1"}
+{"ts_utc": "2026-03-17T13:02:51.940+00:00", "feature": "packet_engine", "phase": "progress", "done": 15, "total": 19, "status": "P-40"}
+{"ts_utc": "2026-03-17T13:02:52.168+00:00", "feature": "build_packet", "phase": "progress", "done": 16, "total": 19, "status": "P-41"}
+{"ts_utc": "2026-03-17T13:02:52.800+00:00", "feature": "packet_engine", "phase": "progress", "done": 18, "total": 19, "status": "P-48"}
+{"ts_utc": "2026-03-17T13:02:53.035+00:00", "feature": "build_packet", "phase": "progress", "done": 19, "total": 19, "status": "P-96"}
+{"ts_utc": "2026-03-17T13:02:53.045+00:00", "feature": "packet_engine", "phase": "progress", "done": 19, "total": 19, "status": "P-96"}
+{"ts_utc": "2026-03-17T13:02:53.272+00:00", "feature": "build_packet", "phase": "progress", "done": 19, "total": 19, "status": "Writing packet file"}
+{"ts_utc": "2026-03-17T13:02:53.448+00:00", "feature": "build_packet", "phase": "progress", "done": 19, "total": 19, "status": "Packet complete"}
+{"ts_utc": "2026-03-17T13:02:53.464+00:00", "feature": "packet_engine", "phase": "success", "elapsed_ms": 5417, "pages": 19, "missing": 0, "out_size_bytes": 1530880, "avg_part_ms": 218, "max_part_ms": 438}
+{"ts_utc": "2026-03-17T13:02:53.486+00:00", "feature": "build_packet", "phase": "success", "elapsed_ms": 5457, "packet_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PUMP COVERINGS\\F55334 PUMP COVERINGS\\_out\\PrintPacket_QTY_20260317_090248.pdf", "pages": 19, "missing": 0}
