@@ -36,3 +36,4 @@ def build_packet(
 
 
 PacketBuildCanceled = pdf_packet.PacketBuildCanceled
+PacketBuildEmpty = pdf_packet.PacketBuildEmpty

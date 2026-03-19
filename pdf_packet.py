@@ -12,6 +12,8 @@
 
 import os
 import re
+import shutil
+import tempfile
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 import time
 from typing import Callable, List, Optional, Tuple
@@ -57,7 +59,10 @@ PACKET_BW_THRESHOLD = 208
 PACKET_JPEG_QUALITY = 82
 # PyMuPDF page processing can be unstable in threaded mode on some systems.
 # Keep stable single-thread default; allow override via env for testing.
-PACKET_MAX_WORKERS = 2
+try:
+    PACKET_MAX_WORKERS = max(1, int(str(os.environ.get("RK_PACKET_MAX_WORKERS", "1")).strip() or "1"))
+except Exception:
+    PACKET_MAX_WORKERS = 1
 # Default OFF: keep normal black-on-white output unless explicitly requested.
 PACKET_INVERT_BW = str(os.environ.get("RK_PACKET_INVERT_BW", "0")).strip().lower() not in ("0", "false", "off", "no")
 
@@ -66,6 +71,18 @@ class PacketBuildCanceled(Exception):
     def __init__(
         self,
         message: str = "Packet build canceled.",
+        pages: int = 0,
+        missing: int = 0,
+    ):
+        super().__init__(message)
+        self.pages = int(pages)
+        self.missing = int(missing)
+
+
+class PacketBuildEmpty(Exception):
+    def __init__(
+        self,
+        message: str = "No packet pages were created.",
         pages: int = 0,
         missing: int = 0,
     ):
@@ -1882,20 +1899,59 @@ def build_watermarked_packet(
                 missing=int(missing),
             )
 
+        if int(pages) <= 0 or int(getattr(dst, "page_count", 0) or 0) <= 0:
+            if progress_cb is not None:
+                try:
+                    progress_cb(progress_total, progress_total, "No packet pages created")
+                except Exception:
+                    pass
+            span.skip(
+                reason="no_packet_pages",
+                pages=int(pages),
+                missing=int(missing),
+                processed_parts=int(done_parts),
+            )
+            raise PacketBuildEmpty(
+                "No packet pages were created because no PDFs were found for the selected rows.",
+                pages=int(pages),
+                missing=int(missing),
+            )
+
         if progress_cb is not None:
             try:
-                progress_cb(progress_total, progress_total, "Writing packet file")
+                progress_cb(progress_total, progress_total, "Saving packet to temp file")
             except Exception:
                 pass
 
-        _apply_packet_layer_policy(dst)
-
-        dst.save(
-            out_pdf_path,
-            deflate=False,
-            deflate_images=False,
-            garbage=0,
-        )
+        tmp_fd = -1
+        tmp_pdf_path = ""
+        try:
+            tmp_fd, tmp_pdf_path = tempfile.mkstemp(prefix="rk_packet_", suffix=".pdf")
+            os.close(tmp_fd)
+            tmp_fd = -1
+            dst.save(
+                tmp_pdf_path,
+                deflate=False,
+                deflate_images=False,
+                garbage=0,
+            )
+            if progress_cb is not None:
+                try:
+                    progress_cb(progress_total, progress_total, "Copying packet file")
+                except Exception:
+                    pass
+            shutil.copyfile(tmp_pdf_path, out_pdf_path)
+        finally:
+            if tmp_fd >= 0:
+                try:
+                    os.close(tmp_fd)
+                except Exception:
+                    pass
+            if tmp_pdf_path:
+                try:
+                    os.remove(tmp_pdf_path)
+                except Exception:
+                    pass
         out_size = 0
         try:
             out_size = int(os.path.getsize(out_pdf_path))

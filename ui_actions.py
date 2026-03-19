@@ -203,7 +203,7 @@ def run_build_packet(
         page_cap=(int(page_cap) if page_cap is not None else 0),
         output_dir=effective_out_dir,
         suppress_layer_0=True,
-        workers=2,
+        workers="auto",
         mode=mode,
     )
     if not _require_rpd_loaded(parent, tree, rpd_path):
@@ -264,7 +264,6 @@ def run_build_packet(
             resolve_asset_fn=resolve_asset_fn,
             progress_cb=on_progress,
             should_cancel_cb=progress.wasCanceled,
-            max_workers=2,
             render_mode=mode,
         )
         ticker.stop()
@@ -281,6 +280,19 @@ def run_build_packet(
             except Exception:
                 pass
             progress.close()
+        return False
+    except packet_service.PacketBuildEmpty as exc:
+        span.skip(reason="no_packet_pages", missing=int(getattr(exc, "missing", 0) or 0))
+        if progress is not None:
+            progress.close()
+        QMessageBox.information(
+            parent,
+            "Build Packet",
+            (
+                "No packet was created because no PDFs were found for the selected rows.\n"
+                f"Missing PDFs: {int(getattr(exc, 'missing', 0) or 0)}"
+            ),
+        )
         return False
     except Exception as exc:
         span.fail(exc)
@@ -349,12 +361,18 @@ def run_rf_suggest(
         model.set_predictions(preds)
         refresh_ui_cb()
         progress.setValue(progress.maximum())
+        predicted_rows = sum(1 for label, _conf in preds if str(label or "").strip())
+        skipped_rows = max(0, len(parts) - predicted_rows)
         QMessageBox.information(
             parent,
             "RF Suggest complete",
-            f"Predictions updated for {len(preds)} rows.\nModel source: {source}.",
+            (
+                f"Predictions updated for {predicted_rows} rows.\n"
+                f"Rows skipped (missing PDF): {skipped_rows}.\n"
+                f"Model source: {source}."
+            ),
         )
-        span.success(pred_count=int(len(preds)), source=str(source))
+        span.success(pred_count=int(predicted_rows), skipped_missing_pdf_rows=int(skipped_rows), source=str(source))
     except Exception as exc:
         span.fail(exc)
         QMessageBox.critical(parent, "RF Suggest failed", traceback.format_exc())
@@ -414,6 +432,7 @@ def run_ml_log(
             (
                 f"Rows processed: {int(summary.get('processed_rows', 0))}/{int(summary.get('total_rows', 0))}\n"
                 f"Rows written: {int(summary.get('written_rows', 0))}\n"
+                f"Rows skipped (missing PDF): {int(summary.get('skipped_missing_pdf_rows', 0))}\n"
                 f"Workers: {int(summary.get('workers', 1))}\n"
                 f"Duplicates skipped: {int(summary.get('skipped_duplicate_rows', 0))}\n"
                 f"Dataset: {summary.get('dataset_path', '')}\n"

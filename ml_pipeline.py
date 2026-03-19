@@ -407,6 +407,7 @@ def run_scan_and_log(
         "processed_rows": 0,
         "written_rows": 0,
         "skipped_duplicate_rows": 0,
+        "skipped_missing_pdf_rows": 0,
         "missing_pdf_rows": 0,
         "missing_dxf_rows": 0,
         "append_error_rows": 0,
@@ -451,11 +452,28 @@ def run_scan_and_log(
             existing_parts.add(key)
 
         pdf = resolve_asset_fn(sym_path, ".pdf") or ""
-        dxf = resolve_asset_fn(sym_path, ".dxf") or ""
         pdf_exists = bool(pdf and os.path.exists(pdf))
-        dxf_exists = bool(dxf and os.path.exists(dxf))
         if not pdf_exists:
             counts["missing_pdf_rows"] += 1
+            counts["skipped_missing_pdf_rows"] += 1
+            counts["processed_rows"] += 1
+            done += 1
+            item = {
+                "status": "skipped_missing_pdf",
+                "part_name": part_name,
+                "kit_label": kit,
+                "pdf_path": str(pdf or ""),
+                "reason": "missing_pdf",
+            }
+            logger.log_part(item)
+            _safe_emit(on_part, item)
+            _safe_emit(on_progress, done, total)
+            if delay_ms > 0:
+                time.sleep(int(delay_ms) / 1000.0)
+            continue
+
+        dxf = resolve_asset_fn(sym_path, ".dxf") or ""
+        dxf_exists = bool(dxf and os.path.exists(dxf))
         if not dxf_exists:
             counts["missing_dxf_rows"] += 1
 
