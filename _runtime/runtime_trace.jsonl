@@ -2717,3 +2717,232 @@
 {"ts_utc": "2026-03-17T13:02:53.448+00:00", "feature": "build_packet", "phase": "progress", "done": 19, "total": 19, "status": "Packet complete"}
 {"ts_utc": "2026-03-17T13:02:53.464+00:00", "feature": "packet_engine", "phase": "success", "elapsed_ms": 5417, "pages": 19, "missing": 0, "out_size_bytes": 1530880, "avg_part_ms": 218, "max_part_ms": 438}
 {"ts_utc": "2026-03-17T13:02:53.486+00:00", "feature": "build_packet", "phase": "success", "elapsed_ms": 5457, "packet_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PUMP COVERINGS\\F55334 PUMP COVERINGS\\_out\\PrintPacket_QTY_20260317_090248.pdf", "pages": 19, "missing": 0}
+{"ts_utc": "2026-03-19T17:09:30.378+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PAINT PACK\\F55334 PAINT PACK\\F55334 PAINT PACK.rpd"}
+{"ts_utc": "2026-03-19T17:09:33.425+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 3046, "part_count": 74}
+{"ts_utc": "2026-03-19T17:16:32.555+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PAINT PACK\\F55334 PAINT PACK\\F55334 PAINT PACK.rpd"}
+{"ts_utc": "2026-03-19T17:16:35.481+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 2932, "part_count": 74}
+{"ts_utc": "2026-03-19T17:16:41.141+00:00", "feature": "build_packet", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PAINT PACK\\F55334 PAINT PACK\\F55334 PAINT PACK.rpd", "part_count": 74, "first_page_only": false, "page_cap": 0, "output_dir": "_out", "suppress_layer_0": true, "workers": 2, "mode": "vector"}
+{"ts_utc": "2026-03-19T17:16:41.163+00:00", "feature": "packet_engine", "phase": "start", "out_pdf_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PAINT PACK\\F55334 PAINT PACK\\_out\\PrintPacket_QTY_20260319_131641.pdf", "total_parts": 74, "workers": 2, "dpi": 220, "jpeg_quality": 82, "suppress_layer_0": true}
+{"ts_utc": "2026-03-19T17:16:41.170+00:00", "feature": "build_packet", "phase": "progress", "done": 0, "total": 74, "status": "Starting packet build"}
+{"ts_utc": "2026-03-19T17:16:41.257+00:00", "feature": "packet_engine", "phase": "progress", "done": 1, "total": 74, "status": "B-1"}
+{"ts_utc": "2026-03-19T17:16:41.921+00:00", "feature": "build_packet", "phase": "progress", "done": 5, "total": 74, "status": "B-110"}
+{"ts_utc": "2026-03-19T17:16:42.055+00:00", "feature": "packet_engine", "phase": "progress", "done": 6, "total": 74, "status": "B-12"}
+{"ts_utc": "2026-03-19T17:16:42.821+00:00", "feature": "build_packet", "phase": "progress", "done": 12, "total": 74, "status": "B-189"}
+{"ts_utc": "2026-03-19T17:16:42.821+00:00", "feature": "packet_engine", "phase": "progress", "done": 12, "total": 74, "status": "B-189"}
+{"ts_utc": "2026-03-19T17:16:43.598+00:00", "feature": "build_packet", "phase": "progress", "done": 16, "total": 74, "status": "B-22"}
+{"ts_utc": "2026-03-19T17:16:43.605+00:00", "feature": "packet_engine", "phase": "progress", "done": 16, "total": 74, "status": "B-22"}
+{"ts_utc": "2026-03-19T17:16:44.357+00:00", "feature": "build_packet", "phase": "progress", "done": 22, "total": 74, "status": "B-34"}
+{"ts_utc": "2026-03-19T17:16:44.357+00:00", "feature": "packet_engine", "phase": "progress", "done": 22, "total": 74, "status": "B-34"}
+{"ts_utc": "2026-03-19T17:16:45.159+00:00", "feature": "build_packet", "phase": "progress", "done": 28, "total": 74, "status": "B-47 R2"}
+{"ts_utc": "2026-03-19T17:16:45.174+00:00", "feature": "packet_engine", "phase": "progress", "done": 28, "total": 74, "status": "B-47 R2"}
+{"ts_utc": "2026-03-19T17:16:46.057+00:00", "feature": "build_packet", "phase": "progress", "done": 34, "total": 74, "status": "B-55 R4"}
+{"ts_utc": "2026-03-19T17:16:46.067+00:00", "feature": "packet_engine", "phase": "progress", "done": 34, "total": 74, "status": "B-55 R4"}
+{"ts_utc": "2026-03-19T17:16:46.892+00:00", "feature": "build_packet", "phase": "progress", "done": 40, "total": 74, "status": "F55334-B-01"}
+{"ts_utc": "2026-03-19T17:16:46.901+00:00", "feature": "packet_engine", "phase": "progress", "done": 40, "total": 74, "status": "F55334-B-01"}
+{"ts_utc": "2026-03-19T17:16:47.739+00:00", "feature": "build_packet", "phase": "progress", "done": 44, "total": 74, "status": "F55334-B-05"}
+{"ts_utc": "2026-03-19T17:16:47.752+00:00", "feature": "packet_engine", "phase": "progress", "done": 44, "total": 74, "status": "F55334-B-05"}
+{"ts_utc": "2026-03-19T17:16:48.611+00:00", "feature": "build_packet", "phase": "progress", "done": 48, "total": 74, "status": "F55334-B-10"}
+{"ts_utc": "2026-03-19T17:16:48.629+00:00", "feature": "packet_engine", "phase": "progress", "done": 48, "total": 74, "status": "F55334-B-10"}
+{"ts_utc": "2026-03-19T17:16:49.369+00:00", "feature": "build_packet", "phase": "progress", "done": 51, "total": 74, "status": "F55334-B-13"}
+{"ts_utc": "2026-03-19T17:16:49.380+00:00", "feature": "packet_engine", "phase": "progress", "done": 51, "total": 74, "status": "F55334-B-13"}
+{"ts_utc": "2026-03-19T17:16:50.283+00:00", "feature": "build_packet", "phase": "progress", "done": 55, "total": 74, "status": "F55334-B-17"}
+{"ts_utc": "2026-03-19T17:16:50.293+00:00", "feature": "packet_engine", "phase": "progress", "done": 55, "total": 74, "status": "F55334-B-17"}
+{"ts_utc": "2026-03-19T17:16:51.098+00:00", "feature": "build_packet", "phase": "progress", "done": 59, "total": 74, "status": "F55334-B-22"}
+{"ts_utc": "2026-03-19T17:16:51.113+00:00", "feature": "packet_engine", "phase": "progress", "done": 59, "total": 74, "status": "F55334-B-22"}
+{"ts_utc": "2026-03-19T17:16:52.002+00:00", "feature": "build_packet", "phase": "progress", "done": 66, "total": 74, "status": "F55334-B-41"}
+{"ts_utc": "2026-03-19T17:16:52.014+00:00", "feature": "packet_engine", "phase": "progress", "done": 66, "total": 74, "status": "F55334-B-41"}
+{"ts_utc": "2026-03-19T17:16:54.183+00:00", "feature": "build_packet", "phase": "progress", "done": 69, "total": 74, "status": "F55985-C-18"}
+{"ts_utc": "2026-03-19T17:16:54.199+00:00", "feature": "packet_engine", "phase": "progress", "done": 69, "total": 74, "status": "F55985-C-18"}
+{"ts_utc": "2026-03-19T17:21:01.577+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PAINT PACK\\F55334 PAINT PACK\\F55334 PAINT PACK.rpd"}
+{"ts_utc": "2026-03-19T17:21:04.744+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 3167, "part_count": 74}
+{"ts_utc": "2026-03-19T17:21:10.784+00:00", "feature": "prepare_kits", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PAINT PACK\\F55334 PAINT PACK\\F55334 PAINT PACK.rpd", "part_count": 74}
+{"ts_utc": "2026-03-19T17:21:10.834+00:00", "feature": "prepare_kits", "phase": "progress", "done": 0, "total": 83, "status": "Preparing kits..."}
+{"ts_utc": "2026-03-19T17:21:11.585+00:00", "feature": "prepare_kits", "phase": "progress", "done": 37, "total": 83, "status": "Updating Attr109: B-9.sym"}
+{"ts_utc": "2026-03-19T17:21:12.352+00:00", "feature": "prepare_kits", "phase": "progress", "done": 68, "total": 83, "status": "Updating Attr109: P-147.sym"}
+{"ts_utc": "2026-03-19T17:21:12.881+00:00", "feature": "prepare_kits", "phase": "progress", "done": 83, "total": 83, "status": "Skipping invalid kit label"}
+{"ts_utc": "2026-03-19T17:21:13.997+00:00", "feature": "prepare_kits", "phase": "success", "elapsed_ms": 3208, "kit_count": 9}
+{"ts_utc": "2026-03-19T17:21:15.172+00:00", "feature": "build_packet", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PAINT PACK\\F55334 PAINT PACK\\F55334 PAINT PACK.rpd", "part_count": 74, "first_page_only": false, "page_cap": 0, "output_dir": "_out", "suppress_layer_0": true, "workers": 2, "mode": "vector"}
+{"ts_utc": "2026-03-19T17:21:15.189+00:00", "feature": "packet_engine", "phase": "start", "out_pdf_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PAINT PACK\\F55334 PAINT PACK\\_out\\PrintPacket_QTY_20260319_132115.pdf", "total_parts": 74, "workers": 2, "dpi": 220, "jpeg_quality": 82, "suppress_layer_0": true}
+{"ts_utc": "2026-03-19T17:21:15.205+00:00", "feature": "build_packet", "phase": "progress", "done": 0, "total": 74, "status": "Starting packet build"}
+{"ts_utc": "2026-03-19T17:21:15.298+00:00", "feature": "packet_engine", "phase": "progress", "done": 1, "total": 74, "status": "B-1"}
+{"ts_utc": "2026-03-19T17:21:16.075+00:00", "feature": "build_packet", "phase": "progress", "done": 6, "total": 74, "status": "B-12"}
+{"ts_utc": "2026-03-19T17:21:16.097+00:00", "feature": "packet_engine", "phase": "progress", "done": 6, "total": 74, "status": "B-12"}
+{"ts_utc": "2026-03-19T17:21:16.926+00:00", "feature": "build_packet", "phase": "progress", "done": 12, "total": 74, "status": "B-189"}
+{"ts_utc": "2026-03-19T17:21:16.943+00:00", "feature": "packet_engine", "phase": "progress", "done": 12, "total": 74, "status": "B-189"}
+{"ts_utc": "2026-03-19T17:21:17.931+00:00", "feature": "build_packet", "phase": "progress", "done": 16, "total": 74, "status": "B-22"}
+{"ts_utc": "2026-03-19T17:21:17.944+00:00", "feature": "packet_engine", "phase": "progress", "done": 16, "total": 74, "status": "B-22"}
+{"ts_utc": "2026-03-19T17:21:18.716+00:00", "feature": "build_packet", "phase": "progress", "done": 22, "total": 74, "status": "B-34"}
+{"ts_utc": "2026-03-19T17:21:18.739+00:00", "feature": "packet_engine", "phase": "progress", "done": 22, "total": 74, "status": "B-34"}
+{"ts_utc": "2026-03-19T17:21:19.501+00:00", "feature": "build_packet", "phase": "progress", "done": 27, "total": 74, "status": "B-45 R1"}
+{"ts_utc": "2026-03-19T17:21:19.516+00:00", "feature": "packet_engine", "phase": "progress", "done": 27, "total": 74, "status": "B-45 R1"}
+{"ts_utc": "2026-03-19T17:21:20.366+00:00", "feature": "build_packet", "phase": "progress", "done": 28, "total": 74, "status": "B-47 R2"}
+{"ts_utc": "2026-03-19T17:21:20.366+00:00", "feature": "packet_engine", "phase": "progress", "done": 28, "total": 74, "status": "B-47 R2"}
+{"ts_utc": "2026-03-19T17:21:21.488+00:00", "feature": "build_packet", "phase": "progress", "done": 32, "total": 74, "status": "B-54 R1"}
+{"ts_utc": "2026-03-19T17:21:21.514+00:00", "feature": "packet_engine", "phase": "progress", "done": 32, "total": 74, "status": "B-54 R1"}
+{"ts_utc": "2026-03-19T17:21:22.240+00:00", "feature": "build_packet", "phase": "progress", "done": 36, "total": 74, "status": "B-8"}
+{"ts_utc": "2026-03-19T17:21:22.345+00:00", "feature": "packet_engine", "phase": "progress", "done": 37, "total": 74, "status": "B-9"}
+{"ts_utc": "2026-03-19T17:21:23.046+00:00", "feature": "build_packet", "phase": "progress", "done": 41, "total": 74, "status": "F55334-B-02"}
+{"ts_utc": "2026-03-19T17:21:23.263+00:00", "feature": "packet_engine", "phase": "progress", "done": 42, "total": 74, "status": "F55334-B-03"}
+{"ts_utc": "2026-03-19T17:21:23.834+00:00", "feature": "build_packet", "phase": "progress", "done": 45, "total": 74, "status": "F55334-B-06"}
+{"ts_utc": "2026-03-19T17:21:24.241+00:00", "feature": "packet_engine", "phase": "progress", "done": 47, "total": 74, "status": "F55334-B-08"}
+{"ts_utc": "2026-03-19T17:21:24.757+00:00", "feature": "build_packet", "phase": "progress", "done": 49, "total": 74, "status": "F55334-B-11"}
+{"ts_utc": "2026-03-19T17:21:25.232+00:00", "feature": "packet_engine", "phase": "progress", "done": 51, "total": 74, "status": "F55334-B-13"}
+{"ts_utc": "2026-03-19T17:21:25.733+00:00", "feature": "build_packet", "phase": "progress", "done": 53, "total": 74, "status": "F55334-B-15"}
+{"ts_utc": "2026-03-19T17:21:26.098+00:00", "feature": "packet_engine", "phase": "progress", "done": 55, "total": 74, "status": "F55334-B-17"}
+{"ts_utc": "2026-03-19T17:21:26.499+00:00", "feature": "build_packet", "phase": "progress", "done": 57, "total": 74, "status": "F55334-B-20"}
+{"ts_utc": "2026-03-19T17:21:26.933+00:00", "feature": "packet_engine", "phase": "progress", "done": 60, "total": 74, "status": "F55334-B-33"}
+{"ts_utc": "2026-03-19T17:21:27.293+00:00", "feature": "build_packet", "phase": "progress", "done": 63, "total": 74, "status": "F55334-B-38"}
+{"ts_utc": "2026-03-19T17:21:27.800+00:00", "feature": "packet_engine", "phase": "progress", "done": 67, "total": 74, "status": "F55334-B-42"}
+{"ts_utc": "2026-03-19T17:21:29.068+00:00", "feature": "build_packet", "phase": "progress", "done": 69, "total": 74, "status": "F55985-C-18"}
+{"ts_utc": "2026-03-19T17:21:29.083+00:00", "feature": "packet_engine", "phase": "progress", "done": 69, "total": 74, "status": "F55985-C-18"}
+{"ts_utc": "2026-03-19T17:22:12.324+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PAINT PACK\\F55334 PAINT PACK\\F55334 PAINT PACK.rpd"}
+{"ts_utc": "2026-03-19T17:22:15.370+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 3046, "part_count": 74}
+{"ts_utc": "2026-03-19T17:25:42.772+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PAINT PACK\\F55334 PAINT PACK\\F55334 PAINT PACK.rpd"}
+{"ts_utc": "2026-03-19T17:25:45.883+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 3112, "part_count": 74}
+{"ts_utc": "2026-03-19T17:26:16.046+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PAINT PACK\\F55334 PAINT PACK\\F55334 PAINT PACK.rpd"}
+{"ts_utc": "2026-03-19T17:26:19.121+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 3081, "part_count": 74}
+{"ts_utc": "2026-03-19T17:28:44.868+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PAINT PACK\\F55334 PAINT PACK\\F55334 PAINT PACK.rpd"}
+{"ts_utc": "2026-03-19T17:28:48.172+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 3303, "part_count": 74}
+{"ts_utc": "2026-03-19T17:30:50.078+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PAINT PACK\\F55334 PAINT PACK\\F55334 PAINT PACK.rpd"}
+{"ts_utc": "2026-03-19T17:30:53.599+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 3520, "part_count": 74}
+{"ts_utc": "2026-03-19T17:37:38.893+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PAINT PACK\\F55334 PAINT PACK\\F55334 PAINT PACK.rpd"}
+{"ts_utc": "2026-03-19T17:37:41.963+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 3079, "part_count": 74}
+{"ts_utc": "2026-03-19T17:45:18.198+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PAINT PACK\\F55334 PAINT PACK\\F55334 PAINT PACK.rpd"}
+{"ts_utc": "2026-03-19T17:45:21.102+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 2917, "part_count": 74}
+{"ts_utc": "2026-03-19T17:51:28.270+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PAINT PACK\\F55334 PAINT PACK\\F55334 PAINT PACK.rpd"}
+{"ts_utc": "2026-03-19T17:51:31.358+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 3085, "part_count": 74}
+{"ts_utc": "2026-03-19T18:01:36.541+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PAINT PACK\\F55334 PAINT PACK\\F55334 PAINT PACK.rpd"}
+{"ts_utc": "2026-03-19T18:01:39.708+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 3166, "part_count": 74}
+{"ts_utc": "2026-03-19T18:05:19.154+00:00", "feature": "build_packet", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PAINT PACK\\F55334 PAINT PACK\\F55334 PAINT PACK.rpd", "part_count": 74, "first_page_only": false, "page_cap": 0, "output_dir": "_out", "suppress_layer_0": true, "workers": "auto", "mode": "vector"}
+{"ts_utc": "2026-03-19T18:05:19.160+00:00", "feature": "packet_engine", "phase": "start", "out_pdf_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PAINT PACK\\F55334 PAINT PACK\\_out\\PrintPacket_QTY_20260319_140519.pdf", "total_parts": 74, "workers": 1, "dpi": 220, "jpeg_quality": 82, "suppress_layer_0": true}
+{"ts_utc": "2026-03-19T18:05:19.172+00:00", "feature": "build_packet", "phase": "progress", "done": 0, "total": 74, "status": "Starting packet build"}
+{"ts_utc": "2026-03-19T18:05:19.259+00:00", "feature": "packet_engine", "phase": "progress", "done": 1, "total": 74, "status": "B-1 (missing PDF)"}
+{"ts_utc": "2026-03-19T18:05:19.469+00:00", "feature": "build_packet", "phase": "progress", "done": 74, "total": 74, "status": "BASE SIDE (COIL WINDER 2025) (missing PDF)"}
+{"ts_utc": "2026-03-19T18:05:19.480+00:00", "feature": "packet_engine", "phase": "progress", "done": 74, "total": 74, "status": "BASE SIDE (COIL WINDER 2025) (missing PDF)"}
+{"ts_utc": "2026-03-19T18:05:19.506+00:00", "feature": "build_packet", "phase": "progress", "done": 74, "total": 74, "status": "Writing packet file"}
+{"ts_utc": "2026-03-19T18:05:19.552+00:00", "feature": "packet_engine", "phase": "error", "elapsed_ms": 391, "error_type": "ValueError", "error": "cannot save with zero pages", "traceback": "Traceback (most recent call last):\n  File \"C:\\Tools\\radan_kitter\\pdf_packet.py\", line 1896, in build_watermarked_packet\n    dst.save(\n  File \"C:\\Tools\\.venv\\Lib\\site-packages\\pymupdf\\__init__.py\", line 6515, in save\n    raise ValueError(\"cannot save with zero pages\")\nValueError: cannot save with zero pages\n"}
+{"ts_utc": "2026-03-19T18:05:19.562+00:00", "feature": "build_packet", "phase": "error", "elapsed_ms": 407, "error_type": "ValueError", "error": "cannot save with zero pages", "traceback": "Traceback (most recent call last):\n  File \"C:\\Tools\\radan_kitter\\ui_actions.py\", line 260, in run_build_packet\n    packet_path, pages, missing = packet_service.build_packet(\n                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Tools\\radan_kitter\\packet_service.py\", line 26, in build_packet\n    pages, missing = pdf_packet.build_watermarked_packet(\n                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Tools\\radan_kitter\\pdf_packet.py\", line 1896, in build_watermarked_packet\n    dst.save(\n  File \"C:\\Tools\\.venv\\Lib\\site-packages\\pymupdf\\__init__.py\", line 6515, in save\n    raise ValueError(\"cannot save with zero pages\")\nValueError: cannot save with zero pages\n"}
+{"ts_utc": "2026-03-19T18:09:59.134+00:00", "feature": "packet_engine", "phase": "start", "out_pdf_path": "c:\\Tools\\radan_kitter\\_tmp_packet_smoke\\out.pdf", "total_parts": 2, "workers": 1, "dpi": 220, "jpeg_quality": 82, "suppress_layer_0": true}
+{"ts_utc": "2026-03-19T18:09:59.153+00:00", "feature": "packet_engine", "phase": "progress", "done": 1, "total": 2, "status": "A-1"}
+{"ts_utc": "2026-03-19T18:09:59.178+00:00", "feature": "packet_engine", "phase": "progress", "done": 2, "total": 2, "status": "A-2"}
+{"ts_utc": "2026-03-19T18:09:59.196+00:00", "feature": "packet_engine", "phase": "success", "elapsed_ms": 62, "pages": 2, "missing": 0, "out_size_bytes": 64492, "avg_part_ms": 2, "max_part_ms": 3}
+{"ts_utc": "2026-03-19T18:10:00.267+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PAINT PACK\\F55334 PAINT PACK\\F55334 PAINT PACK.rpd"}
+{"ts_utc": "2026-03-19T18:10:03.278+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 3011, "part_count": 74}
+{"ts_utc": "2026-03-19T18:10:54.066+00:00", "feature": "build_packet", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PAINT PACK\\F55334 PAINT PACK\\F55334 PAINT PACK.rpd", "part_count": 74, "first_page_only": false, "page_cap": 0, "output_dir": "_out", "suppress_layer_0": true, "workers": "auto", "mode": "vector"}
+{"ts_utc": "2026-03-19T18:10:54.083+00:00", "feature": "packet_engine", "phase": "start", "out_pdf_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PAINT PACK\\F55334 PAINT PACK\\_out\\PrintPacket_QTY_20260319_141054.pdf", "total_parts": 74, "workers": 1, "dpi": 220, "jpeg_quality": 82, "suppress_layer_0": true}
+{"ts_utc": "2026-03-19T18:10:54.083+00:00", "feature": "build_packet", "phase": "progress", "done": 0, "total": 74, "status": "Starting packet build"}
+{"ts_utc": "2026-03-19T18:10:54.181+00:00", "feature": "packet_engine", "phase": "progress", "done": 1, "total": 74, "status": "B-1 (missing PDF)"}
+{"ts_utc": "2026-03-19T18:10:54.359+00:00", "feature": "build_packet", "phase": "progress", "done": 74, "total": 74, "status": "BASE SIDE (COIL WINDER 2025) (missing PDF)"}
+{"ts_utc": "2026-03-19T18:10:54.370+00:00", "feature": "packet_engine", "phase": "progress", "done": 74, "total": 74, "status": "BASE SIDE (COIL WINDER 2025) (missing PDF)"}
+{"ts_utc": "2026-03-19T18:10:54.388+00:00", "feature": "build_packet", "phase": "progress", "done": 74, "total": 74, "status": "Saving packet to temp file"}
+{"ts_utc": "2026-03-19T18:10:54.439+00:00", "feature": "packet_engine", "phase": "error", "elapsed_ms": 356, "error_type": "ValueError", "error": "cannot save with zero pages", "traceback": "Traceback (most recent call last):\n  File \"C:\\Tools\\radan_kitter\\pdf_packet.py\", line 1902, in build_watermarked_packet\n    dst.save(\n  File \"C:\\Tools\\.venv\\Lib\\site-packages\\pymupdf\\__init__.py\", line 6515, in save\n    raise ValueError(\"cannot save with zero pages\")\nValueError: cannot save with zero pages\n"}
+{"ts_utc": "2026-03-19T18:10:54.450+00:00", "feature": "build_packet", "phase": "error", "elapsed_ms": 378, "error_type": "ValueError", "error": "cannot save with zero pages", "traceback": "Traceback (most recent call last):\n  File \"C:\\Tools\\radan_kitter\\ui_actions.py\", line 260, in run_build_packet\n    packet_path, pages, missing = packet_service.build_packet(\n                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Tools\\radan_kitter\\packet_service.py\", line 26, in build_packet\n    pages, missing = pdf_packet.build_watermarked_packet(\n                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Tools\\radan_kitter\\pdf_packet.py\", line 1902, in build_watermarked_packet\n    dst.save(\n  File \"C:\\Tools\\.venv\\Lib\\site-packages\\pymupdf\\__init__.py\", line 6515, in save\n    raise ValueError(\"cannot save with zero pages\")\nValueError: cannot save with zero pages\n"}
+{"ts_utc": "2026-03-19T18:11:25.358+00:00", "feature": "build_packet", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PAINT PACK\\F55334 PAINT PACK\\F55334 PAINT PACK.rpd", "part_count": 74, "first_page_only": false, "page_cap": 0, "output_dir": "_out", "suppress_layer_0": true, "workers": "auto", "mode": "vector"}
+{"ts_utc": "2026-03-19T18:11:25.362+00:00", "feature": "packet_engine", "phase": "start", "out_pdf_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PAINT PACK\\F55334 PAINT PACK\\_out\\PrintPacket_QTY_20260319_141125.pdf", "total_parts": 74, "workers": 1, "dpi": 220, "jpeg_quality": 82, "suppress_layer_0": true}
+{"ts_utc": "2026-03-19T18:11:25.371+00:00", "feature": "build_packet", "phase": "progress", "done": 0, "total": 74, "status": "Starting packet build"}
+{"ts_utc": "2026-03-19T18:11:25.444+00:00", "feature": "packet_engine", "phase": "progress", "done": 1, "total": 74, "status": "B-1 (missing PDF)"}
+{"ts_utc": "2026-03-19T18:11:25.621+00:00", "feature": "build_packet", "phase": "progress", "done": 74, "total": 74, "status": "BASE SIDE (COIL WINDER 2025) (missing PDF)"}
+{"ts_utc": "2026-03-19T18:11:25.628+00:00", "feature": "packet_engine", "phase": "progress", "done": 74, "total": 74, "status": "BASE SIDE (COIL WINDER 2025) (missing PDF)"}
+{"ts_utc": "2026-03-19T18:11:25.662+00:00", "feature": "build_packet", "phase": "progress", "done": 74, "total": 74, "status": "Saving packet to temp file"}
+{"ts_utc": "2026-03-19T18:11:25.699+00:00", "feature": "packet_engine", "phase": "error", "elapsed_ms": 342, "error_type": "ValueError", "error": "cannot save with zero pages", "traceback": "Traceback (most recent call last):\n  File \"C:\\Tools\\radan_kitter\\pdf_packet.py\", line 1902, in build_watermarked_packet\n    dst.save(\n  File \"C:\\Tools\\.venv\\Lib\\site-packages\\pymupdf\\__init__.py\", line 6515, in save\n    raise ValueError(\"cannot save with zero pages\")\nValueError: cannot save with zero pages\n"}
+{"ts_utc": "2026-03-19T18:11:25.715+00:00", "feature": "build_packet", "phase": "error", "elapsed_ms": 355, "error_type": "ValueError", "error": "cannot save with zero pages", "traceback": "Traceback (most recent call last):\n  File \"C:\\Tools\\radan_kitter\\ui_actions.py\", line 260, in run_build_packet\n    packet_path, pages, missing = packet_service.build_packet(\n                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Tools\\radan_kitter\\packet_service.py\", line 26, in build_packet\n    pages, missing = pdf_packet.build_watermarked_packet(\n                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Tools\\radan_kitter\\pdf_packet.py\", line 1902, in build_watermarked_packet\n    dst.save(\n  File \"C:\\Tools\\.venv\\Lib\\site-packages\\pymupdf\\__init__.py\", line 6515, in save\n    raise ValueError(\"cannot save with zero pages\")\nValueError: cannot save with zero pages\n"}
+{"ts_utc": "2026-03-19T18:13:26.954+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PAINT PACK\\F55334 PAINT PACK\\F55334 PAINT PACK.rpd"}
+{"ts_utc": "2026-03-19T18:13:29.913+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 2958, "part_count": 74}
+{"ts_utc": "2026-03-19T18:35:21.774+00:00", "feature": "build_packet", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PAINT PACK\\F55334 PAINT PACK\\F55334 PAINT PACK.rpd", "part_count": 74, "first_page_only": false, "page_cap": 0, "output_dir": "_out", "suppress_layer_0": true, "workers": "auto", "mode": "vector"}
+{"ts_utc": "2026-03-19T18:35:21.777+00:00", "feature": "packet_engine", "phase": "start", "out_pdf_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PAINT PACK\\F55334 PAINT PACK\\_out\\PrintPacket_QTY_20260319_143521.pdf", "total_parts": 74, "workers": 1, "dpi": 220, "jpeg_quality": 82, "suppress_layer_0": true}
+{"ts_utc": "2026-03-19T18:35:21.790+00:00", "feature": "build_packet", "phase": "progress", "done": 0, "total": 74, "status": "Starting packet build"}
+{"ts_utc": "2026-03-19T18:35:21.874+00:00", "feature": "packet_engine", "phase": "progress", "done": 1, "total": 74, "status": "B-1 (missing PDF)"}
+{"ts_utc": "2026-03-19T18:35:22.099+00:00", "feature": "build_packet", "phase": "progress", "done": 74, "total": 74, "status": "BASE SIDE (COIL WINDER 2025) (missing PDF)"}
+{"ts_utc": "2026-03-19T18:35:22.111+00:00", "feature": "packet_engine", "phase": "progress", "done": 74, "total": 74, "status": "BASE SIDE (COIL WINDER 2025) (missing PDF)"}
+{"ts_utc": "2026-03-19T18:35:22.139+00:00", "feature": "build_packet", "phase": "progress", "done": 74, "total": 74, "status": "No packet pages created"}
+{"ts_utc": "2026-03-19T18:35:22.184+00:00", "feature": "packet_engine", "phase": "skip", "reason": "no_packet_pages", "elapsed_ms": 405, "pages": 0, "missing": 74, "processed_parts": 74}
+{"ts_utc": "2026-03-19T18:35:22.195+00:00", "feature": "build_packet", "phase": "error", "elapsed_ms": 419, "error_type": "PacketBuildEmpty", "error": "No packet pages were created because no PDFs were found for the selected rows.", "traceback": "Traceback (most recent call last):\n  File \"C:\\Tools\\radan_kitter\\ui_actions.py\", line 260, in run_build_packet\n    packet_path, pages, missing = packet_service.build_packet(\n                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Tools\\radan_kitter\\packet_service.py\", line 26, in build_packet\n    pages, missing = pdf_packet.build_watermarked_packet(\n                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Tools\\radan_kitter\\pdf_packet.py\", line 1914, in build_watermarked_packet\n    raise PacketBuildEmpty(\npdf_packet.PacketBuildEmpty: No packet pages were created because no PDFs were found for the selected rows.\n"}
+{"ts_utc": "2026-03-19T18:35:49.949+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\PAINT PACK\\F55334 PAINT PACK\\F55334 PAINT PACK.rpd"}
+{"ts_utc": "2026-03-19T18:35:53.061+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 3112, "part_count": 74}
+{"ts_utc": "2026-03-19T18:37:11.627+00:00", "feature": "packet_engine", "phase": "start", "out_pdf_path": "c:\\Tools\\radan_kitter\\_tmp_packet_empty\\out.pdf", "total_parts": 1, "workers": 1, "dpi": 220, "jpeg_quality": 82, "suppress_layer_0": true}
+{"ts_utc": "2026-03-19T18:37:11.628+00:00", "feature": "packet_engine", "phase": "progress", "done": 1, "total": 1, "status": "MISSING (missing PDF)"}
+{"ts_utc": "2026-03-19T18:37:11.639+00:00", "feature": "packet_engine", "phase": "skip", "reason": "no_packet_pages", "elapsed_ms": 12, "pages": 0, "missing": 1, "processed_parts": 1}
+{"ts_utc": "2026-03-19T18:39:33.699+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\P-SMALL FLEET\\P58511\\P58511\\P58511.rpd"}
+{"ts_utc": "2026-03-19T18:40:17.324+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\P-SMALL FLEET\\P58511\\P58511\\P58511.rpd"}
+{"ts_utc": "2026-03-19T19:01:57.843+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\P-SMALL FLEET\\P58511\\P58511\\P58511.rpd"}
+{"ts_utc": "2026-03-19T19:04:38.420+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 160594, "part_count": 25}
+{"ts_utc": "2026-03-19T19:04:54.046+00:00", "feature": "prepare_kits", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\P-SMALL FLEET\\P58511\\P58511\\P58511.rpd", "part_count": 25}
+{"ts_utc": "2026-03-19T19:04:54.095+00:00", "feature": "prepare_kits", "phase": "progress", "done": 0, "total": 26, "status": "Preparing kits..."}
+{"ts_utc": "2026-03-19T19:04:54.866+00:00", "feature": "prepare_kits", "phase": "progress", "done": 19, "total": 26, "status": "Updating Attr109: P55504-57.sym"}
+{"ts_utc": "2026-03-19T19:04:55.079+00:00", "feature": "prepare_kits", "phase": "progress", "done": 26, "total": 26, "status": "Skipping invalid kit label"}
+{"ts_utc": "2026-03-19T19:04:56.664+00:00", "feature": "prepare_kits", "phase": "success", "elapsed_ms": 2629, "kit_count": 1}
+{"ts_utc": "2026-03-19T19:04:57.446+00:00", "feature": "build_packet", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\P-SMALL FLEET\\P58511\\P58511\\P58511.rpd", "part_count": 25, "first_page_only": false, "page_cap": 0, "output_dir": "_out", "suppress_layer_0": true, "workers": "auto", "mode": "vector"}
+{"ts_utc": "2026-03-19T19:04:57.452+00:00", "feature": "packet_engine", "phase": "start", "out_pdf_path": "L:\\BATTLESHIELD\\P-SMALL FLEET\\P58511\\P58511\\_out\\PrintPacket_QTY_20260319_150457.pdf", "total_parts": 25, "workers": 1, "dpi": 220, "jpeg_quality": 82, "suppress_layer_0": true}
+{"ts_utc": "2026-03-19T19:04:57.463+00:00", "feature": "build_packet", "phase": "progress", "done": 0, "total": 25, "status": "Starting packet build"}
+{"ts_utc": "2026-03-19T19:04:57.537+00:00", "feature": "packet_engine", "phase": "progress", "done": 1, "total": 25, "status": "P55356-55-R2 (missing PDF)"}
+{"ts_utc": "2026-03-19T19:04:57.640+00:00", "feature": "build_packet", "phase": "progress", "done": 25, "total": 25, "status": "P56112-102-R1 (missing PDF)"}
+{"ts_utc": "2026-03-19T19:04:57.651+00:00", "feature": "packet_engine", "phase": "progress", "done": 25, "total": 25, "status": "P56112-102-R1 (missing PDF)"}
+{"ts_utc": "2026-03-19T19:04:57.671+00:00", "feature": "build_packet", "phase": "progress", "done": 25, "total": 25, "status": "No packet pages created"}
+{"ts_utc": "2026-03-19T19:04:57.725+00:00", "feature": "packet_engine", "phase": "skip", "reason": "no_packet_pages", "elapsed_ms": 263, "pages": 0, "missing": 25, "processed_parts": 25}
+{"ts_utc": "2026-03-19T19:04:57.735+00:00", "feature": "build_packet", "phase": "skip", "reason": "no_packet_pages", "elapsed_ms": 288, "missing": 25}
+{"ts_utc": "2026-03-19T19:16:22.878+00:00", "feature": "build_packet", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\P-SMALL FLEET\\P58511\\P58511\\P58511.rpd", "part_count": 25, "first_page_only": false, "page_cap": 0, "output_dir": "_out", "suppress_layer_0": true, "workers": "auto", "mode": "vector"}
+{"ts_utc": "2026-03-19T19:16:22.904+00:00", "feature": "packet_engine", "phase": "start", "out_pdf_path": "L:\\BATTLESHIELD\\P-SMALL FLEET\\P58511\\P58511\\_out\\PrintPacket_QTY_20260319_151622.pdf", "total_parts": 25, "workers": 1, "dpi": 220, "jpeg_quality": 82, "suppress_layer_0": true}
+{"ts_utc": "2026-03-19T19:16:22.910+00:00", "feature": "build_packet", "phase": "progress", "done": 0, "total": 25, "status": "Starting packet build"}
+{"ts_utc": "2026-03-19T19:16:22.976+00:00", "feature": "packet_engine", "phase": "progress", "done": 1, "total": 25, "status": "P55356-55-R2 (missing PDF)"}
+{"ts_utc": "2026-03-19T19:16:23.103+00:00", "feature": "build_packet", "phase": "progress", "done": 25, "total": 25, "status": "P56112-102-R1 (missing PDF)"}
+{"ts_utc": "2026-03-19T19:16:23.115+00:00", "feature": "packet_engine", "phase": "progress", "done": 25, "total": 25, "status": "P56112-102-R1 (missing PDF)"}
+{"ts_utc": "2026-03-19T19:16:23.140+00:00", "feature": "build_packet", "phase": "progress", "done": 25, "total": 25, "status": "No packet pages created"}
+{"ts_utc": "2026-03-19T19:16:23.194+00:00", "feature": "packet_engine", "phase": "skip", "reason": "no_packet_pages", "elapsed_ms": 292, "pages": 0, "missing": 25, "processed_parts": 25}
+{"ts_utc": "2026-03-19T19:16:23.204+00:00", "feature": "build_packet", "phase": "skip", "reason": "no_packet_pages", "elapsed_ms": 318, "missing": 25}
+{"ts_utc": "2026-03-19T19:16:47.342+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\P-SMALL FLEET\\P58511\\P58511\\P58511.rpd"}
+{"ts_utc": "2026-03-19T19:17:20.223+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\P-SMALL FLEET\\P58511\\P58511\\P58511.rpd"}
+{"ts_utc": "2026-03-19T19:19:02.475+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\P-SMALL FLEET\\P58511\\P58511\\P58511.rpd"}
+{"ts_utc": "2026-03-19T19:19:02.479+00:00", "feature": "load_rpd_path", "phase": "error", "elapsed_ms": 0, "error_type": "FileNotFoundError", "error": "[Errno 2] No such file or directory: 'L:\\\\BATTLESHIELD\\\\P-SMALL FLEET\\\\P58511\\\\P58511\\\\P58511.rpd'", "traceback": "Traceback (most recent call last):\n  File \"C:\\Tools\\radan_kitter\\radan_kitter.py\", line 228, in _load_rpd_path\n    self.tree, self.parts, self.model = ui_table_loader.load_rpd_into_table(\n                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Tools\\radan_kitter\\ui_table_loader.py\", line 39, in load_rpd_into_table\n    tree, parts, _debug = rpd_io.load_rpd(path)\n                          ^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Tools\\radan_kitter\\rpd_io.py\", line 80, in load_rpd\n    tree = ET.parse(path)\n           ^^^^^^^^^^^^^^\n  File \"C:\\Users\\athankachan\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\xml\\etree\\ElementTree.py\", line 1204, in parse\n    tree.parse(source, parser)\n  File \"C:\\Users\\athankachan\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\xml\\etree\\ElementTree.py\", line 558, in parse\n    source = open(source, \"rb\")\n             ^^^^^^^^^^^^^^^^^^\nFileNotFoundError: [Errno 2] No such file or directory: 'L:\\\\BATTLESHIELD\\\\P-SMALL FLEET\\\\P58511\\\\P58511\\\\P58511.rpd'\n"}
+{"ts_utc": "2026-03-19T19:19:20.218+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 152884, "part_count": 25}
+{"ts_utc": "2026-03-19T19:19:56.128+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 155919, "part_count": 25}
+{"ts_utc": "2026-03-19T19:19:59.221+00:00", "feature": "open_rpd_dialog", "phase": "start"}
+{"ts_utc": "2026-03-19T19:20:26.360+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\P-SMALL FLEET\\P58511\\P58511\\P58511.rpd"}
+{"ts_utc": "2026-03-19T19:20:29.187+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 2827, "part_count": 25}
+{"ts_utc": "2026-03-19T19:29:20.804+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\P-SMALL FLEET\\P58511\\P58511\\P58511.rpd"}
+{"ts_utc": "2026-03-19T19:29:23.634+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 2830, "part_count": 25}
+{"ts_utc": "2026-03-19T19:31:18.725+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\P-SMALL FLEET\\P58511\\P58511\\P58511.rpd"}
+{"ts_utc": "2026-03-19T19:31:21.576+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 2850, "part_count": 25}
+{"ts_utc": "2026-03-19T19:31:45.321+00:00", "feature": "build_packet", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\P-SMALL FLEET\\P58511\\P58511\\P58511.rpd", "part_count": 25, "first_page_only": false, "page_cap": 0, "output_dir": "_out", "suppress_layer_0": true, "workers": "auto", "mode": "vector"}
+{"ts_utc": "2026-03-19T19:31:45.338+00:00", "feature": "packet_engine", "phase": "start", "out_pdf_path": "L:\\BATTLESHIELD\\P-SMALL FLEET\\P58511\\P58511\\_out\\PrintPacket_QTY_20260319_153145.pdf", "total_parts": 25, "workers": 1, "dpi": 220, "jpeg_quality": 82, "suppress_layer_0": true}
+{"ts_utc": "2026-03-19T19:31:45.354+00:00", "feature": "build_packet", "phase": "progress", "done": 0, "total": 25, "status": "Starting packet build"}
+{"ts_utc": "2026-03-19T19:31:45.622+00:00", "feature": "packet_engine", "phase": "progress", "done": 1, "total": 25, "status": "P55356-55-R2"}
+{"ts_utc": "2026-03-19T19:31:46.152+00:00", "feature": "build_packet", "phase": "progress", "done": 4, "total": 25, "status": "P55504-2"}
+{"ts_utc": "2026-03-19T19:31:46.398+00:00", "feature": "packet_engine", "phase": "progress", "done": 5, "total": 25, "status": "P55504-29"}
+{"ts_utc": "2026-03-19T19:31:47.062+00:00", "feature": "build_packet", "phase": "progress", "done": 8, "total": 25, "status": "P55504-31"}
+{"ts_utc": "2026-03-19T19:31:47.193+00:00", "feature": "packet_engine", "phase": "progress", "done": 9, "total": 25, "status": "P55504-32"}
+{"ts_utc": "2026-03-19T19:31:47.838+00:00", "feature": "build_packet", "phase": "progress", "done": 12, "total": 25, "status": "P55504-4"}
+{"ts_utc": "2026-03-19T19:31:48.040+00:00", "feature": "packet_engine", "phase": "progress", "done": 13, "total": 25, "status": "P55504-40"}
+{"ts_utc": "2026-03-19T19:31:48.791+00:00", "feature": "build_packet", "phase": "progress", "done": 16, "total": 25, "status": "P55504-5"}
+{"ts_utc": "2026-03-19T19:31:48.952+00:00", "feature": "packet_engine", "phase": "progress", "done": 17, "total": 25, "status": "P55504-55"}
+{"ts_utc": "2026-03-19T19:31:49.749+00:00", "feature": "build_packet", "phase": "progress", "done": 22, "total": 25, "status": "P55504-67"}
+{"ts_utc": "2026-03-19T19:31:49.758+00:00", "feature": "packet_engine", "phase": "progress", "done": 22, "total": 25, "status": "P55504-67"}
+{"ts_utc": "2026-03-19T19:31:50.235+00:00", "feature": "build_packet", "phase": "progress", "done": 25, "total": 25, "status": "P56112-102-R1"}
+{"ts_utc": "2026-03-19T19:31:50.245+00:00", "feature": "packet_engine", "phase": "progress", "done": 25, "total": 25, "status": "P56112-102-R1"}
+{"ts_utc": "2026-03-19T19:31:50.266+00:00", "feature": "build_packet", "phase": "progress", "done": 25, "total": 25, "status": "Saving packet to temp file"}
+{"ts_utc": "2026-03-19T19:31:50.330+00:00", "feature": "build_packet", "phase": "progress", "done": 25, "total": 25, "status": "Copying packet file"}
+{"ts_utc": "2026-03-19T19:31:50.966+00:00", "feature": "build_packet", "phase": "progress", "done": 25, "total": 25, "status": "Packet complete"}
+{"ts_utc": "2026-03-19T19:31:51.025+00:00", "feature": "packet_engine", "phase": "success", "elapsed_ms": 5681, "pages": 25, "missing": 0, "out_size_bytes": 2061528, "avg_part_ms": 12, "max_part_ms": 47}
+{"ts_utc": "2026-03-19T19:31:51.046+00:00", "feature": "build_packet", "phase": "success", "elapsed_ms": 5728, "packet_path": "L:\\BATTLESHIELD\\P-SMALL FLEET\\P58511\\P58511\\_out\\PrintPacket_QTY_20260319_153145.pdf", "pages": 25, "missing": 0}
+{"ts_utc": "2026-03-19T19:34:14.793+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\P-SMALL FLEET\\P58511\\P58511\\P58511.rpd"}
+{"ts_utc": "2026-03-19T19:34:17.729+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 2936, "part_count": 12}
+{"ts_utc": "2026-03-19T19:34:30.995+00:00", "feature": "build_packet", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\P-SMALL FLEET\\P58511\\P58511\\P58511.rpd", "part_count": 12, "first_page_only": false, "page_cap": 0, "output_dir": "_out", "suppress_layer_0": true, "workers": "auto", "mode": "vector"}
+{"ts_utc": "2026-03-19T19:34:31.007+00:00", "feature": "packet_engine", "phase": "start", "out_pdf_path": "L:\\BATTLESHIELD\\P-SMALL FLEET\\P58511\\P58511\\_out\\PrintPacket_QTY_20260319_153431.pdf", "total_parts": 12, "workers": 1, "dpi": 220, "jpeg_quality": 82, "suppress_layer_0": true}
+{"ts_utc": "2026-03-19T19:34:31.020+00:00", "feature": "build_packet", "phase": "progress", "done": 0, "total": 12, "status": "Starting packet build"}
+{"ts_utc": "2026-03-19T19:34:31.161+00:00", "feature": "packet_engine", "phase": "progress", "done": 1, "total": 12, "status": "P55444-37-R1"}
+{"ts_utc": "2026-03-19T19:34:31.777+00:00", "feature": "build_packet", "phase": "progress", "done": 5, "total": 12, "status": "P58511-2"}
+{"ts_utc": "2026-03-19T19:34:31.998+00:00", "feature": "packet_engine", "phase": "progress", "done": 7, "total": 12, "status": "P58511-4"}
+{"ts_utc": "2026-03-19T19:34:32.529+00:00", "feature": "build_packet", "phase": "progress", "done": 11, "total": 12, "status": "P58511-8"}
+{"ts_utc": "2026-03-19T19:34:32.669+00:00", "feature": "build_packet", "phase": "progress", "done": 12, "total": 12, "status": "P58511-9"}
+{"ts_utc": "2026-03-19T19:34:32.682+00:00", "feature": "packet_engine", "phase": "progress", "done": 12, "total": 12, "status": "P58511-9"}
+{"ts_utc": "2026-03-19T19:34:32.702+00:00", "feature": "build_packet", "phase": "progress", "done": 12, "total": 12, "status": "Saving packet to temp file"}
+{"ts_utc": "2026-03-19T19:34:32.759+00:00", "feature": "build_packet", "phase": "progress", "done": 12, "total": 12, "status": "Copying packet file"}
+{"ts_utc": "2026-03-19T19:34:32.966+00:00", "feature": "build_packet", "phase": "progress", "done": 12, "total": 12, "status": "Packet complete"}
+{"ts_utc": "2026-03-19T19:34:32.996+00:00", "feature": "packet_engine", "phase": "success", "elapsed_ms": 1985, "pages": 12, "missing": 0, "out_size_bytes": 971443, "avg_part_ms": 14, "max_part_ms": 41}
+{"ts_utc": "2026-03-19T19:34:33.021+00:00", "feature": "build_packet", "phase": "success", "elapsed_ms": 2025, "packet_path": "L:\\BATTLESHIELD\\P-SMALL FLEET\\P58511\\P58511\\_out\\PrintPacket_QTY_20260319_153431.pdf", "pages": 12, "missing": 0}
+{"ts_utc": "2026-03-19T19:41:05.798+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\P-SMALL FLEET\\P58511\\P58511\\P58511.rpd"}
+{"ts_utc": "2026-03-19T19:41:08.645+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 2845, "part_count": 37}
+{"ts_utc": "2026-03-19T19:42:27.412+00:00", "feature": "prepare_kits", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\P-SMALL FLEET\\P58511\\P58511\\P58511.rpd", "part_count": 37}
+{"ts_utc": "2026-03-19T19:42:27.446+00:00", "feature": "prepare_kits", "phase": "progress", "done": 0, "total": 39, "status": "Preparing kits..."}
+{"ts_utc": "2026-03-19T19:42:28.202+00:00", "feature": "prepare_kits", "phase": "progress", "done": 17, "total": 39, "status": "Updating Attr109: P55504-29.sym"}
+{"ts_utc": "2026-03-19T19:42:28.921+00:00", "feature": "prepare_kits", "phase": "progress", "done": 39, "total": 39, "status": "Building kit: Walls"}
+{"ts_utc": "2026-03-19T19:42:30.554+00:00", "feature": "prepare_kits", "phase": "success", "elapsed_ms": 3128, "kit_count": 2}
