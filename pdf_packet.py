@@ -91,6 +91,13 @@ class PacketBuildEmpty(Exception):
         self.missing = int(missing)
 
 
+def _format_qty_watermark_text(qty: int, extra: int = 0) -> str:
+    text = f"QTY {int(qty or 0)}"
+    if int(extra or 0) != 0:
+        text += " + S/U"
+    return text
+
+
 def _norm_layer_name(text: object) -> str:
     return "".join(ch.lower() for ch in str(text or "") if ch.isalnum())
 
@@ -1381,6 +1388,7 @@ def _process_packet_part(
     part_name = os.path.splitext(os.path.basename(getattr(p, "sym", "") or ""))[0]
     status = part_name or f"Part {i}"
     qty = int(getattr(p, "qty", None) or 1)
+    extra = int(getattr(p, "extra", None) or 0)
     pdf = resolver(p.sym, ".pdf")
     if not pdf or not os.path.exists(pdf):
         return {
@@ -1420,6 +1428,7 @@ def _process_packet_part(
                 "mode": "vector",
                 "pdf_path": pdf,
                 "qty": qty,
+                "extra": extra,
                 "elapsed_ms": int((time.perf_counter() - t0) * 1000.0),
             }
 
@@ -1460,6 +1469,7 @@ def _process_packet_part(
             "w": float(src_rect.width),
             "h": float(src_rect.height),
             "qty": qty,
+            "extra": extra,
             "img_stream": stream,
             "open_ms": open_ms,
             "gate_ms": gate_ms,
@@ -1529,6 +1539,7 @@ def _apply_packet_result(
     if not bool(res.get("skip", False)):
         mode = str(res.get("mode", "raster") or "raster").strip().lower()
         qty = int(res.get("qty", 1) or 1)
+        extra = int(res.get("extra", 0) or 0)
         dst_page = None
         if mode == "vector":
             pdf_path = str(res.get("pdf_path") or "").strip()
@@ -1650,7 +1661,7 @@ def _apply_packet_result(
 
         if dst_page is not None and pages_inc > 0:
             rect = dst_page.rect
-            text = f"QTY {qty}"
+            text = _format_qty_watermark_text(qty, extra)
             margin = 18
             font_size = 24 * WATERMARK_TEXT_SCALE
             box_h = 46 * WATERMARK_TEXT_SCALE

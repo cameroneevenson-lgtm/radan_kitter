@@ -2946,3 +2946,40 @@
 {"ts_utc": "2026-03-19T19:42:28.202+00:00", "feature": "prepare_kits", "phase": "progress", "done": 17, "total": 39, "status": "Updating Attr109: P55504-29.sym"}
 {"ts_utc": "2026-03-19T19:42:28.921+00:00", "feature": "prepare_kits", "phase": "progress", "done": 39, "total": 39, "status": "Building kit: Walls"}
 {"ts_utc": "2026-03-19T19:42:30.554+00:00", "feature": "prepare_kits", "phase": "success", "elapsed_ms": 3128, "kit_count": 2}
+{"ts_utc": "2026-03-25T20:09:38.648+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\CONSOLE PACK\\F55334 CONSOLE PACK\\F55334 CONSOLE PACK.rpd"}
+{"ts_utc": "2026-03-25T20:09:41.460+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 2812, "part_count": 36}
+{"ts_utc": "2026-03-25T20:10:52.125+00:00", "feature": "prepare_kits", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\CONSOLE PACK\\F55334 CONSOLE PACK\\F55334 CONSOLE PACK.rpd", "part_count": 36}
+{"ts_utc": "2026-03-25T20:10:52.141+00:00", "feature": "prepare_kits", "phase": "progress", "done": 0, "total": 38, "status": "Preparing kits..."}
+{"ts_utc": "2026-03-25T20:10:52.902+00:00", "feature": "prepare_kits", "phase": "progress", "done": 14, "total": 38, "status": "Updating Attr109: EC-F-PLUS-SP-00012-R1.sym"}
+{"ts_utc": "2026-03-25T20:10:53.661+00:00", "feature": "prepare_kits", "phase": "progress", "done": 32, "total": 38, "status": "Updating Attr109: EC-F-SP-00017.sym"}
+{"ts_utc": "2026-03-25T20:10:53.899+00:00", "feature": "prepare_kits", "phase": "progress", "done": 38, "total": 38, "status": "Building kit: Flat Parts"}
+{"ts_utc": "2026-03-25T20:10:55.126+00:00", "feature": "prepare_kits", "phase": "success", "elapsed_ms": 3006, "kit_count": 2}
+{"ts_utc": "2026-03-25T20:10:56.257+00:00", "feature": "write_rpd", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\CONSOLE PACK\\F55334 CONSOLE PACK\\F55334 CONSOLE PACK.rpd", "part_count": 36}
+{"ts_utc": "2026-03-25T20:10:59.932+00:00", "feature": "write_rpd", "phase": "success", "elapsed_ms": 3678, "backup_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\CONSOLE PACK\\F55334 CONSOLE PACK\\_bak\\F55334 CONSOLE PACK.rpd.20260325_161056.bak"}
+{"ts_utc": "2026-03-25T20:12:04.957+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\CONSOLE PACK\\F55334 CONSOLE PACK\\F55334 CONSOLE PACK.rpd"}
+{"ts_utc": "2026-03-25T20:12:07.790+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 2832, "part_count": 36}
+{"ts_utc": "2026-03-25T20:12:13.281+00:00", "feature": "build_packet", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\CONSOLE PACK\\F55334 CONSOLE PACK\\F55334 CONSOLE PACK.rpd", "part_count": 36, "first_page_only": false, "page_cap": 0, "output_dir": "_out", "suppress_layer_0": true, "workers": "auto", "mode": "vector"}
+{"ts_utc": "2026-03-25T20:12:13.297+00:00", "feature": "packet_engine", "phase": "start", "out_pdf_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\CONSOLE PACK\\F55334 CONSOLE PACK\\_out\\PrintPacket_QTY_20260325_161213.pdf", "total_parts": 36, "workers": 1, "dpi": 220, "jpeg_quality": 82, "suppress_layer_0": true}
+{"ts_utc": "2026-03-25T20:12:13.313+00:00", "feature": "build_packet", "phase": "progress", "done": 0, "total": 36, "status": "Starting packet build"}
+{"ts_utc": "2026-03-25T20:12:13.662+00:00", "feature": "packet_engine", "phase": "progress", "done": 1, "total": 36, "status": "EC-CP-00001"}
+{"ts_utc": "2026-03-25T20:12:14.248+00:00", "feature": "build_packet", "phase": "progress", "done": 3, "total": 36, "status": "EC-CP-00004"}
+{"ts_utc": "2026-03-25T20:12:14.475+00:00", "feature": "packet_engine", "phase": "progress", "done": 4, "total": 36, "status": "EC-F-DCP-00002-1-R1"}
+{"ts_utc": "2026-03-25T20:12:15.134+00:00", "feature": "build_packet", "phase": "progress", "done": 7, "total": 36, "status": "EC-F-DCP-00005"}
+{"ts_utc": "2026-03-25T20:12:15.330+00:00", "feature": "packet_engine", "phase": "progress", "done": 8, "total": 36, "status": "EC-F-DCP-00007"}
+{"ts_utc": "2026-03-25T20:12:16.069+00:00", "feature": "build_packet", "phase": "progress", "done": 12, "total": 36, "status": "EC-F-PLUS-SP-00006-R1"}
+{"ts_utc": "2026-03-25T20:12:16.083+00:00", "feature": "packet_engine", "phase": "progress", "done": 12, "total": 36, "status": "EC-F-PLUS-SP-00006-R1"}
+{"ts_utc": "2026-03-25T20:12:17.001+00:00", "feature": "build_packet", "phase": "progress", "done": 17, "total": 36, "status": "EC-F-PLUS-SP-00015"}
+{"ts_utc": "2026-03-25T20:12:17.017+00:00", "feature": "packet_engine", "phase": "progress", "done": 17, "total": 36, "status": "EC-F-PLUS-SP-00015"}
+{"ts_utc": "2026-03-25T20:12:17.782+00:00", "feature": "build_packet", "phase": "progress", "done": 22, "total": 36, "status": "EC-F-PLUS-SP-00028"}
+{"ts_utc": "2026-03-25T20:12:17.795+00:00", "feature": "packet_engine", "phase": "progress", "done": 22, "total": 36, "status": "EC-F-PLUS-SP-00028"}
+{"ts_utc": "2026-03-25T20:12:18.539+00:00", "feature": "build_packet", "phase": "progress", "done": 27, "total": 36, "status": "EC-F-PLUS-SP-00037"}
+{"ts_utc": "2026-03-25T20:12:18.670+00:00", "feature": "packet_engine", "phase": "progress", "done": 28, "total": 36, "status": "EC-F-SP-00002-R1"}
+{"ts_utc": "2026-03-25T20:12:19.411+00:00", "feature": "build_packet", "phase": "progress", "done": 34, "total": 36, "status": "EC-F-SP-00020-12"}
+{"ts_utc": "2026-03-25T20:12:19.555+00:00", "feature": "packet_engine", "phase": "progress", "done": 35, "total": 36, "status": "EC-F-SP-00026"}
+{"ts_utc": "2026-03-25T20:12:19.738+00:00", "feature": "build_packet", "phase": "progress", "done": 36, "total": 36, "status": "F55334-B-43"}
+{"ts_utc": "2026-03-25T20:12:19.755+00:00", "feature": "packet_engine", "phase": "progress", "done": 36, "total": 36, "status": "F55334-B-43"}
+{"ts_utc": "2026-03-25T20:12:19.782+00:00", "feature": "build_packet", "phase": "progress", "done": 36, "total": 36, "status": "Saving packet to temp file"}
+{"ts_utc": "2026-03-25T20:12:19.857+00:00", "feature": "build_packet", "phase": "progress", "done": 36, "total": 36, "status": "Copying packet file"}
+{"ts_utc": "2026-03-25T20:12:20.554+00:00", "feature": "build_packet", "phase": "progress", "done": 36, "total": 36, "status": "Packet complete"}
+{"ts_utc": "2026-03-25T20:12:20.617+00:00", "feature": "packet_engine", "phase": "success", "elapsed_ms": 7316, "pages": 36, "missing": 0, "out_size_bytes": 2861462, "avg_part_ms": 14, "max_part_ms": 34}
+{"ts_utc": "2026-03-25T20:12:20.651+00:00", "feature": "build_packet", "phase": "success", "elapsed_ms": 7359, "packet_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55334\\CONSOLE PACK\\F55334 CONSOLE PACK\\_out\\PrintPacket_QTY_20260325_161213.pdf", "pages": 36, "missing": 0}

@@ -35,6 +35,12 @@ def safe_int_1_9(s: str, default: int = 9) -> int:
         return default
     return max(1, min(9, v))
 
+def _parse_int_text(s: str, default: int = 0) -> int:
+    try:
+        return int(float(str(s).strip()))
+    except Exception:
+        return default
+
 def kit_label_from_rpd_text(kit_text: str) -> str:
     if not kit_text:
         return ""
@@ -45,6 +51,16 @@ def kit_label_from_rpd_text(kit_text: str) -> str:
 def _find_child_text(el: ET.Element, tag_candidates: List[str]) -> str:
     for t in tag_candidates:
         v = el.findtext(f"r:{t}", "", NS)
+        if v:
+            return v
+    wanted = {str(t or "").strip().lower() for t in tag_candidates if str(t or "").strip()}
+    if not wanted:
+        return ""
+    for child in list(el):
+        tag = re.sub(r"^\{.*\}", "", str(child.tag or "")).strip().lower()
+        if tag not in wanted:
+            continue
+        v = str(child.text or "").strip()
         if v:
             return v
     return ""
@@ -61,6 +77,7 @@ class PartRow:
     qty: int
     material: str
     thickness: str
+    extra: int = 0
 
     kit_label: str = ""
     suggested_kit: str = ""
@@ -90,6 +107,7 @@ def load_rpd(path: str) -> Tuple[ET.ElementTree, List[PartRow], Dict[str, str]]:
         )
 
     qty_tags = ["Qty", "QTY", "Quantity", "Count", "Num", "Number", "Instances"]
+    extra_tags = ["Extra", "ExtraQty", "ExtraQTY", "ExtraQuantity"]
     mat_tags = ["Material", "Mat"]
     thk_tags = ["Thickness", "Thk", "Gauge"]
 
@@ -100,15 +118,12 @@ def load_rpd(path: str) -> Tuple[ET.ElementTree, List[PartRow], Dict[str, str]]:
         priority = el.findtext("r:Priority", "", NS)
 
         qty_s = _find_child_text(el, qty_tags)
+        extra_s = _find_child_text(el, extra_tags)
         mat = _find_child_text(el, mat_tags)
         thk = _find_child_text(el, thk_tags)
 
-        qty = 1
-        if qty_s:
-            try:
-                qty = int(float(qty_s))
-            except Exception:
-                qty = 1
+        qty = _parse_int_text(qty_s, default=1) if qty_s else 1
+        extra = _parse_int_text(extra_s, default=0) if extra_s else 0
 
         row = PartRow(
             pid=pid,
@@ -118,6 +133,7 @@ def load_rpd(path: str) -> Tuple[ET.ElementTree, List[PartRow], Dict[str, str]]:
             qty=qty,
             material=mat or "",
             thickness=thk or "",
+            extra=extra,
         )
         row.kit_label = kit_label_from_rpd_text(kit_text)
         parts.append(row)
