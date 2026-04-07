@@ -1,7 +1,7 @@
 {
-  "trained_at_utc": "2026-03-12T14:35:13+00:00",
+  "trained_at_utc": "2026-04-07T11:00:48+00:00",
   "dataset_path": "C:\\Tools\\radan_kitter\\ml_dataset.csv",
-  "dataset_mtime": 1773325558.8165698,
+  "dataset_mtime": 1773326122.160451,
   "requested_features": [
     "dxf_perimeter_area_ratio",
     "dxf_internal_void_area_ratio",
@@ -24,22 +24,21 @@
     "dxf_perimeter_area_ratio",
     "dxf_internal_void_area_ratio",
     "dxf_entity_count",
-    "dxf_arc_length_ratio",
-    "dxf_exterior_notch_count",
-    "dxf_has_interior_polylines",
-    "dxf_color_count",
-    "pdf_dim_density",
-    "pdf_bendline_score"
-  ],
-  "dropped_constant_features": [
     "dxf_arc_count",
     "dxf_bbox_aspect_ratio",
     "dxf_fill_ratio",
     "dxf_edge_length_cv",
     "dxf_edge_band_entity_ratio",
+    "dxf_arc_length_ratio",
+    "dxf_exterior_notch_count",
+    "dxf_has_interior_polylines",
+    "dxf_color_count",
+    "pdf_dim_density",
     "pdf_red_dim_density",
+    "pdf_bendline_score",
     "pdf_bendline_entity_density"
   ],
+  "dropped_constant_features": [],
   "dropped_correlated_features": [],
   "corr_threshold_abs": 0.985,
   "classes": [
@@ -53,5 +52,5 @@
     "Walls",
     "Wheel Wells"
   ],
-  "n_rows": 152
+  "n_rows": 162
 }
