@@ -182,7 +182,8 @@ def run_build_packet(
     if cfg_cap > 0:
         page_cap = cfg_cap if page_cap is None else min(page_cap, cfg_cap)
 
-    build_parts = list(parts[:page_cap]) if page_cap is not None else list(parts)
+    ordered_parts = packet_service.sort_packet_parts(parts)
+    build_parts = list(ordered_parts[:page_cap]) if page_cap is not None else list(ordered_parts)
     if not build_parts:
         return False
     effective_out_dir = (
@@ -289,7 +290,7 @@ def run_build_packet(
             parent,
             "Build Packet",
             (
-                "No packet was created because no PDFs were found for the selected rows.\n"
+                f"{exc}\n"
                 f"Missing PDFs: {int(getattr(exc, 'missing', 0) or 0)}"
             ),
         )
@@ -433,6 +434,7 @@ def run_ml_log(
                 f"Rows processed: {int(summary.get('processed_rows', 0))}/{int(summary.get('total_rows', 0))}\n"
                 f"Rows written: {int(summary.get('written_rows', 0))}\n"
                 f"Rows skipped (missing PDF): {int(summary.get('skipped_missing_pdf_rows', 0))}\n"
+                f"Rows with feature warnings: {int(summary.get('feature_error_rows', 0))}\n"
                 f"Workers: {int(summary.get('workers', 1))}\n"
                 f"Duplicates skipped: {int(summary.get('skipped_duplicate_rows', 0))}\n"
                 f"Dataset: {summary.get('dataset_path', '')}\n"
@@ -535,6 +537,8 @@ def run_ml_recompute_all(
                 f"Rows processed: {int(summary.get('processed_rows', 0))}/{int(summary.get('total_rows', 0))}\n"
                 f"Rows updated: {int(summary.get('updated_rows', 0))}\n"
                 f"Rows with compute errors: {int(summary.get('error_rows', 0))}\n"
+                f"Rows with DXF feature errors: {int(summary.get('dxf_feature_error_rows', 0))}\n"
+                f"Rows with PDF feature errors: {int(summary.get('pdf_feature_error_rows', 0))}\n"
                 f"Rows missing PDF path/file: {int(summary.get('missing_pdf_rows', 0))}\n"
                 f"Rows missing DXF path/file: {int(summary.get('missing_dxf_rows', 0))}\n"
                 f"Workers: {int(summary.get('workers', 1))}\n"

@@ -1,0 +1,18 @@
+{
+  "dxf_perimeter_area_ratio": 0.05333333333333334,
+  "dxf_internal_void_area_ratio": 0.05221047688802062,
+  "dxf_entity_count": 4.0,
+  "dxf_arc_count": 1.0,
+  "dxf_bbox_aspect_ratio": 1.6666666666666667,
+  "dxf_fill_ratio": 1.0,
+  "dxf_edge_length_cv": 0.25,
+  "dxf_edge_band_entity_ratio": 0.25,
+  "dxf_arc_length_ratio": 0.19858154676993806,
+  "dxf_exterior_notch_count": 0.0,
+  "dxf_has_interior_polylines": 2.0,
+  "dxf_color_count": 3.0,
+  "pdf_dim_density": 0.1,
+  "pdf_red_dim_density": 0.1,
+  "pdf_bendline_score": 0.6666666666666666,
+  "pdf_bendline_entity_density": 0.032789822822990866
+}

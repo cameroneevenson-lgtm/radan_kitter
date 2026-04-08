@@ -1,35 +1,12 @@
 from __future__ import annotations
 
-import datetime
 import os
 import re
-import shutil
 from typing import Callable, Dict, List, Optional, Tuple, TypeVar
 
+from file_utils import atomic_write_bytes, backup_file, ensure_dir, now_stamp
+
 T = TypeVar("T")
-
-
-def now_stamp() -> str:
-    return datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-
-
-def ensure_dir(p: str) -> None:
-    os.makedirs(p, exist_ok=True)
-
-
-def atomic_write_bytes(path: str, data: bytes) -> None:
-    tmp = path + ".tmp"
-    with open(tmp, "wb") as f:
-        f.write(data)
-    os.replace(tmp, path)
-
-
-def backup_file(src_path: str, bak_dir: str) -> str:
-    ensure_dir(bak_dir)
-    base = os.path.basename(src_path)
-    dst = os.path.join(bak_dir, f"{base}.{now_stamp()}.bak")
-    shutil.copy2(src_path, dst)
-    return dst
 
 
 def read_text_fallback(path: str) -> str:

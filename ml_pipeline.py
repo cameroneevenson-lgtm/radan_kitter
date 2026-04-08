@@ -16,9 +16,6 @@ from __future__ import annotations
 
 import math
 import os
-import re
-import csv
-import json
 import time
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from datetime import datetime, timezone
@@ -27,6 +24,20 @@ from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple
 import pandas as pd
 import numpy as np
 from config import GLOBAL_DATASET_PATH
+from ml_dxf_features import compute_dxf_features as _compute_dxf_features_impl
+from ml_dataset_store import (
+    ScanLogger,
+    append_labeled_row as _append_labeled_row_impl,
+    ensure_dataset_exists as _ensure_dataset_exists_impl,
+    load_dataset_df as _load_dataset_df_impl,
+    load_existing_part_names as _load_existing_part_names_impl,
+    make_run_name as _make_run_name_impl,
+    now_local_stamp as _now_local_stamp_impl,
+    part_keys_from_df as _part_keys_from_df_impl,
+    part_name_from_obj as _part_name_from_obj_impl,
+    safe_emit as _safe_emit_impl,
+)
+from ml_pdf_features import compute_pdf_features_vector as _compute_pdf_features_vector_impl
 
 try:
     from PySide6.QtCore import QObject, QRunnable, Signal
@@ -150,15 +161,29 @@ def _entropy_from_counts(counts: List[int]) -> float:
     return ent
 
 
+def _format_error(exc: Exception) -> str:
+    name = type(exc).__name__
+    text = str(exc or "").strip()
+    return f"{name}: {text}" if text else name
+
+
+def _join_feature_errors(feature_errors: Dict[str, str]) -> str:
+    if not feature_errors:
+        return ""
+    parts = []
+    for key in ("dxf", "pdf"):
+        msg = str(feature_errors.get(key) or "").strip()
+        if msg:
+            parts.append(f"{key.upper()}: {msg}")
+    return "; ".join(parts)
+
+
 # -----------------------------
 # Dataset I/O
 # -----------------------------
 
 def ensure_dataset_exists() -> None:
-    os.makedirs(os.path.dirname(DATASET_PATH), exist_ok=True)
-    if not os.path.exists(DATASET_PATH):
-        df = pd.DataFrame(columns=ALL_COLS)
-        df.to_csv(DATASET_PATH, index=False)
+    _ensure_dataset_exists_impl(DATASET_PATH, ALL_COLS)
 
 
 def append_labeled_row(
@@ -168,153 +193,46 @@ def append_labeled_row(
     dxf_path: str,
     rpd_token: Optional[str] = None,
 ) -> None:
-    """
-    Append/Upsert one labeled row to the dataset.
-
-    Global identity key: part_name (basename).
-    Behavior: LAST ADDED WINS (if part_name already exists, it is replaced).
-
-    Computes features from pdf_path/dxf_path only.
-    """
-    ensure_dataset_exists()
-    df = pd.read_csv(DATASET_PATH)
-    for c in ALL_COLS:
-        if c not in df.columns:
-            df[c] = _nan()
-    df = df.loc[:, ALL_COLS].copy()
-
-    part_name_s = str(part_name or "").strip()
-    if not part_name_s:
-        return
-
-    # Drop any existing rows for this part_name (last-added-wins)
-    if "part_name" in df.columns and len(df) > 0:
-        df = df[df["part_name"].astype(str) != part_name_s].copy()
-
-    row = {
-        "timestamp_utc": _utc_now_iso(),
-        "rpd_token": str(rpd_token or "").strip(),
-        "part_name": part_name_s,
-        "kit_label": str(kit_label or "").strip(),
-        "pdf_path": str(pdf_path or "").strip(),
-        "dxf_path": str(dxf_path or "").strip(),
-    }
-
-    feats = compute_phase2_signals(row["pdf_path"], row["dxf_path"])
-    row.update(feats)
-
-    for c in ALL_COLS:
-        if c not in row:
-            row[c] = _nan()
-
-    df = pd.concat([df, pd.DataFrame([row], columns=ALL_COLS)], ignore_index=True)
-    df.to_csv(DATASET_PATH, index=False)
+    _append_labeled_row_impl(
+        part_name,
+        kit_label,
+        pdf_path,
+        dxf_path,
+        dataset_path=DATASET_PATH,
+        all_cols=ALL_COLS,
+        compute_signals_fn=compute_phase2_signals,
+        nan_fn=_nan,
+        utc_now_iso_fn=_utc_now_iso,
+        rpd_token=rpd_token,
+    )
 
 
 def _now_local_stamp() -> str:
-    return datetime.now().strftime("%Y%m%d_%H%M%S")
+    return _now_local_stamp_impl()
 
 
 def make_run_name(rpd_path: str) -> str:
-    base = os.path.splitext(os.path.basename(rpd_path or ""))[0].strip()
-    if not base:
-        base = "run"
-    base = re.sub(r"[^A-Za-z0-9_.-]+", "_", base).strip("_")
-    return f"MLRun_{base}_{_now_local_stamp()}"
+    return _make_run_name_impl(rpd_path, stamp_fn=_now_local_stamp)
 
 
 def load_existing_part_names(dataset_path: str = DATASET_PATH) -> set[str]:
-    if not dataset_path or not os.path.exists(dataset_path):
-        return set()
-    out: set[str] = set()
-    try:
-        with open(dataset_path, newline="", encoding="utf-8") as f:
-            r = csv.DictReader(f)
-            for row in r:
-                part = str(row.get("part_name") or row.get("part") or "").strip()
-                if part:
-                    out.add(part.upper())
-    except Exception:
-        return set()
-    return out
-
-
-class ScanLogger:
-    def __init__(self, run_dir: str, run_name: str):
-        self.run_dir = run_dir
-        self.run_name = run_name
-        os.makedirs(self.run_dir, exist_ok=True)
-        self.meta_path = os.path.join(self.run_dir, f"{self.run_name}.meta.json")
-        self.parts_path = os.path.join(self.run_dir, f"{self.run_name}.parts.jsonl")
-        self.summary_path = os.path.join(self.run_dir, f"{self.run_name}.summary.json")
-        self._t0 = time.time()
-
-    def write_meta(self, meta: Dict[str, Any]) -> None:
-        payload = dict(meta or {})
-        payload.setdefault("timestamp_utc", _utc_now_iso())
-        with open(self.meta_path, "w", encoding="utf-8") as f:
-            json.dump(payload, f, indent=2)
-
-    def log_part(self, item: Dict[str, Any]) -> None:
-        payload = dict(item or {})
-        payload.setdefault("timestamp_utc", _utc_now_iso())
-        with open(self.parts_path, "a", encoding="utf-8") as f:
-            f.write(json.dumps(payload) + "\n")
-
-    def write_summary(self, summary: Dict[str, Any]) -> None:
-        payload = dict(summary or {})
-        payload.setdefault("timestamp_utc", _utc_now_iso())
-        payload.setdefault("duration_sec", round(max(0.0, time.time() - self._t0), 3))
-        with open(self.summary_path, "w", encoding="utf-8") as f:
-            json.dump(payload, f, indent=2)
+    return _load_existing_part_names_impl(dataset_path)
 
 
 def _part_name_from_obj(p: Any) -> str:
-    part = str(getattr(p, "part", "") or "").strip()
-    if part:
-        return part
-    sym = str(getattr(p, "sym", "") or "").strip()
-    if not sym:
-        return ""
-    return os.path.splitext(os.path.basename(sym))[0].strip()
+    return _part_name_from_obj_impl(p)
 
 
 def _safe_emit(cb: Optional[Callable], *args) -> None:
-    if cb is None:
-        return
-    try:
-        cb(*args)
-    except Exception:
-        return
+    _safe_emit_impl(cb, *args)
 
 
 def _load_dataset_df(path: str) -> pd.DataFrame:
-    if not path:
-        path = DATASET_PATH
-    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
-    if not os.path.exists(path):
-        return pd.DataFrame(columns=ALL_COLS)
-    try:
-        df = pd.read_csv(path)
-    except Exception:
-        df = pd.DataFrame(columns=ALL_COLS)
-    for c in ALL_COLS:
-        if c not in df.columns:
-            df[c] = _nan()
-    return df.loc[:, ALL_COLS].copy()
+    return _load_dataset_df_impl(path or DATASET_PATH, ALL_COLS, _nan)
 
 
 def _part_keys_from_df(df: pd.DataFrame) -> set[str]:
-    out: set[str] = set()
-    if "part_name" not in df.columns or len(df) == 0:
-        return out
-    for v in df["part_name"]:
-        if pd.isna(v):
-            continue
-        part = str(v).strip()
-        if part:
-            out.add(part.upper())
-    return out
+    return _part_keys_from_df_impl(df)
 
 
 def _compute_ml_log_row(
@@ -328,7 +246,7 @@ def _compute_ml_log_row(
     pdf = str(task.get("pdf_path") or "").strip()
     dxf = str(task.get("dxf_path") or "").strip()
 
-    feats = compute_phase2_signals(pdf, dxf)
+    feats, feature_errors = _compute_phase2_signals_detail(pdf, dxf)
     row = {
         "timestamp_utc": _utc_now_iso(),
         "rpd_token": str(rpd_token or "").strip(),
@@ -350,6 +268,7 @@ def _compute_ml_log_row(
     return {
         "row": row,
         "signals": sig_vals,
+        "feature_errors": feature_errors,
     }
 
 
@@ -410,6 +329,9 @@ def run_scan_and_log(
         "skipped_missing_pdf_rows": 0,
         "missing_pdf_rows": 0,
         "missing_dxf_rows": 0,
+        "feature_error_rows": 0,
+        "dxf_feature_error_rows": 0,
+        "pdf_feature_error_rows": 0,
         "append_error_rows": 0,
     }
     stopped = False
@@ -500,6 +422,7 @@ def run_scan_and_log(
 
         status = "computed"
         signal_vals: Dict[str, float] = {s: 0.0 for s in signals}
+        feature_errors: Dict[str, str] = {}
         if not err and res is not None:
             try:
                 row = dict(res.get("row") or {})
@@ -516,9 +439,27 @@ def run_scan_and_log(
                         signal_vals[s] = float(v) if math.isfinite(v) else 0.0
             except Exception:
                 signal_vals = {s: 0.0 for s in signals}
+            try:
+                err_obj = res.get("feature_errors")
+                if isinstance(err_obj, dict):
+                    feature_errors = {
+                        str(k): str(v).strip()
+                        for k, v in err_obj.items()
+                        if str(v or "").strip()
+                    }
+            except Exception:
+                feature_errors = {}
+        if feature_errors:
+            counts["feature_error_rows"] += 1
+            if feature_errors.get("dxf"):
+                counts["dxf_feature_error_rows"] += 1
+            if feature_errors.get("pdf"):
+                counts["pdf_feature_error_rows"] += 1
         if err:
             status = "append_error"
             counts["append_error_rows"] += 1
+        elif feature_errors:
+            status = "computed_with_warnings"
 
         item = {
             "status": status,
@@ -529,7 +470,8 @@ def run_scan_and_log(
             "pdf_exists": bool(task.get("pdf_exists", False)),
             "dxf_exists": bool(task.get("dxf_exists", False)),
             "signals": signal_vals,
-            "error": str(err or ""),
+            "feature_errors": feature_errors,
+            "error": str(err or _join_feature_errors(feature_errors)),
         }
         logger.log_part(item)
         _safe_emit(on_part, item)
@@ -668,6 +610,9 @@ def recompute_dataset_signals(
             "error_rows": 0,
             "missing_pdf_rows": 0,
             "missing_dxf_rows": 0,
+            "feature_error_rows": 0,
+            "dxf_feature_error_rows": 0,
+            "pdf_feature_error_rows": 0,
             "stopped": False,
             "workers": 1,
         }
@@ -686,6 +631,9 @@ def recompute_dataset_signals(
     errors = 0
     missing_pdf = 0
     missing_dxf = 0
+    feature_error_rows = 0
+    dxf_feature_error_rows = 0
+    pdf_feature_error_rows = 0
     stopped = False
     _safe_emit(on_progress, 0, total)
 
@@ -697,8 +645,16 @@ def recompute_dataset_signals(
         dxf_path = "" if pd.isna(dxf_raw) else str(dxf_raw).strip()
         tasks.append((idx, pdf_path, dxf_path))
 
-    def _apply_row_result(idx: int, pdf_path: str, dxf_path: str, feats: Optional[Dict[str, float]]) -> None:
+    def _apply_row_result(
+        idx: int,
+        pdf_path: str,
+        dxf_path: str,
+        feats: Optional[Dict[str, float]],
+        feature_errors: Optional[Dict[str, str]] = None,
+        hard_error: str = "",
+    ) -> None:
         nonlocal processed, updated, errors, missing_pdf, missing_dxf
+        nonlocal feature_error_rows, dxf_feature_error_rows, pdf_feature_error_rows
         if not (pdf_path and os.path.exists(pdf_path)):
             missing_pdf += 1
         if not (dxf_path and os.path.exists(dxf_path)):
@@ -707,7 +663,18 @@ def recompute_dataset_signals(
             for s in signals:
                 df.at[idx, s] = _safe_float(feats.get(s, _nan()))
             updated += 1
-        else:
+        row_feature_errors = {
+            str(k): str(v).strip()
+            for k, v in (feature_errors or {}).items()
+            if str(v or "").strip()
+        }
+        if row_feature_errors:
+            feature_error_rows += 1
+            if row_feature_errors.get("dxf"):
+                dxf_feature_error_rows += 1
+            if row_feature_errors.get("pdf"):
+                pdf_feature_error_rows += 1
+        if hard_error or row_feature_errors or feats is None:
             errors += 1
         processed += 1
         _safe_emit(on_progress, processed, total)
@@ -722,11 +689,14 @@ def recompute_dataset_signals(
                 except Exception:
                     pass
             feats: Optional[Dict[str, float]] = None
+            feature_errors: Dict[str, str] = {}
+            hard_error = ""
             try:
-                feats = compute_phase2_signals(pdf_path, dxf_path)
-            except Exception:
+                feats, feature_errors = _compute_phase2_signals_detail(pdf_path, dxf_path)
+            except Exception as exc:
+                hard_error = _format_error(exc)
                 feats = None
-            _apply_row_result(idx, pdf_path, dxf_path, feats)
+            _apply_row_result(idx, pdf_path, dxf_path, feats, feature_errors, hard_error)
     else:
         submitted = 0
         in_flight: Dict[Any, Tuple[int, str, str]] = {}
@@ -738,7 +708,7 @@ def recompute_dataset_signals(
                     return False
                 idx, pdf_path, dxf_path = tasks[submitted]
                 submitted += 1
-                fut = pool.submit(compute_phase2_signals, pdf_path, dxf_path)
+                fut = pool.submit(_compute_phase2_signals_detail, pdf_path, dxf_path)
                 in_flight[fut] = (idx, pdf_path, dxf_path)
                 return True
 
@@ -759,11 +729,14 @@ def recompute_dataset_signals(
                 for fut in done_set:
                     idx, pdf_path, dxf_path = in_flight.pop(fut)
                     feats: Optional[Dict[str, float]] = None
+                    feature_errors: Dict[str, str] = {}
+                    hard_error = ""
                     try:
-                        feats = fut.result()
-                    except Exception:
+                        feats, feature_errors = fut.result()
+                    except Exception as exc:
+                        hard_error = _format_error(exc)
                         feats = None
-                    _apply_row_result(idx, pdf_path, dxf_path, feats)
+                    _apply_row_result(idx, pdf_path, dxf_path, feats, feature_errors, hard_error)
                     if not stopped:
                         _submit_next()
         finally:
@@ -790,6 +763,9 @@ def recompute_dataset_signals(
         "error_rows": errors,
         "missing_pdf_rows": missing_pdf,
         "missing_dxf_rows": missing_dxf,
+        "feature_error_rows": feature_error_rows,
+        "dxf_feature_error_rows": dxf_feature_error_rows,
+        "pdf_feature_error_rows": pdf_feature_error_rows,
         "stopped": bool(stopped),
         "workers": int(workers),
     }
@@ -800,779 +776,45 @@ def recompute_dataset_signals(
 # Feature extraction entrypoint
 # -----------------------------
 
-def compute_phase2_signals(pdf_path: str, dxf_path: str) -> Dict[str, float]:
+def _compute_phase2_signals_detail(pdf_path: str, dxf_path: str) -> Tuple[Dict[str, float], Dict[str, str]]:
     feats: Dict[str, float] = {c: _nan() for c in FEATURE_COLS}
+    errors: Dict[str, str] = {}
 
     try:
         feats.update(_compute_dxf_features(dxf_path))
-    except Exception:
-        pass
+    except Exception as exc:
+        errors["dxf"] = _format_error(exc)
 
     try:
         feats.update(_compute_pdf_features_vector(pdf_path))
-    except Exception:
-        pass
+    except Exception as exc:
+        errors["pdf"] = _format_error(exc)
 
+    return feats, errors
+
+
+def compute_phase2_signals(pdf_path: str, dxf_path: str) -> Dict[str, float]:
+    feats, _ = _compute_phase2_signals_detail(pdf_path, dxf_path)
     return feats
 
 
-# -----------------------------
-# DXF features (vector)
-# -----------------------------
-
-def _iter_dxf_entities(doc) -> Iterable:
-    msp = doc.modelspace()
-    for e in msp:
-        yield e
-
-
-def _layer_aci_color(doc, layer_name: str) -> Optional[int]:
-    try:
-        if not layer_name:
-            return None
-        layer = doc.layers.get(layer_name)
-        if layer is None:
-            return None
-        if not layer.dxf.hasattr("color"):
-            return None
-        return abs(int(layer.dxf.color))
-    except Exception:
-        return None
-
-
-def _entity_effective_color_key(e, doc) -> Optional[str]:
-    # Prefer true-color when present.
-    try:
-        if hasattr(e, "dxf") and e.dxf.hasattr("true_color"):
-            tc = int(e.dxf.true_color) & 0xFFFFFF
-            if tc > 0:
-                return f"rgb:{tc:06X}"
-    except Exception:
-        pass
-
-    aci: Optional[int] = None
-    try:
-        if hasattr(e, "dxf") and e.dxf.hasattr("color"):
-            aci = int(e.dxf.color)
-    except Exception:
-        aci = None
-
-    # Resolve BYLAYER / BYBLOCK through layer color when possible.
-    if aci in (None, 0, 256):
-        layer_name = ""
-        try:
-            layer_name = str(e.dxf.layer or "")
-        except Exception:
-            layer_name = ""
-        layer_aci = _layer_aci_color(doc, layer_name)
-        if layer_aci is not None:
-            aci = layer_aci
-
-    if aci is None:
-        return None
-    return f"aci:{abs(int(aci))}"
-
-
-def _polyline_points(e) -> Optional[List[Tuple[float, float]]]:
-    t = e.dxftype()
-    try:
-        if t == "LINE":
-            s = e.dxf.start
-            en = e.dxf.end
-            return [(float(s.x), float(s.y)), (float(en.x), float(en.y))]
-        if t == "LWPOLYLINE":
-            pts = [(float(x), float(y)) for (x, y, *_rest) in e.get_points()]
-            return pts
-        if t == "POLYLINE":
-            pts = []
-            for v in e.vertices():
-                pts.append((float(v.dxf.location.x), float(v.dxf.location.y)))
-            return pts
-    except Exception:
-        return None
-    return None
-
-
-def _segments_from_points(pts: List[Tuple[float, float]], closed: bool) -> List[Tuple[Tuple[float, float], Tuple[float, float]]]:
-    segs = []
-    for i in range(len(pts) - 1):
-        segs.append((pts[i], pts[i + 1]))
-    if closed and len(pts) >= 3:
-        segs.append((pts[-1], pts[0]))
-    return segs
-
-
-def _arc_span_deg(start_deg: float, end_deg: float) -> float:
-    span = (float(end_deg) - float(start_deg)) % 360.0
-    if span <= 1e-9:
-        span = 360.0
-    return span
-
-
-def _points_close(a: Tuple[float, float], b: Tuple[float, float], tol: float) -> bool:
-    return abs(a[0] - b[0]) <= tol and abs(a[1] - b[1]) <= tol
-
-
-def _dedupe_consecutive_points(pts: List[Tuple[float, float]], tol: float) -> List[Tuple[float, float]]:
-    if not pts:
-        return []
-    out = [pts[0]]
-    for p in pts[1:]:
-        if not _points_close(out[-1], p, tol):
-            out.append(p)
-    return out
-
-
-def _stitch_open_paths_to_closed_loops(open_polys: List[List[Tuple[float, float]]]) -> List[List[Tuple[float, float]]]:
-    segs: List[Tuple[Tuple[float, float], Tuple[float, float]]] = []
-    cloud: List[Tuple[float, float]] = []
-    for p in open_polys:
-        if len(p) < 2:
-            continue
-        cloud.extend(p)
-        segs.extend(_segments_from_points(p, closed=False))
-    segs = [(a, b) for (a, b) in segs if _seg_len(a, b) > 1e-9]
-    if not segs:
-        return []
-
-    if len(cloud) >= 2:
-        x0, y0, x1, y1 = _bbox_from_points(cloud)
-        diag = math.hypot(x1 - x0, y1 - y0)
-    else:
-        diag = 0.0
-    tol = max(1e-4, 1e-4 * diag)
-
-    loops: List[List[Tuple[float, float]]] = []
-    unused = list(segs)
-    while unused:
-        a, b = unused.pop()
-        path: List[Tuple[float, float]] = [a, b]
-
-        made_progress = True
-        while made_progress and unused:
-            made_progress = False
-            for idx, (p0, p1) in enumerate(unused):
-                if _points_close(path[-1], p0, tol):
-                    path.append(p1)
-                elif _points_close(path[-1], p1, tol):
-                    path.append(p0)
-                elif _points_close(path[0], p1, tol):
-                    path.insert(0, p0)
-                elif _points_close(path[0], p0, tol):
-                    path.insert(0, p1)
-                else:
-                    continue
-                unused.pop(idx)
-                made_progress = True
-                break
-
-        if len(path) < 4:
-            continue
-        if not _points_close(path[0], path[-1], tol):
-            continue
-        path = path[:-1]
-        path = _dedupe_consecutive_points(path, tol)
-        if len(path) >= 3:
-            loops.append(path)
-    return loops
-
-
-def _seg_len(a: Tuple[float, float], b: Tuple[float, float]) -> float:
-    return math.hypot(b[0] - a[0], b[1] - a[1])
-
-
-def _point_to_segment_distance(
-    p: Tuple[float, float],
-    a: Tuple[float, float],
-    b: Tuple[float, float],
-) -> float:
-    ax, ay = float(a[0]), float(a[1])
-    bx, by = float(b[0]), float(b[1])
-    px, py = float(p[0]), float(p[1])
-    vx = bx - ax
-    vy = by - ay
-    den = (vx * vx) + (vy * vy)
-    if den <= 1e-18:
-        return math.hypot(px - ax, py - ay)
-    t = ((px - ax) * vx + (py - ay) * vy) / den
-    t = 0.0 if t < 0.0 else 1.0 if t > 1.0 else t
-    cx = ax + t * vx
-    cy = ay + t * vy
-    return math.hypot(px - cx, py - cy)
-
-
-def _seg_angle_deg(a: Tuple[float, float], b: Tuple[float, float]) -> float:
-    ang = math.degrees(math.atan2(b[1] - a[1], b[0] - a[0]))
-    ang = abs(ang) % 180.0
-    return ang
-
-
-def _is_ortho(angle_deg: float, tol: float = 5.0) -> bool:
-    return (min(abs(angle_deg - 0.0), abs(angle_deg - 180.0)) <= tol) or (abs(angle_deg - 90.0) <= tol)
-
-
-def _bbox_from_points(pts: List[Tuple[float, float]]) -> Tuple[float, float, float, float]:
-    xs = [p[0] for p in pts]
-    ys = [p[1] for p in pts]
-    return (min(xs), min(ys), max(xs), max(ys))
-
-
-def _bbox_aspect(x0: float, y0: float, x1: float, y1: float) -> float:
-    w = max(1e-9, x1 - x0)
-    h = max(1e-9, y1 - y0)
-    return w / h if w >= h else h / w
-
-
-def _circle_points(cx: float, cy: float, r: float, steps: int = 48) -> List[Tuple[float, float]]:
-    out: List[Tuple[float, float]] = []
-    n = max(12, int(steps))
-    for i in range(n):
-        t = 2.0 * math.pi * (i / n)
-        out.append((cx + r * math.cos(t), cy + r * math.sin(t)))
-    return out
-
-
-def _arc_points(
-    cx: float,
-    cy: float,
-    r: float,
-    start_deg: float,
-    end_deg: float,
-    steps: int = 24,
-) -> List[Tuple[float, float]]:
-    out: List[Tuple[float, float]] = []
-    if r <= 1e-9:
-        return out
-    span = _arc_span_deg(start_deg, end_deg)
-    n = max(6, int(max(6.0, float(steps) * (span / 360.0))))
-    for i in range(n + 1):
-        t_deg = float(start_deg) + (float(span) * (float(i) / float(n)))
-        t = math.radians(t_deg)
-        out.append((cx + r * math.cos(t), cy + r * math.sin(t)))
-    return out
-
-
-def _poly_area_abs(pts: List[Tuple[float, float]]) -> float:
-    if len(pts) < 3:
-        return 0.0
-    s = 0.0
-    n = len(pts)
-    for i in range(n):
-        x1, y1 = pts[i]
-        x2, y2 = pts[(i + 1) % n]
-        s += x1 * y2 - x2 * y1
-    return abs(0.5 * s)
-
-
-def _poly_perimeter(pts: List[Tuple[float, float]]) -> float:
-    if len(pts) < 2:
-        return 0.0
-    return sum(_seg_len(a, b) for (a, b) in _segments_from_points(pts, closed=True))
-
-
-def _poly_area_signed(pts: List[Tuple[float, float]]) -> float:
-    if len(pts) < 3:
-        return 0.0
-    s = 0.0
-    n = len(pts)
-    for i in range(n):
-        x1, y1 = pts[i]
-        x2, y2 = pts[(i + 1) % n]
-        s += x1 * y2 - x2 * y1
-    return 0.5 * s
-
-
-def _convex_hull(points: List[Tuple[float, float]]) -> List[Tuple[float, float]]:
-    pts = sorted(set(points))
-    if len(pts) <= 1:
-        return pts
-
-    def cross(o, a, b) -> float:
-        return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
-
-    lower: List[Tuple[float, float]] = []
-    for p in pts:
-        while len(lower) >= 2 and cross(lower[-2], lower[-1], p) <= 0:
-            lower.pop()
-        lower.append(p)
-
-    upper: List[Tuple[float, float]] = []
-    for p in reversed(pts):
-        while len(upper) >= 2 and cross(upper[-2], upper[-1], p) <= 0:
-            upper.pop()
-        upper.append(p)
-
-    return lower[:-1] + upper[:-1]
-
-
-def _point_in_poly(point: Tuple[float, float], poly: List[Tuple[float, float]]) -> bool:
-    x, y = point
-    inside = False
-    n = len(poly)
-    if n < 3:
-        return False
-    for i in range(n):
-        x1, y1 = poly[i]
-        x2, y2 = poly[(i + 1) % n]
-        intersects = ((y1 > y) != (y2 > y))
-        if intersects:
-            x_hit = (x2 - x1) * (y - y1) / max(1e-12, (y2 - y1)) + x1
-            if x < x_hit:
-                inside = not inside
-    return inside
-
-
 def _compute_dxf_features(dxf_path: str) -> Dict[str, float]:
-    out = {k: _nan() for k in DXF_SIGNAL_COLS}
-
-    if not dxf_path or not os.path.exists(dxf_path) or ezdxf is None:
-        return out
-
-    try:
-        doc = ezdxf.readfile(dxf_path)
-    except Exception:
-        return out
-
-    entities = list(_iter_dxf_entities(doc))
-    out["dxf_entity_count"] = _safe_int(len(entities))
-
-    arc_entity_count = 0
-    all_line_seg_lens: List[float] = []
-
-    colors: set[str] = set()
-    for e in entities:
-        ck = _entity_effective_color_key(e, doc)
-        if ck is None:
-            continue
-        colors.add(ck)
-    out["dxf_color_count"] = _safe_int(len(colors))
-
-    closed_loops: List[List[Tuple[float, float]]] = []
-    open_polys: List[List[Tuple[float, float]]] = []
-    cloud_points: List[Tuple[float, float]] = []
-    entity_samples: List[List[Tuple[float, float]]] = []
-    total_geom_len = 0.0
-    arc_geom_len = 0.0
-
-    for e in entities:
-        t = e.dxftype()
-        if t == "CIRCLE":
-            try:
-                c = e.dxf.center
-                r = abs(float(e.dxf.radius))
-                if r > 1e-9:
-                    cpts = _circle_points(float(c.x), float(c.y), r)
-                    cloud_points.extend(cpts)
-                    entity_samples.append(cpts)
-                    closed_loops.append(cpts)
-                    circ_len = 2.0 * math.pi * r
-                    total_geom_len += circ_len
-                    arc_geom_len += circ_len
-            except Exception:
-                pass
-            continue
-
-        if t == "ARC":
-            arc_entity_count += 1
-            try:
-                c = e.dxf.center
-                r = abs(float(e.dxf.radius))
-                if r > 1e-9:
-                    start_a = float(e.dxf.start_angle)
-                    end_a = float(e.dxf.end_angle)
-                    span_deg = _arc_span_deg(start_a, end_a)
-                    alen = math.radians(span_deg) * r
-                    total_geom_len += alen
-                    arc_geom_len += alen
-                    apts = _arc_points(float(c.x), float(c.y), r, start_a, end_a)
-                    if apts:
-                        cloud_points.extend(apts)
-                        entity_samples.append(apts)
-            except Exception:
-                pass
-            continue
-
-        pts = _polyline_points(e)
-        if not pts or len(pts) < 2:
-            continue
-        cloud_points.extend(pts)
-        entity_samples.append(pts)
-        is_closed = False
-        try:
-            if t == "LWPOLYLINE":
-                is_closed = bool(e.closed)
-            elif t == "POLYLINE":
-                is_closed = bool(e.is_closed)
-        except Exception:
-            is_closed = False
-
-        segs_here = _segments_from_points(pts, closed=is_closed and len(pts) >= 3)
-        for (a, b) in segs_here:
-            seg_len = _seg_len(a, b)
-            total_geom_len += seg_len
-            if seg_len > 1e-9:
-                all_line_seg_lens.append(seg_len)
-
-        if is_closed and len(pts) >= 3:
-            closed_loops.append(pts)
-        else:
-            open_polys.append(pts)
-
-    if total_geom_len > 1e-9:
-        out["dxf_arc_length_ratio"] = _safe_float(arc_geom_len / total_geom_len)
-    else:
-        out["dxf_arc_length_ratio"] = _safe_float(0.0)
-    out["dxf_arc_count"] = _safe_int(arc_entity_count)
-    out["dxf_bbox_aspect_ratio"] = _safe_float(0.0)
-    out["dxf_fill_ratio"] = _safe_float(0.0)
-    out["dxf_edge_length_cv"] = _safe_float(0.0)
-    out["dxf_edge_band_entity_ratio"] = _safe_float(0.0)
-    if len(cloud_points) >= 2:
-        bx0, by0, bx1, by1 = _bbox_from_points(cloud_points)
-        out["dxf_bbox_aspect_ratio"] = _safe_float(_bbox_aspect(bx0, by0, bx1, by1))
-    if all_line_seg_lens:
-        mean_len = sum(all_line_seg_lens) / max(1, len(all_line_seg_lens))
-        if mean_len > 1e-9:
-            var = sum((x - mean_len) ** 2 for x in all_line_seg_lens) / max(1, len(all_line_seg_lens))
-            out["dxf_edge_length_cv"] = _safe_float(math.sqrt(var) / mean_len)
-
-    if not closed_loops and open_polys:
-        closed_loops = _stitch_open_paths_to_closed_loops(open_polys)
-
-    # Fallback when no closed loops are available: estimate using convex hull.
-    if not closed_loops and len(cloud_points) >= 3:
-        hull = _convex_hull(cloud_points)
-        hull_area = _poly_area_abs(hull)
-        hull_perim = _poly_perimeter(hull)
-        if hull_area > 1e-9 and hull_perim > 1e-9:
-            out["dxf_perimeter_area_ratio"] = _safe_float(hull_perim / hull_area)
-            out["dxf_internal_void_area_ratio"] = _safe_float(0.0)
-            out["dxf_has_interior_polylines"] = _safe_int(0)
-            out["dxf_exterior_notch_count"] = _safe_int(0)
-            hx0, hy0, hx1, hy1 = _bbox_from_points(hull)
-            hbbox_area = max(0.0, hx1 - hx0) * max(0.0, hy1 - hy0)
-            if hbbox_area > 1e-9:
-                out["dxf_fill_ratio"] = _safe_float(_clamp01(hull_area / hbbox_area))
-            return out
-
-    # Last-chance fallback for very thin/degenerate geometry: bbox proxy ratio.
-    if not closed_loops and len(cloud_points) >= 2:
-        x0, y0, x1, y1 = _bbox_from_points(cloud_points)
-        w = max(0.0, x1 - x0)
-        h = max(0.0, y1 - y0)
-        bbox_area = w * h
-        bbox_perim = 2.0 * (w + h)
-        if bbox_area > 1e-9 and bbox_perim > 1e-9:
-            out["dxf_perimeter_area_ratio"] = _safe_float(bbox_perim / bbox_area)
-            out["dxf_internal_void_area_ratio"] = _safe_float(0.0)
-            out["dxf_has_interior_polylines"] = _safe_int(0)
-            out["dxf_exterior_notch_count"] = _safe_int(0)
-            return out
-
-    if not closed_loops:
-        out["dxf_perimeter_area_ratio"] = _safe_float(0.0)
-        out["dxf_internal_void_area_ratio"] = _safe_float(0.0)
-        out["dxf_has_interior_polylines"] = _safe_int(0)
-        out["dxf_exterior_notch_count"] = _safe_int(0)
-        return out
-
-    loop_areas = [(float(_poly_area_abs(lp)), lp) for lp in closed_loops]
-    loop_areas.sort(key=lambda t: t[0], reverse=True)
-    outer_area, outer_loop = loop_areas[0]
-    outer_perim = _poly_perimeter(outer_loop)
-    interior_loop_areas: List[float] = []
-    if outer_loop:
-        for area_i, loop_i in loop_areas[1:]:
-            if area_i <= 1e-9 or len(loop_i) < 3:
-                continue
-            cx_i = sum(pt[0] for pt in loop_i) / float(len(loop_i))
-            cy_i = sum(pt[1] for pt in loop_i) / float(len(loop_i))
-            if not _point_in_poly((cx_i, cy_i), outer_loop):
-                continue
-            # Filter out duplicate outer profiles (common in layered exports).
-            if outer_area > 1e-9 and abs(area_i - outer_area) / outer_area <= 0.01:
-                continue
-            interior_loop_areas.append(float(area_i))
-    if outer_area > 1e-9:
-        out["dxf_perimeter_area_ratio"] = _safe_float(outer_perim / outer_area)
-        void_area = sum(interior_loop_areas)
-        out["dxf_internal_void_area_ratio"] = _safe_float(void_area / outer_area)
-        bx0, by0, bx1, by1 = _bbox_from_points(outer_loop)
-        bbox_area = max(0.0, bx1 - bx0) * max(0.0, by1 - by0)
-        out["dxf_bbox_aspect_ratio"] = _safe_float(_bbox_aspect(bx0, by0, bx1, by1))
-        if bbox_area > 1e-9:
-            out["dxf_fill_ratio"] = _safe_float(_clamp01(outer_area / bbox_area))
-    else:
-        # Degenerate "closed" loop; fall back to hull proxy if possible.
-        hull = _convex_hull(cloud_points)
-        hull_area = _poly_area_abs(hull)
-        hull_perim = _poly_perimeter(hull)
-        if hull_area > 1e-9 and hull_perim > 1e-9:
-            out["dxf_perimeter_area_ratio"] = _safe_float(hull_perim / hull_area)
-            if len(hull) >= 2:
-                hx0, hy0, hx1, hy1 = _bbox_from_points(hull)
-                hbbox_area = max(0.0, hx1 - hx0) * max(0.0, hy1 - hy0)
-                out["dxf_bbox_aspect_ratio"] = _safe_float(_bbox_aspect(hx0, hy0, hx1, hy1))
-                if hbbox_area > 1e-9:
-                    out["dxf_fill_ratio"] = _safe_float(_clamp01(hull_area / hbbox_area))
-        else:
-            out["dxf_perimeter_area_ratio"] = _safe_float(0.0)
-        out["dxf_internal_void_area_ratio"] = _safe_float(0.0)
-
-    # Legacy column name retained for backward compatibility, but value is now
-    # an interior polyline COUNT (not boolean):
-    #   - closed interior loops (holes) + interior open polylines.
-    interior_count = int(len(interior_loop_areas))
-    if outer_loop:
-        open_inside = 0
-        for p in open_polys:
-            if len(p) < 2:
-                continue
-            if len(p) >= 3:
-                cx = sum(pt[0] for pt in p) / len(p)
-                cy = sum(pt[1] for pt in p) / len(p)
-            else:
-                cx = 0.5 * (p[0][0] + p[-1][0])
-                cy = 0.5 * (p[0][1] + p[-1][1])
-            if _point_in_poly((cx, cy), outer_loop):
-                open_inside += 1
-        interior_count += open_inside
-    out["dxf_has_interior_polylines"] = _safe_int(interior_count)
-
-    x0, y0, x1, y1 = _bbox_from_points(outer_loop)
-    bbox_diag = math.hypot(x1 - x0, y1 - y0)
-    short_thr = 0.03 * bbox_diag if bbox_diag > 1e-9 else 0.0
-    notch_count = 0
-    segs = _segments_from_points(outer_loop, closed=True)
-    outer_edge_lens = [_seg_len(a, b) for (a, b) in segs if _seg_len(a, b) > 1e-9]
-    if outer_edge_lens:
-        mean_len = sum(outer_edge_lens) / max(1, len(outer_edge_lens))
-        if mean_len > 1e-9:
-            var = sum((x - mean_len) ** 2 for x in outer_edge_lens) / max(1, len(outer_edge_lens))
-            out["dxf_edge_length_cv"] = _safe_float(math.sqrt(var) / mean_len)
-    n = len(segs)
-    for i in range(n):
-        a0, b0 = segs[i - 1]
-        a1, b1 = segs[i]
-        l0 = _seg_len(a0, b0)
-        l1 = _seg_len(a1, b1)
-        if short_thr <= 0 or (l0 > short_thr and l1 > short_thr):
-            continue
-        ang0 = _seg_angle_deg(a0, b0)
-        ang1 = _seg_angle_deg(a1, b1)
-        diff = abs(ang1 - ang0) % 180.0
-        diff = min(diff, 180.0 - diff)
-        if 70.0 <= diff <= 110.0:
-            notch_count += 1
-    if notch_count == 0:
-        # Fallback proxy: count concave near-90 corners and fold pairs into notch count.
-        signed_area = _poly_area_signed(outer_loop)
-        if abs(signed_area) > 1e-12 and len(outer_loop) >= 4:
-            ccw = signed_area > 0.0
-            concave_ortho = 0
-            m = len(outer_loop)
-            for i in range(m):
-                p_prev = outer_loop[i - 1]
-                p_cur = outer_loop[i]
-                p_next = outer_loop[(i + 1) % m]
-                v1x = p_cur[0] - p_prev[0]
-                v1y = p_cur[1] - p_prev[1]
-                v2x = p_next[0] - p_cur[0]
-                v2y = p_next[1] - p_cur[1]
-                if math.hypot(v1x, v1y) <= 1e-9 or math.hypot(v2x, v2y) <= 1e-9:
-                    continue
-                cross = v1x * v2y - v1y * v2x
-                is_concave = (cross < -1e-12) if ccw else (cross > 1e-12)
-                if not is_concave:
-                    continue
-                ang0 = _seg_angle_deg(p_prev, p_cur)
-                ang1 = _seg_angle_deg(p_cur, p_next)
-                diff = abs(ang1 - ang0) % 180.0
-                diff = min(diff, 180.0 - diff)
-                if 70.0 <= diff <= 110.0:
-                    concave_ortho += 1
-            if concave_ortho >= 2:
-                notch_count = max(notch_count, concave_ortho // 2)
-    out["dxf_exterior_notch_count"] = _safe_int(notch_count)
-
-    # Edge-band entity ratio:
-    # geometry entities with >=50% sampled points near the exterior profile.
-    if bbox_diag > 1e-9 and segs and entity_samples:
-        band_w = 0.03 * bbox_diag
-        near_entities = 0
-        used_entities = 0
-        for pts in entity_samples:
-            if not pts:
-                continue
-            sample_pts = pts
-            if len(sample_pts) > 24:
-                step = max(1, int(len(sample_pts) / 24))
-                sample_pts = sample_pts[::step]
-            near_pts = 0
-            valid_pts = 0
-            for p in sample_pts:
-                valid_pts += 1
-                is_near = False
-                for (a, b) in segs:
-                    if _point_to_segment_distance(p, a, b) <= band_w:
-                        is_near = True
-                        break
-                if is_near:
-                    near_pts += 1
-            if valid_pts <= 0:
-                continue
-            used_entities += 1
-            if (float(near_pts) / float(valid_pts)) >= 0.5:
-                near_entities += 1
-        if used_entities > 0:
-            out["dxf_edge_band_entity_ratio"] = _safe_float(
-                _clamp01(float(near_entities) / float(used_entities))
-            )
-
-    # Keep core geometry ratios numeric for downstream tooling / CSV inspection.
-    for col in (
-        "dxf_perimeter_area_ratio",
-        "dxf_internal_void_area_ratio",
-        "dxf_bbox_aspect_ratio",
-        "dxf_fill_ratio",
-        "dxf_edge_length_cv",
-        "dxf_edge_band_entity_ratio",
-    ):
-        v = _safe_float(out.get(col))
-        out[col] = float(v) if math.isfinite(v) else 0.0
-    # Void area ratio should be bounded [0, 1].
-    out["dxf_internal_void_area_ratio"] = _safe_float(_clamp01(float(out["dxf_internal_void_area_ratio"])))
-    out["dxf_fill_ratio"] = _safe_float(_clamp01(float(out["dxf_fill_ratio"])))
-    out["dxf_edge_band_entity_ratio"] = _safe_float(_clamp01(float(out["dxf_edge_band_entity_ratio"])))
-
-    return out
-
-
-# -----------------------------
-# PDF features (vector)
-# -----------------------------
-
-
-def _page_area(page) -> float:
-    r = page.rect
-    return max(1e-9, float(r.width) * float(r.height))
+    return _compute_dxf_features_impl(
+        dxf_path,
+        dxf_signal_cols=DXF_SIGNAL_COLS,
+        nan_fn=_nan,
+        safe_float_fn=_safe_float,
+        safe_int_fn=_safe_int,
+        clamp01_fn=_clamp01,
+        ezdxf_module=ezdxf,
+    )
 
 
 def _compute_pdf_features_vector(pdf_path: str) -> Dict[str, float]:
-    out = {k: _nan() for k in PDF_SIGNAL_COLS}
-
-    if not pdf_path or not os.path.exists(pdf_path) or fitz is None:
-        return out
-
-    try:
-        doc = fitz.open(pdf_path)
-    except Exception:
-        return out
-
-    try:
-        if doc.page_count < 1:
-            return out
-        page = doc.load_page(0)
-        page_area = _page_area(page)
-
-        def _layer_matches(layer: str, *tokens: str) -> bool:
-            s = str(layer or "").lower()
-            return any(t in s for t in tokens)
-
-        def _to_rgb255(color_val: Any) -> Optional[Tuple[float, float, float]]:
-            if color_val is None:
-                return None
-            # PyMuPDF texttrace color is often an int 0xRRGGBB.
-            if isinstance(color_val, int):
-                iv = int(color_val) & 0xFFFFFF
-                return (float((iv >> 16) & 0xFF), float((iv >> 8) & 0xFF), float(iv & 0xFF))
-            # Drawings can expose tuples in 0..1 or 0..255 ranges.
-            if isinstance(color_val, (list, tuple)) and len(color_val) >= 3:
-                try:
-                    r = float(color_val[0])
-                    g = float(color_val[1])
-                    b = float(color_val[2])
-                except Exception:
-                    return None
-                if max(r, g, b) <= 1.2:
-                    return (255.0 * r, 255.0 * g, 255.0 * b)
-                return (r, g, b)
-            return None
-
-        def _is_red(color_val: Any) -> bool:
-            rgb = _to_rgb255(color_val)
-            if rgb is None:
-                return False
-            r, g, b = rgb
-            return bool(r >= 150.0 and g <= 125.0 and b <= 125.0 and r >= (g + 24.0) and r >= (b + 24.0))
-
-        drawings = []
-        try:
-            drawings = page.get_drawings()
-        except Exception:
-            drawings = []
-
-        total_geom = 0
-        dim_geom = 0
-        red_dim_geom = 0
-        bend_geom = 0
-        bend_geom_area = 0.0
-
-        for d in drawings:
-            items = d.get("items", []) or []
-            geom_count = max(1, len(items))
-            total_geom += geom_count
-            layer = str(d.get("layer") or "")
-            if _layer_matches(layer, "dimension", "dim"):
-                dim_geom += geom_count
-                if _is_red(d.get("color")) or _is_red(d.get("fill")):
-                    red_dim_geom += geom_count
-            if _layer_matches(layer, "bend", "centerline", "centreline"):
-                bend_geom += geom_count
-                r_b = d.get("rect", None)
-                if r_b is not None:
-                    try:
-                        bx0 = float(r_b.x0)
-                        by0 = float(r_b.y0)
-                        bx1 = float(r_b.x1)
-                        by1 = float(r_b.y1)
-                        bw = max(0.0, bx1 - bx0)
-                        bh = max(0.0, by1 - by0)
-                        bend_geom_area += (bw * bh)
-                    except Exception:
-                        pass
-        dim_chars = 0
-        red_dim_chars = 0
-        try:
-            traces = page.get_texttrace()
-        except Exception:
-            traces = []
-        for t in traces:
-            chars = t.get("chars", []) or []
-            n_chars = 0
-            for ch in chars:
-                if isinstance(ch, (list, tuple)) and ch:
-                    n_chars += 1
-            if n_chars <= 0:
-                continue
-            layer = str(t.get("layer") or "")
-            if _layer_matches(layer, "dimension", "dim"):
-                dim_chars += n_chars
-                if _is_red(t.get("color")):
-                    red_dim_chars += n_chars
-
-        out["pdf_bendline_score"] = _safe_float(bend_geom / max(1.0, float(total_geom)))
-        # Keep column name, but use bend-occupied-area normalization to reduce
-        # coupling with global geometry complexity.
-        bend_norm_area = float(bend_geom_area) if bend_geom_area > 1e-9 else float(page_area)
-        bend_density_raw = float(bend_geom) / max(1.0, bend_norm_area / 1000.0)
-        out["pdf_bendline_entity_density"] = _safe_float(math.log1p(max(0.0, bend_density_raw)))
-
-        dim_weight = float(dim_geom) + float(dim_chars)
-        out["pdf_dim_density"] = _safe_float(dim_weight / max(1.0, page_area / 1000.0))
-        red_dim_weight = float(red_dim_geom) + float(red_dim_chars)
-        out["pdf_red_dim_density"] = _safe_float(red_dim_weight / max(1.0, page_area / 1000.0))
-    finally:
-        doc.close()
-
-    return out
+    return _compute_pdf_features_vector_impl(
+        pdf_path,
+        pdf_signal_cols=PDF_SIGNAL_COLS,
+        nan_fn=_nan,
+        safe_float_fn=_safe_float,
+        fitz_module=fitz,
+    )

@@ -17,14 +17,10 @@
 #
 from __future__ import annotations
 
-import json
-import math
 import os
 import subprocess
 import sys
-import time
 import traceback
-from datetime import datetime, timezone
 from typing import List, Optional
 
 import xml.etree.ElementTree as ET
@@ -34,6 +30,7 @@ from PySide6.QtGui import QKeyEvent
 from PySide6.QtWidgets import QFileDialog, QMainWindow, QMessageBox
 
 import assets
+import hot_reload_service
 from app_utils import (
     kit_text_for_rpd,
     safe_int_1_9,
@@ -449,34 +446,13 @@ class Main(QMainWindow):
         except Exception:
             pass
 
-    @staticmethod
-    def _now_utc_iso() -> str:
-        return datetime.now(timezone.utc).isoformat(timespec="seconds")
-
     def _write_hot_reload_response(self, request_id: str, action: str) -> None:
-        rid = str(request_id or "").strip()
-        act = str(action or "").strip().lower()
-        if not rid or act not in ("accept", "reject"):
-            return
-        os.makedirs(GLOBAL_RUNTIME_DIR, exist_ok=True)
-        payload = {
-            "request_id": rid,
-            "action": act,
-            "ts_utc": self._now_utc_iso(),
-        }
-        with open(HOT_RELOAD_RESPONSE_PATH, "w", encoding="utf-8") as f:
-            json.dump(payload, f, indent=2)
+        hot_reload_service.write_response(HOT_RELOAD_RESPONSE_PATH, request_id, action)
 
     def _poll_hot_reload_request(self) -> None:
-        request = None
-        try:
-            if os.path.exists(HOT_RELOAD_REQUEST_PATH):
-                with open(HOT_RELOAD_REQUEST_PATH, "r", encoding="utf-8") as f:
-                    request = json.load(f)
-        except Exception:
-            request = None
-
-        if not isinstance(request, dict):
+        request = hot_reload_service.load_request(HOT_RELOAD_REQUEST_PATH)
+        rid = hot_reload_service.request_id(request)
+        if not rid:
             self._hot_reload_request_id = ""
             self._hot_reload_pending_action = ""
             self._set_hot_reload_prompt(
@@ -484,10 +460,6 @@ class Main(QMainWindow):
                 message="Hot reload requested.",
                 enable_buttons=True,
             )
-            return
-
-        rid = str(request.get("request_id") or "").strip()
-        if not rid:
             return
 
         # New request resets local action latch.
@@ -510,25 +482,7 @@ class Main(QMainWindow):
             )
             return
 
-        count = int(request.get("change_count", 0) or 0)
-        timeout_total = max(1.0, float(request.get("decision_timeout_sec", 30.0) or 30.0))
-        ts_epoch = float(request.get("ts_epoch", 0.0) or 0.0)
-        if ts_epoch > 0.0:
-            elapsed = max(0.0, time.time() - ts_epoch)
-            remaining_sec = max(0, int(math.ceil(timeout_total - elapsed)))
-        else:
-            remaining_sec = int(timeout_total)
-        files = request.get("files", []) or []
-        preview = ""
-        if isinstance(files, list) and files:
-            short = ", ".join(str(x) for x in files[:3])
-            if len(files) > 3:
-                short = f"{short}, ..."
-            preview = f" [{short}]"
-        msg = (
-            f"Hot reload requested ({count} file(s) changed). "
-            f"Accept or reject in {remaining_sec}s (auto-reload after timeout).{preview}"
-        )
+        msg = hot_reload_service.format_prompt_message(request)
         self._set_hot_reload_prompt(visible=True, message=msg, enable_buttons=True)
 
     def on_hot_reload_accept(self) -> None:

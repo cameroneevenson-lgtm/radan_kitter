@@ -1,40 +1,9 @@
 from __future__ import annotations
 
-import datetime
 import os
 import re
-import shutil
 
-
-def now_stamp() -> str:
-    return datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-
-
-def ensure_dir(path: str) -> None:
-    os.makedirs(path, exist_ok=True)
-
-
-def atomic_write_bytes(path: str, data: bytes) -> None:
-    tmp = path + ".tmp"
-    with open(tmp, "wb") as f:
-        f.write(data)
-    os.replace(tmp, path)
-
-
-def backup_file(src_path: str, bak_dir: str) -> str:
-    ensure_dir(bak_dir)
-    base = os.path.basename(src_path)
-    dst = os.path.join(bak_dir, f"{base}.{now_stamp()}.bak")
-    shutil.copy2(src_path, dst)
-    return dst
-
-
-def safe_int_1_9(s: str, default: int = 9) -> int:
-    try:
-        v = int(str(s).strip())
-    except Exception:
-        return default
-    return max(1, min(9, v))
+from file_utils import atomic_write_bytes, backup_file, ensure_dir, now_stamp, safe_int_1_9
 
 
 def kit_label_from_rpd_text(kit_text: str) -> str:
@@ -85,3 +54,24 @@ def kit_text_for_rpd(part_sym_path: str, kit_label: str, kits_dirname: str) -> s
         return ""
     return kit_file_path_for_part_sym(part_sym_path, kit_label, kits_dirname)
 
+
+def windows_natural_sort_key(text: str):
+    """
+    Sort text the way Windows Explorer typically orders file names:
+    numeric runs compare as numbers, not plain strings.
+    """
+    raw = os.path.basename(str(text or ""))
+    stem = os.path.splitext(raw)[0].strip().lower()
+    if not stem:
+        return ((1, ""),)
+    key = []
+    for part in re.split(r"(\d+)", stem):
+        if not part:
+            continue
+        if part.isdigit():
+            key.append((0, int(part)))
+        else:
+            key.append((1, part))
+    if not key:
+        key.append((1, stem))
+    return tuple(key)

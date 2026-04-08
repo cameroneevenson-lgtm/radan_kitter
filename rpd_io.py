@@ -4,36 +4,14 @@ from __future__ import annotations
 import io
 import os
 import re
-import shutil
-import datetime
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from typing import Dict, List, Tuple
 
+from file_utils import atomic_write_bytes, ensure_dir, now_stamp, safe_int_1_9
+
 RADAN_NS = "http://www.radan.com/ns/project"
 NS = {"r": RADAN_NS}
-
-
-# --- local helpers (kept self-contained for Step 2) ---
-
-def now_stamp() -> str:
-    return datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-
-def ensure_dir(p: str) -> None:
-    os.makedirs(p, exist_ok=True)
-
-def atomic_write_bytes(path: str, data: bytes) -> None:
-    tmp = path + ".tmp"
-    with open(tmp, "wb") as f:
-        f.write(data)
-    os.replace(tmp, path)
-
-def safe_int_1_9(s: str, default: int = 9) -> int:
-    try:
-        v = int(str(s).strip())
-    except Exception:
-        return default
-    return max(1, min(9, v))
 
 def _parse_int_text(s: str, default: int = 0) -> int:
     try:
