@@ -1,0 +1,18 @@
+         143451 function calls (142703 primitive calls) in 0.295 seconds
+
+   Ordered by: cumulative time
+   List reduced from 1840 to 10 due to restriction <10>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000    0.295    0.295 smoke_headless.py:68(run_smoke)
+        2    0.000    0.000    0.104    0.052 pdf_packet.py:534(build_watermarked_packet)
+        4    0.000    0.000    0.077    0.019 __init__.py:12180(get_text)
+        4    0.000    0.000    0.077    0.019 utils.py:401(get_text)
+        4    0.000    0.000    0.072    0.018 __init__.py:12195(get_textpage)
+        4    0.000    0.000    0.071    0.018 __init__.py:9999(_get_textpage)
+        4    0.000    0.000    0.071    0.018 extra.py:194(page_get_textpage)
+        4    0.071    0.018    0.071    0.018 {built-in method pymupdf._extra.page_get_textpage}
+        2    0.000    0.000    0.070    0.035 ml_pipeline.py:829(_compute_phase2_signals_detail)
+        4    0.000    0.000    0.070    0.017 pdf_packet.py:494(_apply_packet_result)
+
+
