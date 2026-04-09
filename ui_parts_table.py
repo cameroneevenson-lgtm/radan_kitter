@@ -6,6 +6,7 @@ from PySide6.QtCore import Qt, QAbstractTableModel, QModelIndex
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QComboBox, QSpinBox, QStyledItemDelegate
 
+from app_utils import windows_natural_sort_key
 from rpd_io import PartRow
 
 
@@ -171,7 +172,7 @@ class PartsModel(QAbstractTableModel):
 
         def key(p: PartRow):
             if column == 0:
-                return p.part.upper()
+                return windows_natural_sort_key(p.part)
             if column == 1:
                 return (p.kit_label or "").upper()
             if column == 2:

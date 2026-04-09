@@ -6,20 +6,25 @@ import time
 import traceback
 from typing import Callable, Dict, List, Optional, Sequence
 
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import Qt, QTimer, QThreadPool
 from PySide6.QtWidgets import QApplication, QMessageBox, QProgressDialog, QWidget
 
 import kit_service
-import ml_pipeline
+import ml_runtime
 import packet_service
+import packet_runtime
 import rf_service
 import runtime_trace as rt
 import ui_ml_signal_plot
+from app_utils import ensure_dir, now_stamp
 from config import (
+    CANON_KITS,
+    GLOBAL_RUNTIME_DIR,
     PACKET_TEMP_MAX_PAGES,
     PACKET_TEMP_FIRST_PAGE_ONLY,
     PACKET_TEMP_LOCAL_OUTPUT_DIR,
     PACKET_TEMP_LOCAL_OUTPUT_ENABLED,
+    W_RELEASE_ROOT,
 )
 from rpd_io import PartRow
 from ui_parts_table import PartsModel
@@ -64,6 +69,19 @@ def _open_output_file_when_ready(
             pass
 
     QTimer.singleShot(max(0, int(initial_delay_ms)), _attempt_open)
+
+
+def _format_example_lines(title: str, values: Sequence[str], limit: int = 3) -> str:
+    items = [str(v or "").strip() for v in list(values or []) if str(v or "").strip()]
+    if not items:
+        return ""
+    shown = items[: max(1, int(limit))]
+    out = [title]
+    out.extend(f"- {item}" for item in shown)
+    remaining = len(items) - len(shown)
+    if remaining > 0:
+        out.append(f"- ... and {remaining} more")
+    return "\n".join(out)
 
 
 def run_prepare_kits(
@@ -212,102 +230,104 @@ def run_build_packet(
         return False
     setattr(parent, "_rk_build_packet_running", True)
 
-    progress: Optional[QProgressDialog] = None
-    ticker: Optional[QTimer] = None
-    try:
-        progress = QProgressDialog("Building packet...", "Cancel", 0, max(1, len(build_parts)), parent)
-        progress.setWindowTitle("Build Packet")
-        progress.setWindowModality(Qt.WindowModal)
-        progress.setMinimumDuration(0)
-        progress.setAutoClose(True)
-        progress.setAutoReset(True)
-        started_at = time.perf_counter()
-        last_done = 0
-        last_total = max(1, len(build_parts))
-        last_status = "Starting packet build"
+    progress = QProgressDialog("Building packet...", "Cancel", 0, max(1, len(build_parts)), parent)
+    progress.setWindowTitle("Build Packet")
+    progress.setWindowModality(Qt.WindowModal)
+    progress.setMinimumDuration(0)
+    progress.setAutoClose(True)
+    progress.setAutoReset(True)
+    started_at = time.perf_counter()
+    last_done = 0
+    last_total = max(1, len(build_parts))
+    last_status = "Starting packet build"
 
-        def _fmt_elapsed(seconds: float) -> str:
-            sec = max(0, int(seconds))
-            h = sec // 3600
-            m = (sec % 3600) // 60
-            s = sec % 60
-            if h > 0:
-                return f"{h:02d}:{m:02d}:{s:02d}"
-            return f"{m:02d}:{s:02d}"
+    def _fmt_elapsed(seconds: float) -> str:
+        sec = max(0, int(seconds))
+        h = sec // 3600
+        m = (sec % 3600) // 60
+        s = sec % 60
+        if h > 0:
+            return f"{h:02d}:{m:02d}:{s:02d}"
+        return f"{m:02d}:{s:02d}"
 
-        def _refresh_progress_label() -> None:
-            progress.setMaximum(max(1, int(last_total)))
-            progress.setValue(max(0, int(last_done)))
-            elapsed_txt = _fmt_elapsed(time.perf_counter() - started_at)
-            progress.setLabelText(
-                f"Building packet... {int(last_done)}/{int(last_total)} | {elapsed_txt} | Mode: {mode}\n{last_status}"
-            )
-
-        ticker = QTimer(progress)
-        ticker.setInterval(250)
-        ticker.timeout.connect(_refresh_progress_label)
-        ticker.start()
-
-        def on_progress(done: int, total: int, status: str) -> None:
-            nonlocal last_done, last_total, last_status
-            last_done = int(done)
-            last_total = max(1, int(total))
-            last_status = str(status)
-            _refresh_progress_label()
-            span.progress(done, total, status)
-            QApplication.processEvents()
-
-        _refresh_progress_label()
-        packet_path, pages, missing = packet_service.build_packet(
-            build_parts,
-            rpd_path=rpd_path,
-            out_dirname=effective_out_dir,
-            resolve_asset_fn=resolve_asset_fn,
-            progress_cb=on_progress,
-            should_cancel_cb=progress.wasCanceled,
-            render_mode=mode,
+    def _refresh_progress_label() -> None:
+        progress.setMaximum(max(1, int(last_total)))
+        progress.setValue(max(0, int(last_done)))
+        elapsed_txt = _fmt_elapsed(time.perf_counter() - started_at)
+        progress.setLabelText(
+            f"Building packet... {int(last_done)}/{int(last_total)} | {elapsed_txt} | Mode: {mode}\n{last_status}"
         )
-        ticker.stop()
+
+    ticker = QTimer(progress)
+    ticker.setInterval(250)
+    ticker.timeout.connect(_refresh_progress_label)
+    ticker.start()
+
+    worker = packet_runtime.PacketBuildWorker(
+        parts=build_parts,
+        rpd_path=rpd_path,
+        out_dirname=effective_out_dir,
+        resolve_asset_fn=resolve_asset_fn,
+        render_mode=mode,
+    )
+    setattr(parent, "_rk_build_packet_worker", worker)
+
+    def _cleanup() -> None:
+        try:
+            ticker.stop()
+        except Exception:
+            pass
+        try:
+            progress.close()
+        except Exception:
+            pass
+        setattr(parent, "_rk_build_packet_worker", None)
+        setattr(parent, "_rk_build_packet_running", False)
+
+    def _on_progress(done: int, total: int, status: str) -> None:
+        nonlocal last_done, last_total, last_status
+        last_done = int(done)
+        last_total = max(1, int(total))
+        last_status = str(status)
+        _refresh_progress_label()
+        span.progress(done, total, status)
+
+    def _on_done(packet_path: str, pages: int, missing: int) -> None:
         progress.setValue(progress.maximum())
-        progress.close()
+        _cleanup()
         _open_output_file_when_ready(packet_path)
         span.success(packet_path=packet_path, pages=int(pages), missing=int(missing))
-        return True
-    except packet_service.PacketBuildCanceled:
-        span.skip(reason="user_canceled")
-        if progress is not None:
-            try:
-                progress.cancel()
-            except Exception:
-                pass
-            progress.close()
-        return False
-    except packet_service.PacketBuildEmpty as exc:
-        span.skip(reason="no_packet_pages", missing=int(getattr(exc, "missing", 0) or 0))
-        if progress is not None:
-            progress.close()
+
+    def _on_canceled(pages: int, missing: int) -> None:
+        _cleanup()
+        span.skip(reason="user_canceled", pages=int(pages), missing=int(missing))
+
+    def _on_empty(message: str, pages: int, missing: int) -> None:
+        _cleanup()
+        span.skip(reason="no_packet_pages", pages=int(pages), missing=int(missing))
         QMessageBox.information(
             parent,
             "Build Packet",
             (
-                f"{exc}\n"
-                f"Missing PDFs: {int(getattr(exc, 'missing', 0) or 0)}"
+                f"{message}\n"
+                f"Missing PDFs: {int(missing)}"
             ),
         )
-        return False
-    except Exception as exc:
-        span.fail(exc)
-        if progress is not None:
-            progress.close()
-        QMessageBox.critical(parent, "Build Packet failed", traceback.format_exc())
-        return False
-    finally:
-        if ticker is not None:
-            try:
-                ticker.stop()
-            except Exception:
-                pass
-        setattr(parent, "_rk_build_packet_running", False)
+
+    def _on_error(tb: str) -> None:
+        _cleanup()
+        span.fail(RuntimeError("Packet worker failed"))
+        QMessageBox.critical(parent, "Build Packet failed", str(tb or "").strip() or "Packet worker failed.")
+
+    worker.signals.progress.connect(_on_progress)
+    worker.signals.done.connect(_on_done)
+    worker.signals.canceled.connect(_on_canceled)
+    worker.signals.empty.connect(_on_empty)
+    worker.signals.error.connect(_on_error)
+    progress.canceled.connect(worker.request_stop)
+    _refresh_progress_label()
+    QThreadPool.globalInstance().start(worker)
+    return True
 
 
 def run_rf_suggest(
@@ -390,43 +410,61 @@ def run_ml_log(
     balance_kit: str,
     run_dir: str,
     signal_cols: Sequence[str],
+    on_complete: Optional[Callable[[], None]] = None,
 ) -> None:
     span = rt.begin("ml_log", rpd_path=rpd_path, part_count=len(parts))
     if not _require_rpd_loaded(parent, tree, rpd_path):
         span.skip(reason="no_rpd")
         return
-    try:
-        total = len(parts)
-        progress = QProgressDialog("ML: scanning and logging...", "Cancel", 0, max(1, total), parent)
-        progress.setWindowTitle("ML Log")
-        progress.setWindowModality(Qt.WindowModal)
-        progress.setMinimumDuration(0)
-        progress.setAutoClose(True)
-        progress.setAutoReset(True)
+    total = len(parts)
+    progress = QProgressDialog("ML: scanning and logging...", "Cancel", 0, max(1, total), parent)
+    progress.setWindowTitle("ML Log")
+    progress.setWindowModality(Qt.WindowModal)
+    progress.setMinimumDuration(0)
+    progress.setAutoClose(True)
+    progress.setAutoReset(True)
 
-        def on_progress(done: int, total: int) -> None:
-            progress.setMaximum(max(1, int(total)))
-            progress.setValue(max(0, int(done)))
-            progress.setLabelText(f"ML: scanning and logging...\n{int(done)}/{int(total)}")
-            span.progress(done, total, "ml_log")
-            QApplication.processEvents()
+    worker = ml_runtime.MlScanWorker(
+        parts=parts,
+        rpd_path=rpd_path,
+        delay_ms=0,
+        tools_dir=GLOBAL_RUNTIME_DIR,
+        global_runs_dir=run_dir,
+        canon_kits=CANON_KITS,
+        balance_kit=balance_kit,
+        signal_cols=list(signal_cols),
+        w_release_root=W_RELEASE_ROOT,
+        resolve_asset_fn=resolve_asset_fn,
+        sanitize_kit_name_fn=sanitize_kit_name_fn,
+        now_stamp_fn=now_stamp,
+        ensure_dir_fn=ensure_dir,
+    )
+    setattr(parent, "_rk_ml_log_worker", worker)
 
-        summary = ml_pipeline.run_scan_and_log(
-            parts=parts,
-            rpd_path=rpd_path,
-            resolve_asset_fn=resolve_asset_fn,
-            sanitize_kit_name_fn=sanitize_kit_name_fn,
-            balance_kit=balance_kit,
-            run_dir=run_dir,
-            delay_ms=0,
-            signal_cols=list(signal_cols),
-            should_stop=progress.wasCanceled,
-            on_progress=on_progress,
-        )
+    def _cleanup() -> None:
+        try:
+            progress.close()
+        except Exception:
+            pass
+        setattr(parent, "_rk_ml_log_worker", None)
 
+    def _on_progress(done: int, total_count: int) -> None:
+        progress.setMaximum(max(1, int(total_count)))
+        progress.setValue(max(0, int(done)))
+        progress.setLabelText(f"ML: scanning and logging...\n{int(done)}/{int(total_count)}")
+        span.progress(done, total_count, "ml_log")
+
+    def _on_completed(summary: Dict[str, object]) -> None:
         progress.setValue(progress.maximum())
+        _cleanup()
         stopped = bool(summary.get("stopped", False))
         title = "ML Log stopped" if stopped else "ML Log complete"
+        details = [
+            _format_example_lines("Feature warnings:", summary.get("warning_examples", [])),
+            _format_example_lines("Missing PDF rows:", summary.get("missing_pdf_examples", [])),
+            _format_example_lines("Write errors:", summary.get("error_examples", [])),
+        ]
+        detail_block = "\n\n".join(line for line in details if line)
         QMessageBox.information(
             parent,
             title,
@@ -439,17 +477,31 @@ def run_ml_log(
                 f"Duplicates skipped: {int(summary.get('skipped_duplicate_rows', 0))}\n"
                 f"Dataset: {summary.get('dataset_path', '')}\n"
                 f"Run dir: {summary.get('run_dir', '')}"
+                f"{'' if not detail_block else '\n\n' + detail_block}"
             ),
         )
-        span.success(
-            stopped=bool(stopped),
-            processed_rows=int(summary.get("processed_rows", 0)),
-            written_rows=int(summary.get("written_rows", 0)),
-            skipped_duplicates=int(summary.get("skipped_duplicate_rows", 0)),
-        )
-    except Exception as exc:
-        span.fail(exc)
-        QMessageBox.critical(parent, "ML Log failed", traceback.format_exc())
+        if stopped:
+            span.skip(reason="user_canceled", processed_rows=int(summary.get("processed_rows", 0)))
+        else:
+            span.success(
+                stopped=False,
+                processed_rows=int(summary.get("processed_rows", 0)),
+                written_rows=int(summary.get("written_rows", 0)),
+                skipped_duplicates=int(summary.get("skipped_duplicate_rows", 0)),
+            )
+        if on_complete is not None:
+            on_complete()
+
+    def _on_error(tb: str) -> None:
+        _cleanup()
+        span.fail(RuntimeError("ML log worker failed"))
+        QMessageBox.critical(parent, "ML Log failed", str(tb or "").strip() or "ML log worker failed.")
+
+    worker.signals.progress.connect(_on_progress)
+    worker.signals.completed.connect(_on_completed)
+    worker.signals.error.connect(_on_error)
+    progress.canceled.connect(worker.request_stop)
+    QThreadPool.globalInstance().start(worker)
 
 
 def run_ml_recompute_all(
@@ -458,10 +510,10 @@ def run_ml_recompute_all(
     dataset_path: str,
     signal_cols: Sequence[str],
     max_workers: int = 2,
+    on_complete: Optional[Callable[[], None]] = None,
 ) -> None:
     workers = max(1, min(8, int(max_workers)))
     span = rt.begin("ml_recompute_all", dataset_path=dataset_path, workers=workers)
-    ticker: Optional[QTimer] = None
     try:
         confirm = QMessageBox.question(
             parent,
@@ -508,57 +560,85 @@ def run_ml_recompute_all(
         ticker.timeout.connect(_refresh_progress_label)
         ticker.start()
 
-        def on_progress(done: int, total: int) -> None:
+        worker = ml_runtime.MlRecomputeWorker(
+            dataset_path=dataset_path,
+            signal_cols=list(signal_cols),
+            max_workers=workers,
+        )
+        setattr(parent, "_rk_ml_recompute_worker", worker)
+
+        def _cleanup() -> None:
+            try:
+                ticker.stop()
+            except Exception:
+                pass
+            try:
+                progress.close()
+            except Exception:
+                pass
+            setattr(parent, "_rk_ml_recompute_worker", None)
+
+        def _on_progress(done: int, total: int) -> None:
             nonlocal last_done, last_total
             last_done = int(done)
             last_total = max(1, int(total))
             _refresh_progress_label()
             span.progress(done, total, "ml_recompute")
-            QApplication.processEvents()
 
         _refresh_progress_label()
 
-        summary = ml_pipeline.recompute_dataset_signals(
-            dataset_path=dataset_path,
-            signal_cols=list(signal_cols),
-            should_stop=progress.wasCanceled,
-            on_progress=on_progress,
-            max_workers=workers,
-        )
-        ticker.stop()
-        progress.setValue(progress.maximum())
-        elapsed_txt = _fmt_elapsed(time.perf_counter() - started_at)
-        stopped = bool(summary.get("stopped", False))
-        title = "ML recompute stopped" if stopped else "ML recompute complete"
-        QMessageBox.information(
-            parent,
-            title,
-            (
-                f"Rows processed: {int(summary.get('processed_rows', 0))}/{int(summary.get('total_rows', 0))}\n"
-                f"Rows updated: {int(summary.get('updated_rows', 0))}\n"
-                f"Rows with compute errors: {int(summary.get('error_rows', 0))}\n"
-                f"Rows with DXF feature errors: {int(summary.get('dxf_feature_error_rows', 0))}\n"
-                f"Rows with PDF feature errors: {int(summary.get('pdf_feature_error_rows', 0))}\n"
-                f"Rows missing PDF path/file: {int(summary.get('missing_pdf_rows', 0))}\n"
-                f"Rows missing DXF path/file: {int(summary.get('missing_dxf_rows', 0))}\n"
-                f"Workers: {int(summary.get('workers', 1))}\n"
-                f"Elapsed: {elapsed_txt}\n"
-                f"Dataset: {summary.get('dataset_path', '')}"
-            ),
-        )
-        span.success(
-            stopped=bool(stopped),
-            processed_rows=int(summary.get("processed_rows", 0)),
-            updated_rows=int(summary.get("updated_rows", 0)),
-            error_rows=int(summary.get("error_rows", 0)),
-        )
+        def _on_done(summary: Dict[str, object]) -> None:
+            progress.setValue(progress.maximum())
+            elapsed_txt = _fmt_elapsed(time.perf_counter() - started_at)
+            _cleanup()
+            stopped = bool(summary.get("stopped", False))
+            title = "ML recompute stopped" if stopped else "ML recompute complete"
+            details = [
+                _format_example_lines("Feature error rows:", summary.get("error_examples", [])),
+                _format_example_lines("Missing path rows:", summary.get("missing_path_examples", [])),
+            ]
+            detail_block = "\n\n".join(line for line in details if line)
+            QMessageBox.information(
+                parent,
+                title,
+                (
+                    f"Rows processed: {int(summary.get('processed_rows', 0))}/{int(summary.get('total_rows', 0))}\n"
+                    f"Rows updated: {int(summary.get('updated_rows', 0))}\n"
+                    f"Rows with compute errors: {int(summary.get('error_rows', 0))}\n"
+                    f"Rows with DXF feature errors: {int(summary.get('dxf_feature_error_rows', 0))}\n"
+                    f"Rows with PDF feature errors: {int(summary.get('pdf_feature_error_rows', 0))}\n"
+                    f"Rows missing PDF path/file: {int(summary.get('missing_pdf_rows', 0))}\n"
+                    f"Rows missing DXF path/file: {int(summary.get('missing_dxf_rows', 0))}\n"
+                    f"Workers: {int(summary.get('workers', 1))}\n"
+                    f"Elapsed: {elapsed_txt}\n"
+                    f"Dataset: {summary.get('dataset_path', '')}"
+                    f"{'' if not detail_block else '\n\n' + detail_block}"
+                ),
+            )
+            if stopped:
+                span.skip(reason="user_canceled", processed_rows=int(summary.get("processed_rows", 0)))
+            else:
+                span.success(
+                    stopped=False,
+                    processed_rows=int(summary.get("processed_rows", 0)),
+                    updated_rows=int(summary.get("updated_rows", 0)),
+                    error_rows=int(summary.get("error_rows", 0)),
+                )
+            if on_complete is not None:
+                on_complete()
+
+        def _on_error(tb: str) -> None:
+            _cleanup()
+            span.fail(RuntimeError("ML recompute worker failed"))
+            QMessageBox.critical(parent, "ML recompute failed", str(tb or "").strip() or "ML recompute worker failed.")
+
+        worker.signals.progress.connect(_on_progress)
+        worker.signals.done.connect(_on_done)
+        worker.signals.error.connect(_on_error)
+        progress.canceled.connect(worker.request_stop)
+        QThreadPool.globalInstance().start(worker)
     except Exception as exc:
         span.fail(exc)
-        if ticker is not None:
-            try:
-                ticker.stop()
-            except Exception:
-                pass
         QMessageBox.critical(parent, "ML recompute failed", traceback.format_exc())
 
 

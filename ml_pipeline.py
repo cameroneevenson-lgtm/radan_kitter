@@ -31,6 +31,7 @@ from ml_dataset_store import (
     ensure_dataset_exists as _ensure_dataset_exists_impl,
     load_dataset_df as _load_dataset_df_impl,
     load_existing_part_names as _load_existing_part_names_impl,
+    make_part_key as _make_part_key_impl,
     make_run_name as _make_run_name_impl,
     now_local_stamp as _now_local_stamp_impl,
     part_keys_from_df as _part_keys_from_df_impl,
@@ -38,19 +39,6 @@ from ml_dataset_store import (
     safe_emit as _safe_emit_impl,
 )
 from ml_pdf_features import compute_pdf_features_vector as _compute_pdf_features_vector_impl
-
-try:
-    from PySide6.QtCore import QObject, QRunnable, Signal
-except Exception:
-    QObject = object  # type: ignore[assignment]
-    QRunnable = object  # type: ignore[assignment]
-
-    class _SignalStub:
-        def emit(self, *args, **kwargs) -> None:
-            return
-
-    def Signal(*args, **kwargs):  # type: ignore[misc]
-        return _SignalStub()
 
 try:
     import fitz  # PyMuPDF
@@ -73,6 +61,7 @@ TRACKING_COLS = [
     "timestamp_utc",
     "rpd_token",
     "part_name",
+    "part_key",
     "kit_label",
     "pdf_path",
     "dxf_path",
@@ -178,6 +167,13 @@ def _join_feature_errors(feature_errors: Dict[str, str]) -> str:
     return "; ".join(parts)
 
 
+def _append_example(values: List[str], text: str, limit: int = 5) -> None:
+    item = str(text or "").strip()
+    if not item or len(values) >= int(limit):
+        return
+    values.append(item)
+
+
 # -----------------------------
 # Dataset I/O
 # -----------------------------
@@ -235,6 +231,10 @@ def _part_keys_from_df(df: pd.DataFrame) -> set[str]:
     return _part_keys_from_df_impl(df)
 
 
+def _make_part_key(part_name: str, pdf_path: str, dxf_path: str) -> str:
+    return _make_part_key_impl(part_name, pdf_path, dxf_path)
+
+
 def _compute_ml_log_row(
     task: Dict[str, Any],
     *,
@@ -251,6 +251,7 @@ def _compute_ml_log_row(
         "timestamp_utc": _utc_now_iso(),
         "rpd_token": str(rpd_token or "").strip(),
         "part_name": part_name,
+        "part_key": _make_part_key(part_name, pdf, dxf),
         "kit_label": kit,
         "pdf_path": pdf,
         "dxf_path": dxf,
@@ -334,6 +335,9 @@ def run_scan_and_log(
         "pdf_feature_error_rows": 0,
         "append_error_rows": 0,
     }
+    warning_examples: List[str] = []
+    error_examples: List[str] = []
+    missing_pdf_examples: List[str] = []
     stopped = False
     done = 0
     _safe_emit(on_progress, done, total)
@@ -353,26 +357,6 @@ def run_scan_and_log(
         kit = sanitize_kit_name_fn(kit_raw) or balance_kit
         sym_path = str(getattr(p, "sym", "") or "")
 
-        key = part_name.upper()
-        if key and key in existing_parts:
-            counts["processed_rows"] += 1
-            counts["skipped_duplicate_rows"] += 1
-            done += 1
-            item = {
-                "status": "skipped_duplicate",
-                "part_name": part_name,
-                "kit_label": kit,
-                "reason": "dedupe_part_name",
-            }
-            logger.log_part(item)
-            _safe_emit(on_part, item)
-            _safe_emit(on_progress, done, total)
-            if delay_ms > 0:
-                time.sleep(int(delay_ms) / 1000.0)
-            continue
-        if key:
-            existing_parts.add(key)
-
         pdf = resolve_asset_fn(sym_path, ".pdf") or ""
         pdf_exists = bool(pdf and os.path.exists(pdf))
         if not pdf_exists:
@@ -387,6 +371,7 @@ def run_scan_and_log(
                 "pdf_path": str(pdf or ""),
                 "reason": "missing_pdf",
             }
+            _append_example(missing_pdf_examples, f"{part_name or '(unnamed)'} -> {str(pdf or '').strip() or '(missing path)'}")
             logger.log_part(item)
             _safe_emit(on_part, item)
             _safe_emit(on_progress, done, total)
@@ -399,9 +384,33 @@ def run_scan_and_log(
         if not dxf_exists:
             counts["missing_dxf_rows"] += 1
 
+        part_key = _make_part_key(part_name, pdf, dxf)
+        if part_key and part_key in existing_parts:
+            counts["processed_rows"] += 1
+            counts["skipped_duplicate_rows"] += 1
+            done += 1
+            item = {
+                "status": "skipped_duplicate",
+                "part_name": part_name,
+                "part_key": part_key,
+                "kit_label": kit,
+                "pdf_path": str(pdf or ""),
+                "dxf_path": str(dxf or ""),
+                "reason": "dedupe_part_key",
+            }
+            logger.log_part(item)
+            _safe_emit(on_part, item)
+            _safe_emit(on_progress, done, total)
+            if delay_ms > 0:
+                time.sleep(int(delay_ms) / 1000.0)
+            continue
+        if part_key:
+            existing_parts.add(part_key)
+
         tasks.append(
             {
                 "part_name": part_name,
+                "part_key": part_key,
                 "kit_label": kit,
                 "pdf_path": pdf,
                 "dxf_path": dxf,
@@ -455,15 +464,24 @@ def run_scan_and_log(
                 counts["dxf_feature_error_rows"] += 1
             if feature_errors.get("pdf"):
                 counts["pdf_feature_error_rows"] += 1
+            _append_example(
+                warning_examples,
+                f"{str(task.get('part_name') or '(unnamed)')} -> {_join_feature_errors(feature_errors)}",
+            )
         if err:
             status = "append_error"
             counts["append_error_rows"] += 1
+            _append_example(
+                error_examples,
+                f"{str(task.get('part_name') or '(unnamed)')} -> {str(err).strip() or 'append_error'}",
+            )
         elif feature_errors:
             status = "computed_with_warnings"
 
         item = {
             "status": status,
             "part_name": str(task.get("part_name") or ""),
+            "part_key": str(task.get("part_key") or ""),
             "kit_label": str(task.get("kit_label") or ""),
             "pdf_path": str(task.get("pdf_path") or ""),
             "dxf_path": str(task.get("dxf_path") or ""),
@@ -567,6 +585,9 @@ def run_scan_and_log(
 
     summary = {
         **counts,
+        "warning_examples": warning_examples,
+        "error_examples": error_examples,
+        "missing_pdf_examples": missing_pdf_examples,
         "stopped": bool(stopped),
         "workers": int(workers),
         "run_name": run_name,
@@ -601,6 +622,14 @@ def recompute_dataset_signals(
         if c not in df.columns:
             df[c] = _nan()
     df = df.loc[:, ALL_COLS].copy()
+    if "part_key" in df.columns:
+        df["part_key"] = df["part_key"].astype(object)
+        df["part_key"] = df["part_key"].where(~df["part_key"].isna(), "")
+    for idx in range(len(df)):
+        part_name = "" if pd.isna(df.at[idx, "part_name"]) else str(df.at[idx, "part_name"]).strip()
+        pdf_path = "" if pd.isna(df.at[idx, "pdf_path"]) else str(df.at[idx, "pdf_path"]).strip()
+        dxf_path = "" if pd.isna(df.at[idx, "dxf_path"]) else str(df.at[idx, "dxf_path"]).strip()
+        df.at[idx, "part_key"] = _make_part_key(part_name, pdf_path, dxf_path)
     if len(df) == 0:
         return {
             "dataset_path": dataset_path,
@@ -634,6 +663,8 @@ def recompute_dataset_signals(
     feature_error_rows = 0
     dxf_feature_error_rows = 0
     pdf_feature_error_rows = 0
+    error_examples: List[str] = []
+    missing_path_examples: List[str] = []
     stopped = False
     _safe_emit(on_progress, 0, total)
 
@@ -657,8 +688,16 @@ def recompute_dataset_signals(
         nonlocal feature_error_rows, dxf_feature_error_rows, pdf_feature_error_rows
         if not (pdf_path and os.path.exists(pdf_path)):
             missing_pdf += 1
+            _append_example(
+                missing_path_examples,
+                f"{str(df.at[idx, 'part_name'] or '(unnamed)')} -> missing PDF: {pdf_path or '(blank)'}",
+            )
         if not (dxf_path and os.path.exists(dxf_path)):
             missing_dxf += 1
+            _append_example(
+                missing_path_examples,
+                f"{str(df.at[idx, 'part_name'] or '(unnamed)')} -> missing DXF: {dxf_path or '(blank)'}",
+            )
         if feats is not None:
             for s in signals:
                 df.at[idx, s] = _safe_float(feats.get(s, _nan()))
@@ -674,6 +713,15 @@ def recompute_dataset_signals(
                 dxf_feature_error_rows += 1
             if row_feature_errors.get("pdf"):
                 pdf_feature_error_rows += 1
+            _append_example(
+                error_examples,
+                f"{str(df.at[idx, 'part_name'] or '(unnamed)')} -> {_join_feature_errors(row_feature_errors)}",
+            )
+        if hard_error:
+            _append_example(
+                error_examples,
+                f"{str(df.at[idx, 'part_name'] or '(unnamed)')} -> {hard_error}",
+            )
         if hard_error or row_feature_errors or feats is None:
             errors += 1
         processed += 1
@@ -766,6 +814,8 @@ def recompute_dataset_signals(
         "feature_error_rows": feature_error_rows,
         "dxf_feature_error_rows": dxf_feature_error_rows,
         "pdf_feature_error_rows": pdf_feature_error_rows,
+        "error_examples": error_examples,
+        "missing_path_examples": missing_path_examples,
         "stopped": bool(stopped),
         "workers": int(workers),
     }

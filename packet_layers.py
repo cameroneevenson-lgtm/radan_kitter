@@ -3,6 +3,9 @@ from __future__ import annotations
 import re
 from typing import List, Optional, Tuple
 
+_PARSE_ERRORS = (AttributeError, IndexError, KeyError, TypeError, ValueError)
+_DOC_ERRORS = (AttributeError, RuntimeError, TypeError, ValueError)
+
 
 def norm_layer_name(text: object) -> str:
     return "".join(ch.lower() for ch in str(text or "") if ch.isalnum())
@@ -31,11 +34,11 @@ def ui_cfg_xref(cfg: dict) -> Optional[int]:
     for key in ("xref", "ocg", "oc"):
         try:
             value = cfg.get(key, None)
-        except Exception:
+        except _PARSE_ERRORS:
             value = None
         try:
             xref = int(value)
-        except Exception:
+        except _PARSE_ERRORS:
             continue
         if xref > 0:
             return xref
@@ -50,12 +53,12 @@ def first_toggle_layer_aliases(doc) -> List[str]:
     aliases: List[str] = []
     try:
         ui_cfgs = doc.layer_ui_configs() or []
-    except Exception:
+    except _DOC_ERRORS:
         ui_cfgs = []
     for cfg in ui_cfgs:
         try:
             num = int(cfg.get("number"))
-        except Exception:
+        except _PARSE_ERRORS:
             continue
         if num < 0:
             continue
@@ -82,13 +85,13 @@ def suppress_layer_zero(doc) -> None:
     matched_by_name = False
     try:
         ocgs = doc.get_ocgs() or {}
-    except Exception:
+    except _DOC_ERRORS:
         ocgs = {}
     if isinstance(ocgs, dict):
         for key, value in ocgs.items():
             try:
                 xref = int(key)
-            except Exception:
+            except _PARSE_ERRORS:
                 continue
             all_ocg_xrefs.append(xref)
             name = ""
@@ -106,15 +109,15 @@ def suppress_layer_zero(doc) -> None:
             new_on = [x for x in on if x not in zero_xrefs]
             new_off = sorted(set(off + zero_xrefs))
             doc.set_layer(-1, on=new_on, off=new_off)
-        except Exception:
+        except _DOC_ERRORS:
             try:
                 doc.set_layer(-1, off=zero_xrefs)
-            except Exception:
+            except _DOC_ERRORS:
                 pass
 
     try:
         ui_cfgs = doc.layer_ui_configs()
-    except Exception:
+    except _DOC_ERRORS:
         return
     if not ui_cfgs:
         return
@@ -126,14 +129,14 @@ def suppress_layer_zero(doc) -> None:
             continue
         try:
             num = int(cfg.get("number"))
-        except Exception:
+        except _PARSE_ERRORS:
             continue
         if num < 0:
             continue
         try:
             doc.set_layer_ui_config(num, 2)
             ui_hit = True
-        except Exception:
+        except _DOC_ERRORS:
             pass
 
     if not ui_hit and not matched_by_name:
@@ -141,7 +144,7 @@ def suppress_layer_zero(doc) -> None:
         for cfg in ui_cfgs:
             try:
                 num = int(cfg.get("number"))
-            except Exception:
+            except _DOC_ERRORS:
                 continue
             if num < 0:
                 continue
@@ -158,7 +161,7 @@ def suppress_layer_zero(doc) -> None:
             if first_xref is not None:
                 try:
                     doc.set_layer(-1, off=[int(first_xref)])
-                except Exception:
+                except _DOC_ERRORS:
                     pass
 
 
@@ -198,7 +201,7 @@ def apply_packet_layer_policy(doc) -> bool:
     """
     try:
         ui_cfgs = doc.layer_ui_configs()
-    except Exception:
+    except _DOC_ERRORS:
         ui_cfgs = None
     if not ui_cfgs:
         suppress_layer_zero(doc)
@@ -212,7 +215,7 @@ def apply_packet_layer_policy(doc) -> bool:
     for cfg in ui_cfgs:
         try:
             num = int(cfg.get("number"))
-        except Exception:
+        except _PARSE_ERRORS:
             continue
         if num < 0:
             continue
@@ -239,20 +242,20 @@ def apply_packet_layer_policy(doc) -> bool:
             try:
                 doc.set_layer_ui_config(num, 2)
                 changed = True
-            except Exception:
+            except _DOC_ERRORS:
                 pass
         for num in sorted(keep_nums):
             try:
                 doc.set_layer_ui_config(num, 1)
                 changed = True
-            except Exception:
+            except _DOC_ERRORS:
                 pass
     else:
         suppress_layer_zero(doc)
 
     try:
         ocgs = doc.get_ocgs() or {}
-    except Exception:
+    except _DOC_ERRORS:
         ocgs = {}
     if isinstance(ocgs, dict) and ocgs:
         all_xrefs: List[int] = []
@@ -262,7 +265,7 @@ def apply_packet_layer_policy(doc) -> bool:
         for key, value in ocgs.items():
             try:
                 xref = int(key)
-            except Exception:
+            except _PARSE_ERRORS:
                 continue
             all_xrefs.append(xref)
             name = ""
@@ -308,13 +311,13 @@ def apply_packet_layer_policy(doc) -> bool:
                 try:
                     doc.set_layer(-1, on=on_xrefs, off=off_xrefs)
                     changed = True
-                except Exception:
+                except _DOC_ERRORS:
                     pass
         elif off_xrefs:
             try:
                 doc.set_layer(-1, off=off_xrefs)
                 changed = True
-            except Exception:
+            except _DOC_ERRORS:
                 suppress_layer_zero(doc)
         else:
             suppress_layer_zero(doc)
@@ -339,12 +342,12 @@ def collect_layer_zero_masks(
     try:
         rect = src_page.rect
         page_area = max(1.0, float(rect.width) * float(rect.height))
-    except Exception:
+    except _PARSE_ERRORS:
         page_area = 1.0
 
     try:
         drawings = src_page.get_drawings() or []
-    except Exception:
+    except _DOC_ERRORS:
         drawings = []
     for drawing in drawings:
         if not matches_zero_layer_alias(drawing.get("layer"), zero_layer_aliases or []):
@@ -354,7 +357,7 @@ def collect_layer_zero_masks(
             continue
         try:
             bbox = (float(rect.x0), float(rect.y0), float(rect.x1), float(rect.y1))
-        except Exception:
+        except _PARSE_ERRORS:
             continue
         draw_masks.append(
             {
@@ -367,7 +370,7 @@ def collect_layer_zero_masks(
 
     try:
         traces = src_page.get_texttrace() or []
-    except Exception:
+    except _DOC_ERRORS:
         traces = []
     for trace in traces:
         if not matches_zero_layer_alias(trace.get("layer"), zero_layer_aliases or []):
@@ -377,7 +380,7 @@ def collect_layer_zero_masks(
             continue
         try:
             x0, y0, x1, y1 = float(bbox[0]), float(bbox[1]), float(bbox[2]), float(bbox[3])
-        except Exception:
+        except _PARSE_ERRORS:
             continue
         text_boxes.append((x0, y0, x1, y1))
 
@@ -436,7 +439,7 @@ def erase_layer_zero_overlays(
                     elif op == "qu" and len(item) >= 2:
                         shape.draw_quad(item[1])
                         drew_any = True
-                except Exception:
+                except _DOC_ERRORS:
                     continue
             if drew_any:
                 try:
@@ -450,7 +453,7 @@ def erase_layer_zero_overlays(
                         stroke_opacity=1.0,
                     )
                     shape.commit()
-                except Exception:
+                except _DOC_ERRORS:
                     drew_any = False
 
         if not drew_any:
@@ -462,7 +465,7 @@ def erase_layer_zero_overlays(
                     width=max(2.0, eraser_width),
                     stroke_opacity=1.0,
                 )
-            except Exception:
+            except _DOC_ERRORS:
                 pass
 
     for bbox in text_boxes:
@@ -482,7 +485,7 @@ def erase_layer_zero_overlays(
                 fill=(1, 1, 1),
                 fill_opacity=1.0,
             )
-        except Exception:
+        except _DOC_ERRORS:
             pass
 
 
@@ -491,7 +494,7 @@ def set_layer0_only(doc) -> None:
         return
     try:
         ui_cfgs = doc.layer_ui_configs() or []
-    except Exception:
+    except _DOC_ERRORS:
         ui_cfgs = []
     on_nums: List[int] = []
     off_nums: List[int] = []
@@ -499,7 +502,7 @@ def set_layer0_only(doc) -> None:
     for cfg in ui_cfgs:
         try:
             num = int(cfg.get("number"))
-        except Exception:
+        except _PARSE_ERRORS:
             continue
         if num < 0:
             continue
@@ -516,17 +519,17 @@ def set_layer0_only(doc) -> None:
     for num in off_nums:
         try:
             doc.set_layer_ui_config(num, 2)
-        except Exception:
+        except _DOC_ERRORS:
             pass
     for num in on_nums:
         try:
             doc.set_layer_ui_config(num, 1)
-        except Exception:
+        except _DOC_ERRORS:
             pass
 
     try:
         ocgs = doc.get_ocgs() or {}
-    except Exception:
+    except _DOC_ERRORS:
         ocgs = {}
     if isinstance(ocgs, dict) and ocgs:
         on_xrefs: List[int] = []
@@ -535,7 +538,7 @@ def set_layer0_only(doc) -> None:
         for key, value in ocgs.items():
             try:
                 xref = int(key)
-            except Exception:
+            except _PARSE_ERRORS:
                 continue
             if xref <= 0:
                 continue
@@ -559,9 +562,9 @@ def set_layer0_only(doc) -> None:
             except TypeError:
                 try:
                     doc.set_layer(-1, on=on_xrefs, off=off_xrefs)
-                except Exception:
+                except _DOC_ERRORS:
                     pass
-            except Exception:
+            except _DOC_ERRORS:
                 pass
 
 

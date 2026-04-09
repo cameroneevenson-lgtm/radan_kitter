@@ -3,13 +3,16 @@ from __future__ import annotations
 import re
 from typing import Any, Callable, List, Optional, Tuple
 
+_PARSE_ERRORS = (AttributeError, IndexError, KeyError, TypeError, ValueError)
+_PAGE_READ_ERRORS = (AttributeError, RuntimeError, TypeError, ValueError)
+
 
 def is_red_rgb(color: object) -> bool:
     if not isinstance(color, tuple) or len(color) < 3:
         return False
     try:
         r, g, b = float(color[0]), float(color[1]), float(color[2])
-    except Exception:
+    except _PARSE_ERRORS:
         return False
     return r >= 0.28 and r >= (g + 0.05) and r >= (b + 0.05)
 
@@ -32,7 +35,7 @@ def color_to_rgb(color: object) -> Optional[Tuple[float, float, float]]:
     if isinstance(color, tuple) and len(color) >= 3:
         try:
             return (float(color[0]), float(color[1]), float(color[2]))
-        except Exception:
+        except _PARSE_ERRORS:
             return None
     return None
 
@@ -56,7 +59,7 @@ def highlight_red_target_layers(
 ) -> None:
     try:
         drawings = page.get_drawings()
-    except Exception:
+    except _PAGE_READ_ERRORS:
         return
     for drawing in drawings:
         is_red = is_red_rgb(drawing.get("color")) or is_red_rgb(drawing.get("fill"))
@@ -89,7 +92,7 @@ def highlight_red_text(
 ) -> None:
     try:
         traces = page.get_texttrace()
-    except Exception:
+    except _PAGE_READ_ERRORS:
         return
     items = []
     for trace in traces:
@@ -185,7 +188,7 @@ def collect_red_symbol_dimension_chars(
     out: List[dict] = []
     try:
         traces = page.get_texttrace()
-    except Exception:
+    except _PAGE_READ_ERRORS:
         return out
 
     for trace in traces:
@@ -205,26 +208,26 @@ def collect_red_symbol_dimension_chars(
         rgb = color_to_rgb(color_raw) or (1.0, 0.0, 0.0)
         try:
             size = float(trace.get("size", 0.0) or 0.0)
-        except Exception:
+        except _PARSE_ERRORS:
             size = 0.0
         if size <= 0.0:
             size = 9.0
         try:
             opacity = float(trace.get("opacity", 1.0) or 1.0)
-        except Exception:
+        except _PARSE_ERRORS:
             opacity = 1.0
         for ch in chars:
             if not isinstance(ch, (list, tuple)) or len(ch) < 3:
                 continue
             try:
                 cp = int(ch[0])
-            except Exception:
+            except _PARSE_ERRORS:
                 continue
             if cp <= 0:
                 continue
             try:
                 text = chr(cp)
-            except Exception:
+            except _PARSE_ERRORS:
                 continue
             if not text.strip():
                 continue
@@ -232,7 +235,7 @@ def collect_red_symbol_dimension_chars(
             try:
                 ox = float(origin[0])
                 oy = float(origin[1])
-            except Exception:
+            except _PARSE_ERRORS:
                 continue
             out.append(
                 {
@@ -258,7 +261,7 @@ def overlay_red_symbol_dimension_chars(page, chars: List[dict], *, fitz_module) 
             size = max(4.0, float(item.get("size", 9.0) or 9.0))
             color = item.get("color", (1.0, 0.0, 0.0))
             opacity = max(0.0, min(1.0, float(item.get("opacity", 1.0) or 1.0)))
-        except Exception:
+        except _PARSE_ERRORS:
             continue
         try:
             page.insert_text(
@@ -282,7 +285,7 @@ def overlay_red_symbol_dimension_chars(page, chars: List[dict], *, fitz_module) 
                 )
             except Exception:
                 continue
-        except Exception:
+        except _PARSE_ERRORS:
             continue
 
 
@@ -309,7 +312,7 @@ def overlay_red_text_runs(page, runs: List[dict], *, fitz_module) -> None:
             size = max(4.0, float(item.get("size", 9.0) or 9.0))
             color = item.get("color", (1.0, 0.0, 0.0))
             opacity = max(0.0, min(1.0, float(item.get("opacity", 1.0) or 1.0)))
-        except Exception:
+        except _PARSE_ERRORS:
             size = 9.0
             color = (1.0, 0.0, 0.0)
             opacity = 1.0
@@ -367,7 +370,7 @@ def grayscale_title_layer(
 ) -> None:
     try:
         drawings = page.get_drawings()
-    except Exception:
+    except _PAGE_READ_ERRORS:
         return
     for drawing in drawings:
         if not is_title_layer_fn(drawing.get("layer")):

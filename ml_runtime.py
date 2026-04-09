@@ -112,6 +112,7 @@ class MlWorkerSignals(QObject):
     progress = Signal(int, int)
     stats = Signal(object)
     done = Signal(str, str, str)  # run_name, dataset_path, run_dir
+    completed = Signal(object)  # summary dict
     error = Signal(str)
 
 
@@ -207,5 +208,46 @@ class MlScanWorker(QRunnable):
                 str(summary.get("dataset_path", "")),
                 str(summary.get("run_dir", self.global_runs_dir)),
             )
+            self.signals.completed.emit(summary)
+        except Exception:
+            self.signals.error.emit(traceback.format_exc())
+
+
+class MlRecomputeWorkerSignals(QObject):
+    progress = Signal(int, int)
+    done = Signal(object)  # summary dict
+    error = Signal(str)
+
+
+class MlRecomputeWorker(QRunnable):
+    def __init__(
+        self,
+        *,
+        dataset_path: str,
+        signal_cols: List[str],
+        max_workers: int,
+    ) -> None:
+        super().__init__()
+        self.dataset_path = dataset_path
+        self.signal_cols = list(signal_cols or [])
+        self.max_workers = int(max_workers)
+        self.signals = MlRecomputeWorkerSignals()
+        self._stop = False
+
+    def request_stop(self) -> None:
+        self._stop = True
+
+    def run(self) -> None:
+        try:
+            import ml_pipeline
+
+            summary = ml_pipeline.recompute_dataset_signals(
+                dataset_path=self.dataset_path,
+                signal_cols=self.signal_cols,
+                should_stop=lambda: self._stop,
+                on_progress=lambda done, total: self.signals.progress.emit(int(done), int(total)),
+                max_workers=self.max_workers,
+            )
+            self.signals.done.emit(summary)
         except Exception:
             self.signals.error.emit(traceback.format_exc())

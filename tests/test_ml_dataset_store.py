@@ -9,6 +9,7 @@ from ml_dataset_store import (
     append_labeled_row,
     ensure_dataset_exists,
     load_dataset_df,
+    make_part_key,
     make_run_name,
     part_keys_from_df,
 )
@@ -16,13 +17,14 @@ from test_support import workspace_temp_dir
 
 
 class MlDatasetStoreTests(unittest.TestCase):
-    def test_append_labeled_row_upserts_by_part_name(self) -> None:
+    def test_append_labeled_row_upserts_by_part_key(self) -> None:
         with workspace_temp_dir("ml_dataset_append") as tmpdir:
             dataset_path = os.path.join(tmpdir, "ml_dataset.csv")
             all_cols = [
                 "timestamp_utc",
                 "rpd_token",
                 "part_name",
+                "part_key",
                 "kit_label",
                 "pdf_path",
                 "dxf_path",
@@ -35,8 +37,8 @@ class MlDatasetStoreTests(unittest.TestCase):
             append_labeled_row(
                 "PART-001",
                 "Sides",
-                "a.pdf",
-                "a.dxf",
+                os.path.join(tmpdir, "a.pdf"),
+                os.path.join(tmpdir, "a.dxf"),
                 dataset_path=dataset_path,
                 all_cols=all_cols,
                 compute_signals_fn=fake_compute,
@@ -47,8 +49,8 @@ class MlDatasetStoreTests(unittest.TestCase):
             append_labeled_row(
                 "PART-001",
                 "Tops",
-                "b.pdf",
-                "b.dxf",
+                os.path.join(tmpdir, "a.pdf"),
+                os.path.join(tmpdir, "a.dxf"),
                 dataset_path=dataset_path,
                 all_cols=all_cols,
                 compute_signals_fn=fake_compute,
@@ -62,21 +64,74 @@ class MlDatasetStoreTests(unittest.TestCase):
             self.assertEqual(df.iloc[0]["kit_label"], "Tops")
             self.assertEqual(df.iloc[0]["rpd_token"], "run-b")
 
+    def test_append_labeled_row_keeps_same_basename_with_different_paths(self) -> None:
+        with workspace_temp_dir("ml_dataset_duplicate_basename") as tmpdir:
+            dataset_path = os.path.join(tmpdir, "ml_dataset.csv")
+            all_cols = [
+                "timestamp_utc",
+                "rpd_token",
+                "part_name",
+                "part_key",
+                "kit_label",
+                "pdf_path",
+                "dxf_path",
+                "sig_a",
+            ]
+
+            def fake_compute(pdf_path: str, dxf_path: str) -> dict[str, float]:
+                return {"sig_a": float(len(pdf_path) + len(dxf_path))}
+
+            append_labeled_row(
+                "PART-001",
+                "Sides",
+                os.path.join(tmpdir, "job_a", "part.pdf"),
+                os.path.join(tmpdir, "job_a", "part.dxf"),
+                dataset_path=dataset_path,
+                all_cols=all_cols,
+                compute_signals_fn=fake_compute,
+                nan_fn=lambda: float("nan"),
+            )
+            append_labeled_row(
+                "PART-001",
+                "Tops",
+                os.path.join(tmpdir, "job_b", "part.pdf"),
+                os.path.join(tmpdir, "job_b", "part.dxf"),
+                dataset_path=dataset_path,
+                all_cols=all_cols,
+                compute_signals_fn=fake_compute,
+                nan_fn=lambda: float("nan"),
+            )
+
+            df = pd.read_csv(dataset_path)
+            self.assertEqual(len(df), 2)
+            self.assertEqual(set(df["kit_label"]), {"Sides", "Tops"})
+
     def test_load_dataset_df_backfills_missing_columns(self) -> None:
         with workspace_temp_dir("ml_dataset_load") as tmpdir:
             dataset_path = os.path.join(tmpdir, "ml_dataset.csv")
             pd.DataFrame([{"part_name": "PART-001"}]).to_csv(dataset_path, index=False)
             df = load_dataset_df(
                 dataset_path,
-                ["part_name", "kit_label", "sig_a"],
+                ["part_name", "part_key", "kit_label", "sig_a"],
                 lambda: float("nan"),
             )
-            self.assertEqual(list(df.columns), ["part_name", "kit_label", "sig_a"])
+            self.assertEqual(list(df.columns), ["part_name", "part_key", "kit_label", "sig_a"])
             self.assertEqual(df.iloc[0]["part_name"], "PART-001")
 
-    def test_part_keys_from_df_normalizes_case(self) -> None:
-        df = pd.DataFrame([{"part_name": "Part-001"}, {"part_name": "part-002"}])
-        self.assertEqual(part_keys_from_df(df), {"PART-001", "PART-002"})
+    def test_part_keys_from_df_prefers_asset_derived_identity(self) -> None:
+        df = pd.DataFrame(
+            [
+                {"part_name": "Part-001", "pdf_path": r"C:\job_a\part.pdf", "dxf_path": r"C:\job_a\part.dxf"},
+                {"part_name": "part-001", "pdf_path": r"C:\job_b\part.pdf", "dxf_path": r"C:\job_b\part.dxf"},
+            ]
+        )
+        self.assertEqual(
+            part_keys_from_df(df),
+            {
+                make_part_key("Part-001", r"C:\job_a\part.pdf", r"C:\job_a\part.dxf"),
+                make_part_key("part-001", r"C:\job_b\part.pdf", r"C:\job_b\part.dxf"),
+            },
+        )
 
     def test_make_run_name_sanitizes_job_name(self) -> None:
         run_name = make_run_name(

@@ -410,8 +410,8 @@ class Main(QMainWindow):
             balance_kit=BALANCE_KIT,
             run_dir=GLOBAL_RUNS_DIR,
             signal_cols=RF_FEATURES,
+            on_complete=self._refresh_ml_plot_pane,
         )
-        self._refresh_ml_plot_pane()
 
     def run_ml_recompute_all(self):
         ui_actions.run_ml_recompute_all(
@@ -419,8 +419,8 @@ class Main(QMainWindow):
             dataset_path=GLOBAL_DATASET_PATH,
             signal_cols=RF_FEATURES,
             max_workers=2,
+            on_complete=self._refresh_ml_plot_pane,
         )
-        self._refresh_ml_plot_pane()
 
     def run_ml_signal_plot(self):
         ui_actions.run_ml_signal_plot(

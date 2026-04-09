@@ -10,6 +10,35 @@ from typing import Any, Callable, Dict, Optional, Sequence
 
 import pandas as pd
 
+_TEXT_TRACKING_COLS = {
+    "timestamp_utc",
+    "rpd_token",
+    "part_name",
+    "part_key",
+    "kit_label",
+    "pdf_path",
+    "dxf_path",
+}
+
+
+def normalize_identity_path(path: str) -> str:
+    raw = str(path or "").strip()
+    if not raw:
+        return ""
+    try:
+        return os.path.normcase(os.path.normpath(os.path.abspath(raw)))
+    except Exception:
+        return os.path.normcase(os.path.normpath(raw))
+
+
+def make_part_key(part_name: str, pdf_path: str, dxf_path: str) -> str:
+    pdf_norm = normalize_identity_path(pdf_path)
+    dxf_norm = normalize_identity_path(dxf_path)
+    if pdf_norm or dxf_norm:
+        return f"PDF={pdf_norm}|DXF={dxf_norm}"
+    part_norm = str(part_name or "").strip().upper()
+    return f"PART={part_norm}" if part_norm else ""
+
 
 def utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
@@ -41,8 +70,9 @@ def append_labeled_row(
     """
     Append/Upsert one labeled row to the dataset.
 
-    Global identity key: part_name (basename).
-    Behavior: LAST ADDED WINS (if part_name already exists, it is replaced).
+    Global identity key: part_key derived from normalized PDF/DXF paths,
+    with basename fallback when neither asset path is available.
+    Behavior: LAST ADDED WINS for matching part_key.
 
     Computes features from pdf_path/dxf_path only.
     """
@@ -50,19 +80,34 @@ def append_labeled_row(
     df = load_dataset_df(dataset_path, all_cols, nan_fn)
 
     part_name_s = str(part_name or "").strip()
-    if not part_name_s:
+    pdf_path_s = str(pdf_path or "").strip()
+    dxf_path_s = str(dxf_path or "").strip()
+    part_key = make_part_key(part_name_s, pdf_path_s, dxf_path_s)
+    if not part_name_s and not part_key:
         return
 
-    if "part_name" in df.columns and len(df) > 0:
-        df = df[df["part_name"].astype(str) != part_name_s].copy()
+    if len(df) > 0:
+        existing_keys = []
+        for _idx, existing in df.iterrows():
+            existing_keys.append(
+                make_part_key(
+                    str(existing.get("part_name") or ""),
+                    str(existing.get("pdf_path") or ""),
+                    str(existing.get("dxf_path") or ""),
+                )
+            )
+        if part_key:
+            keep_mask = [key != part_key for key in existing_keys]
+            df = df.loc[keep_mask].copy()
 
     row = {
         "timestamp_utc": utc_now_iso_fn(),
         "rpd_token": str(rpd_token or "").strip(),
         "part_name": part_name_s,
+        "part_key": part_key,
         "kit_label": str(kit_label or "").strip(),
-        "pdf_path": str(pdf_path or "").strip(),
-        "dxf_path": str(dxf_path or "").strip(),
+        "pdf_path": pdf_path_s,
+        "dxf_path": dxf_path_s,
     }
 
     feats = compute_signals_fn(row["pdf_path"], row["dxf_path"])
@@ -97,9 +142,13 @@ def load_existing_part_names(dataset_path: str) -> set[str]:
         with open(dataset_path, newline="", encoding="utf-8") as f:
             reader = csv.DictReader(f)
             for row in reader:
-                part = str(row.get("part_name") or row.get("part") or "").strip()
-                if part:
-                    out.add(part.upper())
+                key = make_part_key(
+                    str(row.get("part_name") or row.get("part") or ""),
+                    str(row.get("pdf_path") or ""),
+                    str(row.get("dxf_path") or ""),
+                )
+                if key:
+                    out.add(key)
     except Exception:
         return set()
     return out
@@ -176,18 +225,20 @@ def load_dataset_df(
         df = pd.DataFrame(columns=list(all_cols))
     for col in all_cols:
         if col not in df.columns:
-            df[col] = nan_fn()
+            df[col] = "" if col in _TEXT_TRACKING_COLS else nan_fn()
     return df.loc[:, list(all_cols)].copy()
 
 
 def part_keys_from_df(df: pd.DataFrame) -> set[str]:
     out: set[str] = set()
-    if "part_name" not in df.columns or len(df) == 0:
+    if len(df) == 0:
         return out
-    for value in df["part_name"]:
-        if pd.isna(value):
-            continue
-        part = str(value).strip()
-        if part:
-            out.add(part.upper())
+    for _idx, row in df.iterrows():
+        key = make_part_key(
+            str(row.get("part_name") or ""),
+            str(row.get("pdf_path") or ""),
+            str(row.get("dxf_path") or ""),
+        )
+        if key:
+            out.add(key)
     return out
