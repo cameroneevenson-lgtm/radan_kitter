@@ -235,8 +235,10 @@ class Main(QMainWindow):
             )
             self.rpd_path = path
             self._refresh_open_rpd_indicator()
-            self.preview_current()
-            self._refresh_ml_plot_pane()
+            with rt.stage("load_rpd_path", "refresh_preview", min_elapsed_ms=25, part_count=len(self.parts)):
+                self.preview_current()
+            with rt.stage("load_rpd_path", "refresh_ml_plot", min_elapsed_ms=25, part_count=len(self.parts)):
+                self._refresh_ml_plot_pane()
             span.success(part_count=len(self.parts))
         except Exception as exc:
             span.fail(exc)

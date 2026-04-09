@@ -4,8 +4,10 @@ from __future__ import annotations
 import json
 import os
 import re
+import time
 from typing import Dict, List, Optional, Tuple
 
+import runtime_trace as rt
 from config import (
     ASSET_LOOKUP_SETTINGS_PATH as CFG_ASSET_LOOKUP_SETTINGS_PATH,
     ENG_RELEASE_MAP as CFG_ENG_RELEASE_MAP,
@@ -26,6 +28,8 @@ _BASE_W_RELEASE_ROOT = DEFAULT_W_RELEASE_ROOT
 _BASE_ENG_RELEASE_MAP: List[Tuple[str, str]] = list(DEFAULT_ENG_RELEASE_MAP)
 _ASSET_ROOT_SOURCE = "default"
 _TREE_INDEX_CACHE: Dict[Tuple[str, str], Tuple[Dict[str, str], Dict[str, List[str]]]] = {}
+ASSET_INDEX_TRACE_MIN_MS = 150
+ASSET_RESOLVE_TRACE_MIN_MS = 75
 
 
 def _normalize_path(path: object) -> str:
@@ -352,13 +356,25 @@ def _index_tree(root_dir: str, ext: str) -> Tuple[Dict[str, str], Dict[str, List
 
     exact: Dict[str, str] = {}
     stem_matches: Dict[str, List[str]] = {}
-    if os.path.isdir(norm_root):
+    dirs_scanned = 0
+    matched_files = 0
+    root_exists = os.path.isdir(norm_root)
+    profile = rt.stage(
+        "asset_lookup",
+        "index_tree",
+        min_elapsed_ms=ASSET_INDEX_TRACE_MIN_MS,
+        root=norm_root,
+        ext=ext,
+    )
+    if root_exists:
         try:
             for dirpath, _dirnames, filenames in os.walk(norm_root):
+                dirs_scanned += 1
                 for name in filenames:
                     stem, name_ext = os.path.splitext(name)
                     if name_ext.lower() != ext.lower():
                         continue
+                    matched_files += 1
                     full = os.path.join(dirpath, name)
                     lower_name = name.lower()
                     exact.setdefault(lower_name, full)
@@ -366,8 +382,18 @@ def _index_tree(root_dir: str, ext: str) -> Tuple[Dict[str, str], Dict[str, List
                     if not stem_key:
                         continue
                     stem_matches.setdefault(stem_key, []).append(full)
-        except Exception:
-            pass
+        except Exception as exc:
+            profile.fail(
+                exc,
+                root_exists=root_exists,
+                dirs_scanned=dirs_scanned,
+                matched_files=matched_files,
+            )
+    profile.success(
+        root_exists=root_exists,
+        dirs_scanned=dirs_scanned,
+        matched_files=matched_files,
+    )
 
     cached = (exact, stem_matches)
     _TREE_INDEX_CACHE[cache_key] = cached
@@ -415,6 +441,7 @@ def _match_subtree(root_dir: str, base: str, ext: str, preferred_dirs: List[str]
 
 
 def resolve_asset(sym_path: str, ext: str) -> Optional[str]:
+    t0 = time.perf_counter()
     sp = _normalize_path(sym_path)
     if not sp:
         return None
@@ -425,15 +452,56 @@ def resolve_asset(sym_path: str, ext: str) -> Optional[str]:
 
     base = os.path.splitext(os.path.basename(sp))[0]
     candidate_dirs = _candidate_asset_dirs(sp)
+    search_roots = _candidate_search_roots(sp)
 
     for dir_path in candidate_dirs:
         hit = _match_immediate_dir(dir_path, base, ext)
         if hit:
+            elapsed_ms = int((time.perf_counter() - t0) * 1000.0)
+            if elapsed_ms >= ASSET_RESOLVE_TRACE_MIN_MS:
+                rt.event(
+                    "asset_lookup",
+                    "resolve",
+                    elapsed_ms=elapsed_ms,
+                    sym_path=sp,
+                    ext=ext,
+                    result="hit",
+                    strategy="candidate_dir",
+                    candidate_dir_count=len(candidate_dirs),
+                    search_root_count=len(search_roots),
+                    hit_path=hit,
+                )
             return hit
 
-    for root_dir in _candidate_search_roots(sp):
+    for root_dir in search_roots:
         hit = _match_subtree(root_dir, base, ext, preferred_dirs=candidate_dirs)
         if hit:
+            elapsed_ms = int((time.perf_counter() - t0) * 1000.0)
+            if elapsed_ms >= ASSET_RESOLVE_TRACE_MIN_MS:
+                rt.event(
+                    "asset_lookup",
+                    "resolve",
+                    elapsed_ms=elapsed_ms,
+                    sym_path=sp,
+                    ext=ext,
+                    result="hit",
+                    strategy="search_root",
+                    candidate_dir_count=len(candidate_dirs),
+                    search_root_count=len(search_roots),
+                    hit_path=hit,
+                )
             return hit
 
+    rt.event(
+        "asset_lookup",
+        "resolve",
+        elapsed_ms=int((time.perf_counter() - t0) * 1000.0),
+        sym_path=sp,
+        ext=ext,
+        result="miss",
+        strategy="miss",
+        candidate_dir_count=len(candidate_dirs),
+        search_root_count=len(search_roots),
+        hit_path="",
+    )
     return None

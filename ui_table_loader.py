@@ -6,6 +6,7 @@ from typing import Callable, Dict, List, Tuple
 from PySide6.QtWidgets import QHeaderView, QTableView
 
 import rpd_io
+import runtime_trace as rt
 from rpd_io import PartRow
 from ui_parts_table import PartsModel
 
@@ -36,23 +37,44 @@ def load_rpd_into_table(
     on_model_data_changed: Callable[[], None],
     on_selection_changed: Callable[[], None],
 ) -> Tuple[ET.ElementTree, List[PartRow], PartsModel]:
-    tree, parts, _debug = rpd_io.load_rpd(path)
-    model = PartsModel(
-        parts,
-        sanitize_kit_name_fn=sanitize_kit_name_fn,
-        kit_text_for_rpd_fn=kit_text_for_rpd_fn,
-        safe_int_1_9_fn=safe_int_1_9_fn,
-        kit_to_priority=kit_to_priority,
-    )
-    table.setModel(model)
-    model.dataChanged.connect(lambda *_: on_model_data_changed())
-    hook_selection_model(table, on_selection_changed)
+    load_stage = rt.stage("load_rpd_path", "parse_rpd", min_elapsed_ms=10, rpd_path=path)
+    try:
+        tree, parts, debug = rpd_io.load_rpd(path)
+    except Exception as exc:
+        load_stage.fail(exc)
+        raise
+    else:
+        load_stage.success(
+            part_count=len(parts),
+            sample_child_tags=str(debug.get("sample_child_tags", "")),
+        )
+
+    model_stage = rt.stage("load_rpd_path", "build_parts_model", min_elapsed_ms=10, part_count=len(parts))
+    try:
+        model = PartsModel(
+            parts,
+            sanitize_kit_name_fn=sanitize_kit_name_fn,
+            kit_text_for_rpd_fn=kit_text_for_rpd_fn,
+            safe_int_1_9_fn=safe_int_1_9_fn,
+            kit_to_priority=kit_to_priority,
+        )
+    except Exception as exc:
+        model_stage.fail(exc)
+        raise
+    else:
+        model_stage.success(column_count=len(PartsModel.HEADERS))
+
+    with rt.stage("load_rpd_path", "bind_table_model", min_elapsed_ms=10, part_count=len(parts)):
+        table.setModel(model)
+        model.dataChanged.connect(lambda *_: on_model_data_changed())
+        hook_selection_model(table, on_selection_changed)
 
     header = table.horizontalHeader()
-    header.setSectionResizeMode(QHeaderView.ResizeToContents)
-    table.resizeColumnsToContents()
-    # Fill the table pane horizontally by stretching visible columns.
-    header.setSectionResizeMode(QHeaderView.Stretch)
+    with rt.stage("load_rpd_path", "resize_table_columns", min_elapsed_ms=10, part_count=len(parts)):
+        header.setSectionResizeMode(QHeaderView.ResizeToContents)
+        table.resizeColumnsToContents()
+        # Fill the table pane horizontally by stretching visible columns.
+        header.setSectionResizeMode(QHeaderView.Stretch)
 
     try:
         kit_col = 1
@@ -73,5 +95,6 @@ def load_rpd_into_table(
         pass
 
     if model.rowCount() > 0 and not table.currentIndex().isValid():
-        table.setCurrentIndex(model.index(0, 0))
+        with rt.stage("load_rpd_path", "select_first_row", min_elapsed_ms=5, part_count=len(parts)):
+            table.setCurrentIndex(model.index(0, 0))
     return tree, parts, model

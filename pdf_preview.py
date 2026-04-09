@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+import time
 from collections import OrderedDict
 from dataclasses import dataclass
 from typing import Optional, Tuple
@@ -12,6 +13,7 @@ import fitz  # pip: pymupdf
 from PySide6.QtCore import QEvent, QTimer, Qt, Signal
 from PySide6.QtGui import QColor, QImage, QMouseEvent, QPainter, QPixmap, QWheelEvent
 from PySide6.QtWidgets import QGraphicsPixmapItem, QGraphicsScene, QGraphicsView
+import runtime_trace as rt
 
 PDF_PREVIEW_MIN_W = 420
 PDF_PREVIEW_DPI = 500
@@ -21,6 +23,7 @@ PDF_PREVIEW_RESIZE_RERENDER_MS = 120
 PDF_PREVIEW_CACHE_BUCKET_PX = 160
 PDF_PREVIEW_INVERT_COLORS = False
 PDF_PREVIEW_INVERT_GRAYSCALE_ONLY = True
+PDF_PREVIEW_RENDER_TRACE_MIN_MS = 40
 
 
 @dataclass
@@ -276,6 +279,7 @@ class PdfPreviewView(QGraphicsView):
 
         if not os.path.exists(pdf_path):
             # Show blank, do not crash.
+            rt.event("pdf_preview", "skip", reason="missing_pdf", pdf_path=pdf_path)
             self._pdf_path = pdf_path
             self._last_render_key = None
             self._pix_item.setPixmap(QPixmap())
@@ -288,12 +292,27 @@ class PdfPreviewView(QGraphicsView):
         # Render (cached)
         entry = self._cache.get(cache_key)
         if entry is None:
-            qimg = _render_pdf_page_to_qimage(
-                pdf_path,
+            render_stage = rt.stage(
+                "pdf_preview",
+                "render_page",
+                min_elapsed_ms=PDF_PREVIEW_RENDER_TRACE_MIN_MS,
+                pdf_path=pdf_path,
                 dpi=self._dpi,
-                target_px=(cache_key[1], cache_key[2]),
-                oversample=PDF_PREVIEW_RENDER_OVERSAMPLE,
+                viewport_w=cache_key[1],
+                viewport_h=cache_key[2],
             )
+            try:
+                qimg = _render_pdf_page_to_qimage(
+                    pdf_path,
+                    dpi=self._dpi,
+                    target_px=(cache_key[1], cache_key[2]),
+                    oversample=PDF_PREVIEW_RENDER_OVERSAMPLE,
+                )
+            except Exception as exc:
+                render_stage.fail(exc)
+                raise
+            else:
+                render_stage.success(image_w=qimg.width(), image_h=qimg.height())
             pm = QPixmap.fromImage(qimg)
             bytes_estimate = int(max(1, qimg.sizeInBytes()) + max(1, pm.width() * pm.height() * 4))
             entry = _CacheEntry(

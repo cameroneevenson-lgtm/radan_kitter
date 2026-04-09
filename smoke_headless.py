@@ -1,9 +1,14 @@
 from __future__ import annotations
 
+import argparse
+import cProfile
+import io
 import json
 import math
 import os
+import pstats
 import shutil
+import time
 import uuid
 
 import fitz
@@ -11,6 +16,7 @@ import pandas as pd
 
 import ml_pipeline
 import packet_service
+from config import GLOBAL_RUNTIME_DIR
 from pdf_packet import build_watermarked_packet
 from rpd_io import PartRow
 
@@ -23,7 +29,43 @@ def _fixture_path(name: str) -> str:
     return os.path.join(FIXTURE_DIR, name)
 
 
-def main() -> int:
+def _default_profile_dir() -> str:
+    return os.path.join(GLOBAL_RUNTIME_DIR, "profiles")
+
+
+def _build_arg_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Run the radan_kitter headless smoke test.")
+    parser.add_argument(
+        "--profile",
+        action="store_true",
+        help="Write a cProfile dump and text summary under _runtime/profiles.",
+    )
+    parser.add_argument(
+        "--profile-dir",
+        default="",
+        help="Override where deep profile outputs are written.",
+    )
+    parser.add_argument(
+        "--profile-sort",
+        default="cumulative",
+        help="pstats sort key for the text summary.",
+    )
+    parser.add_argument(
+        "--profile-limit",
+        type=int,
+        default=40,
+        help="How many functions to include in the text summary.",
+    )
+    return parser
+
+
+def _profile_output_paths(profile_dir: str) -> tuple[str, str]:
+    stamp = time.strftime("%Y%m%d_%H%M%S")
+    base = os.path.join(profile_dir, f"smoke_headless_{stamp}")
+    return base + ".prof", base + "_stats.txt"
+
+
+def run_smoke() -> dict:
     tmpdir = os.path.join(REPO_ROOT, f"_smoke_{uuid.uuid4().hex}")
     os.makedirs(tmpdir, exist_ok=False)
     try:
@@ -97,21 +139,58 @@ def main() -> int:
         assert summary["updated_rows"] == 1
         assert summary["error_rows"] == 0
 
-        print(
-            json.dumps(
-                {
-                    "packet_pages": pages,
-                    "packet_missing": missing,
-                    "ordered_pages": [text.strip().splitlines()[0] for text in page_texts],
-                    "layer_zero_ok": True,
-                    "ml_updated_rows": int(summary["updated_rows"]),
-                },
-                indent=2,
-            )
-        )
-        return 0
+        return {
+            "packet_pages": pages,
+            "packet_missing": missing,
+            "ordered_pages": [text.strip().splitlines()[0] for text in page_texts],
+            "layer_zero_ok": True,
+            "ml_updated_rows": int(summary["updated_rows"]),
+        }
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+def _run_with_profile(args: argparse.Namespace) -> dict:
+    profile_dir = os.path.normpath(str(args.profile_dir or "").strip() or _default_profile_dir())
+    os.makedirs(profile_dir, exist_ok=True)
+    prof_path, stats_path = _profile_output_paths(profile_dir)
+    profiler = cProfile.Profile()
+    t0 = time.perf_counter()
+    result = profiler.runcall(run_smoke)
+    elapsed_ms = int((time.perf_counter() - t0) * 1000.0)
+    profiler.dump_stats(prof_path)
+
+    sort_key = str(args.profile_sort or "cumulative").strip() or "cumulative"
+    limit = max(1, int(args.profile_limit or 40))
+    stream = io.StringIO()
+    stats = pstats.Stats(profiler, stream=stream).strip_dirs()
+    try:
+        stats.sort_stats(sort_key)
+    except Exception:
+        sort_key = "cumulative"
+        stats = pstats.Stats(profiler, stream=stream).strip_dirs().sort_stats(sort_key)
+    stats.print_stats(limit)
+    with open(stats_path, "w", encoding="utf-8") as handle:
+        handle.write(stream.getvalue())
+
+    payload = dict(result)
+    payload.update(
+        {
+            "profile_elapsed_ms": elapsed_ms,
+            "profile_prof_path": prof_path,
+            "profile_stats_path": stats_path,
+            "profile_sort": sort_key,
+            "profile_limit": limit,
+        }
+    )
+    return payload
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = _build_arg_parser().parse_args(argv)
+    payload = _run_with_profile(args) if args.profile else run_smoke()
+    print(json.dumps(payload, indent=2))
+    return 0
 
 
 if __name__ == "__main__":

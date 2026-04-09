@@ -20,6 +20,11 @@ def _trace_enabled() -> bool:
     return flag not in ("0", "false", "off", "no")
 
 
+def _stage_profile_enabled() -> bool:
+    flag = str(os.environ.get("RK_STAGE_PROFILE", "1")).strip().lower()
+    return _trace_enabled() and flag not in ("0", "false", "off", "no")
+
+
 _LOCK = threading.Lock()
 
 
@@ -108,3 +113,84 @@ class Span:
 
 def begin(feature: str, **fields: Any) -> Span:
     return Span(feature, **fields)
+
+
+class Stage:
+    def __init__(
+        self,
+        feature: str,
+        stage_name: str,
+        *,
+        min_elapsed_ms: int = 0,
+        emit_start: bool = False,
+        **fields: Any,
+    ) -> None:
+        self.feature = str(feature or "").strip() or "unknown"
+        self.stage_name = str(stage_name or "").strip() or "unknown"
+        self.min_elapsed_ms = max(0, int(min_elapsed_ms))
+        self._fields: Dict[str, Any] = {str(k): v for k, v in (fields or {}).items()}
+        self._t0 = time.perf_counter()
+        self._closed = False
+        self._enabled = _stage_profile_enabled()
+        if self._enabled and emit_start:
+            event(self.feature, "stage_start", stage=self.stage_name, **self._fields)
+
+    def _payload(self, **fields: Any) -> Dict[str, Any]:
+        payload = dict(self._fields)
+        for key, value in (fields or {}).items():
+            payload[str(key)] = value
+        payload["stage"] = self.stage_name
+        return payload
+
+    def success(self, **fields: Any) -> None:
+        if self._closed:
+            return
+        self._closed = True
+        elapsed_ms = int((time.perf_counter() - self._t0) * 1000.0)
+        if not self._enabled or elapsed_ms < self.min_elapsed_ms:
+            return
+        event(self.feature, "stage", elapsed_ms=elapsed_ms, **self._payload(**fields))
+
+    def fail(self, exc: BaseException, **fields: Any) -> None:
+        if self._closed:
+            return
+        self._closed = True
+        if not self._enabled:
+            return
+        elapsed_ms = int((time.perf_counter() - self._t0) * 1000.0)
+        event(
+            self.feature,
+            "stage_error",
+            elapsed_ms=elapsed_ms,
+            error_type=type(exc).__name__,
+            error=str(exc),
+            traceback=traceback.format_exc(),
+            **self._payload(**fields),
+        )
+
+    def __enter__(self) -> "Stage":
+        return self
+
+    def __exit__(self, exc_type, exc, _tb) -> bool:
+        if exc is not None:
+            self.fail(exc)
+            return False
+        self.success()
+        return False
+
+
+def stage(
+    feature: str,
+    stage_name: str,
+    *,
+    min_elapsed_ms: int = 0,
+    emit_start: bool = False,
+    **fields: Any,
+) -> Stage:
+    return Stage(
+        feature,
+        stage_name,
+        min_elapsed_ms=min_elapsed_ms,
+        emit_start=emit_start,
+        **fields,
+    )
