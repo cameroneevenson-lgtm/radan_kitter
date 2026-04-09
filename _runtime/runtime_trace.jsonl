@@ -3102,3 +3102,171 @@
 {"ts_utc": "2026-04-07T11:15:48.185+00:00", "feature": "write_rpd", "phase": "success", "elapsed_ms": 1807, "backup_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F56139\\PAINT PACK\\F56139 PAINT PACK\\_bak\\F56139 PAINT PACK.rpd.20260407_071546.bak"}
 {"ts_utc": "2026-04-07T12:19:32.722+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F55985\\OPERATIONAL PANELS\\F55985 OPERATIONAL PANELS\\F55985 OPERATIONAL PANELS.rpd"}
 {"ts_utc": "2026-04-07T12:19:35.418+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 2695, "part_count": 0}
+{"ts_utc": "2026-04-08T14:18:21.869+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F56139\\EXTERIOR PACK\\F56139 EXTERIOR PACK\\F56139 EXTERIOR PACK.rpd"}
+{"ts_utc": "2026-04-08T14:18:24.686+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 2817, "part_count": 0}
+{"ts_utc": "2026-04-08T14:18:43.798+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F56139\\EXTERIOR PACK\\F56139 EXTERIOR PACK\\F56139 EXTERIOR PACK.rpd"}
+{"ts_utc": "2026-04-08T14:18:46.672+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 2874, "part_count": 0}
+{"ts_utc": "2026-04-08T14:19:12.748+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F56139\\EXTERIOR PACK\\F56139 EXTERIOR PACK\\F56139 EXTERIOR PACK.rpd"}
+{"ts_utc": "2026-04-08T14:19:15.603+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 2853, "part_count": 0}
+{"ts_utc": "2026-04-08T14:19:39.409+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F56139\\EXTERIOR PACK\\F56139 EXTERIOR PACK\\F56139 EXTERIOR PACK.rpd"}
+{"ts_utc": "2026-04-08T14:19:42.548+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 3139, "part_count": 0}
+{"ts_utc": "2026-04-08T14:20:31.281+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F56139\\EXTERIOR PACK\\F56139 EXTERIOR PACK\\F56139 EXTERIOR PACK.rpd"}
+{"ts_utc": "2026-04-08T14:20:34.423+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 3142, "part_count": 11}
+{"ts_utc": "2026-04-08T14:20:45.256+00:00", "feature": "build_packet", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F56139\\EXTERIOR PACK\\F56139 EXTERIOR PACK\\F56139 EXTERIOR PACK.rpd", "part_count": 11, "first_page_only": false, "page_cap": 0, "output_dir": "_out", "suppress_layer_0": true, "workers": "auto", "mode": "vector"}
+{"ts_utc": "2026-04-08T14:20:45.260+00:00", "feature": "packet_engine", "phase": "start", "out_pdf_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F56139\\EXTERIOR PACK\\F56139 EXTERIOR PACK\\_out\\PrintPacket_QTY_20260408_102045.pdf", "total_parts": 11, "workers": 1, "dpi": 220, "jpeg_quality": 82, "suppress_layer_0": true}
+{"ts_utc": "2026-04-08T14:20:45.273+00:00", "feature": "build_packet", "phase": "progress", "done": 0, "total": 11, "status": "Starting packet build"}
+{"ts_utc": "2026-04-08T14:20:45.465+00:00", "feature": "packet_engine", "phase": "progress", "done": 1, "total": 11, "status": "D-541"}
+{"ts_utc": "2026-04-08T14:20:46.150+00:00", "feature": "build_packet", "phase": "progress", "done": 5, "total": 11, "status": "E-4-R2"}
+{"ts_utc": "2026-04-08T14:20:46.320+00:00", "feature": "packet_engine", "phase": "progress", "done": 6, "total": 11, "status": "E-5"}
+{"ts_utc": "2026-04-08T14:20:46.949+00:00", "feature": "build_packet", "phase": "progress", "done": 10, "total": 11, "status": "F56139-B-73"}
+{"ts_utc": "2026-04-08T14:20:47.170+00:00", "feature": "build_packet", "phase": "progress", "done": 11, "total": 11, "status": "F56139-B-74"}
+{"ts_utc": "2026-04-08T14:20:47.175+00:00", "feature": "packet_engine", "phase": "progress", "done": 11, "total": 11, "status": "F56139-B-74"}
+{"ts_utc": "2026-04-08T14:20:47.206+00:00", "feature": "build_packet", "phase": "progress", "done": 11, "total": 11, "status": "Saving packet to temp file"}
+{"ts_utc": "2026-04-08T14:20:47.258+00:00", "feature": "build_packet", "phase": "progress", "done": 11, "total": 11, "status": "Copying packet file"}
+{"ts_utc": "2026-04-08T14:20:47.463+00:00", "feature": "build_packet", "phase": "progress", "done": 11, "total": 11, "status": "Packet complete"}
+{"ts_utc": "2026-04-08T14:20:47.493+00:00", "feature": "packet_engine", "phase": "success", "elapsed_ms": 2233, "pages": 11, "missing": 0, "out_size_bytes": 964026, "avg_part_ms": 17, "max_part_ms": 37}
+{"ts_utc": "2026-04-08T14:20:47.521+00:00", "feature": "build_packet", "phase": "success", "elapsed_ms": 2265, "packet_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F56139\\EXTERIOR PACK\\F56139 EXTERIOR PACK\\_out\\PrintPacket_QTY_20260408_102045.pdf", "pages": 11, "missing": 0}
+{"ts_utc": "2026-04-08T14:20:55.478+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F56139\\EXTERIOR PACK\\F56139 EXTERIOR PACK\\F56139 EXTERIOR PACK.rpd"}
+{"ts_utc": "2026-04-08T14:20:58.515+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 3041, "part_count": 11}
+{"ts_utc": "2026-04-08T14:21:54.609+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F56139\\EXTERIOR PACK\\F56139 EXTERIOR PACK\\F56139 EXTERIOR PACK.rpd"}
+{"ts_utc": "2026-04-08T14:21:58.148+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 3536, "part_count": 11}
+{"ts_utc": "2026-04-08T14:22:14.583+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F56139\\EXTERIOR PACK\\F56139 EXTERIOR PACK\\F56139 EXTERIOR PACK.rpd"}
+{"ts_utc": "2026-04-08T14:22:18.045+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 3462, "part_count": 11}
+{"ts_utc": "2026-04-08T14:56:10.993+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\I-STOCK-INVENTORY\\I58763\\I58763\\I58763.rpd"}
+{"ts_utc": "2026-04-08T14:56:15.316+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 4323, "part_count": 26}
+{"ts_utc": "2026-04-08T14:59:19.927+00:00", "feature": "prepare_kits", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\I-STOCK-INVENTORY\\I58763\\I58763\\I58763.rpd", "part_count": 26}
+{"ts_utc": "2026-04-08T14:59:19.950+00:00", "feature": "prepare_kits", "phase": "progress", "done": 0, "total": 28, "status": "Preparing kits..."}
+{"ts_utc": "2026-04-08T14:59:20.702+00:00", "feature": "prepare_kits", "phase": "progress", "done": 14, "total": 28, "status": "Updating Attr109: P58213-10.sym"}
+{"ts_utc": "2026-04-08T14:59:21.314+00:00", "feature": "prepare_kits", "phase": "progress", "done": 28, "total": 28, "status": "Skipping invalid kit label"}
+{"ts_utc": "2026-04-08T14:59:24.892+00:00", "feature": "prepare_kits", "phase": "success", "elapsed_ms": 4960, "kit_count": 2}
+{"ts_utc": "2026-04-08T15:01:52.574+00:00", "feature": "write_rpd", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\I-STOCK-INVENTORY\\I58763\\I58763\\I58763.rpd", "part_count": 26}
+{"ts_utc": "2026-04-08T15:01:53.856+00:00", "feature": "write_rpd", "phase": "success", "elapsed_ms": 1273, "backup_path": "L:\\BATTLESHIELD\\I-STOCK-INVENTORY\\I58763\\I58763\\_bak\\I58763.rpd.20260408_110152.bak"}
+{"ts_utc": "2026-04-08T15:03:10.411+00:00", "feature": "prepare_kits", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\I-STOCK-INVENTORY\\I58763\\I58763\\I58763.rpd", "part_count": 26}
+{"ts_utc": "2026-04-08T15:03:10.435+00:00", "feature": "prepare_kits", "phase": "progress", "done": 0, "total": 28, "status": "Preparing kits..."}
+{"ts_utc": "2026-04-08T15:03:11.028+00:00", "feature": "prepare_kits", "phase": "progress", "done": 28, "total": 28, "status": "Skipping invalid kit label"}
+{"ts_utc": "2026-04-08T15:03:14.115+00:00", "feature": "prepare_kits", "phase": "success", "elapsed_ms": 3701, "kit_count": 2}
+{"ts_utc": "2026-04-08T15:06:02.694+00:00", "feature": "prepare_kits", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\I-STOCK-INVENTORY\\I58763\\I58763\\I58763.rpd", "part_count": 26}
+{"ts_utc": "2026-04-08T15:06:02.712+00:00", "feature": "prepare_kits", "phase": "progress", "done": 0, "total": 28, "status": "Preparing kits..."}
+{"ts_utc": "2026-04-08T15:06:03.311+00:00", "feature": "prepare_kits", "phase": "progress", "done": 28, "total": 28, "status": "Skipping invalid kit label"}
+{"ts_utc": "2026-04-08T15:06:04.223+00:00", "feature": "prepare_kits", "phase": "success", "elapsed_ms": 1531, "kit_count": 2}
+{"ts_utc": "2026-04-08T15:07:21.439+00:00", "feature": "prepare_kits", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\I-STOCK-INVENTORY\\I58763\\I58763\\I58763.rpd", "part_count": 26}
+{"ts_utc": "2026-04-08T15:07:21.457+00:00", "feature": "prepare_kits", "phase": "progress", "done": 0, "total": 28, "status": "Preparing kits..."}
+{"ts_utc": "2026-04-08T15:07:22.069+00:00", "feature": "prepare_kits", "phase": "progress", "done": 28, "total": 28, "status": "Skipping invalid kit label"}
+{"ts_utc": "2026-04-08T15:07:22.873+00:00", "feature": "prepare_kits", "phase": "success", "elapsed_ms": 1431, "kit_count": 2}
+{"ts_utc": "2026-04-08T15:07:23.737+00:00", "feature": "build_packet", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\I-STOCK-INVENTORY\\I58763\\I58763\\I58763.rpd", "part_count": 26, "first_page_only": false, "page_cap": 0, "output_dir": "_out", "suppress_layer_0": true, "workers": "auto", "mode": "vector"}
+{"ts_utc": "2026-04-08T15:07:23.753+00:00", "feature": "packet_engine", "phase": "start", "out_pdf_path": "L:\\BATTLESHIELD\\I-STOCK-INVENTORY\\I58763\\I58763\\_out\\PrintPacket_QTY_20260408_110723.pdf", "total_parts": 26, "workers": 1, "dpi": 220, "jpeg_quality": 82, "suppress_layer_0": true}
+{"ts_utc": "2026-04-08T15:07:23.764+00:00", "feature": "build_packet", "phase": "progress", "done": 0, "total": 26, "status": "Starting packet build"}
+{"ts_utc": "2026-04-08T15:07:23.926+00:00", "feature": "packet_engine", "phase": "progress", "done": 1, "total": 26, "status": "P53881-1"}
+{"ts_utc": "2026-04-08T15:07:24.631+00:00", "feature": "build_packet", "phase": "progress", "done": 4, "total": 26, "status": "P58213-13"}
+{"ts_utc": "2026-04-08T15:07:24.787+00:00", "feature": "packet_engine", "phase": "progress", "done": 5, "total": 26, "status": "P58213-15"}
+{"ts_utc": "2026-04-08T15:07:25.436+00:00", "feature": "build_packet", "phase": "progress", "done": 9, "total": 26, "status": "BS-EPL-0005-10"}
+{"ts_utc": "2026-04-08T15:07:25.572+00:00", "feature": "packet_engine", "phase": "progress", "done": 10, "total": 26, "status": "P53881-15"}
+{"ts_utc": "2026-04-08T15:07:26.261+00:00", "feature": "build_packet", "phase": "progress", "done": 13, "total": 26, "status": "P58213-1"}
+{"ts_utc": "2026-04-08T15:07:26.492+00:00", "feature": "packet_engine", "phase": "progress", "done": 14, "total": 26, "status": "P58213-10"}
+{"ts_utc": "2026-04-08T15:07:27.051+00:00", "feature": "build_packet", "phase": "progress", "done": 16, "total": 26, "status": "P58213-12"}
+{"ts_utc": "2026-04-08T15:07:27.379+00:00", "feature": "packet_engine", "phase": "progress", "done": 18, "total": 26, "status": "P58213-17"}
+{"ts_utc": "2026-04-08T15:07:27.873+00:00", "feature": "build_packet", "phase": "progress", "done": 20, "total": 26, "status": "P58213-19"}
+{"ts_utc": "2026-04-08T15:07:28.228+00:00", "feature": "packet_engine", "phase": "progress", "done": 22, "total": 26, "status": "P58213-3"}
+{"ts_utc": "2026-04-08T15:07:28.696+00:00", "feature": "build_packet", "phase": "progress", "done": 24, "total": 26, "status": "P58213-7"}
+{"ts_utc": "2026-04-08T15:07:29.123+00:00", "feature": "build_packet", "phase": "progress", "done": 26, "total": 26, "status": "P58213-9"}
+{"ts_utc": "2026-04-08T15:07:29.145+00:00", "feature": "packet_engine", "phase": "progress", "done": 26, "total": 26, "status": "P58213-9"}
+{"ts_utc": "2026-04-08T15:07:29.165+00:00", "feature": "build_packet", "phase": "progress", "done": 26, "total": 26, "status": "Saving packet to temp file"}
+{"ts_utc": "2026-04-08T15:07:29.192+00:00", "feature": "build_packet", "phase": "progress", "done": 26, "total": 26, "status": "Copying packet file"}
+{"ts_utc": "2026-04-08T15:07:29.456+00:00", "feature": "build_packet", "phase": "progress", "done": 26, "total": 26, "status": "Packet complete"}
+{"ts_utc": "2026-04-08T15:07:29.477+00:00", "feature": "packet_engine", "phase": "success", "elapsed_ms": 5724, "pages": 26, "missing": 0, "out_size_bytes": 2146459, "avg_part_ms": 63, "max_part_ms": 137}
+{"ts_utc": "2026-04-08T15:07:29.511+00:00", "feature": "build_packet", "phase": "success", "elapsed_ms": 5773, "packet_path": "L:\\BATTLESHIELD\\I-STOCK-INVENTORY\\I58763\\I58763\\_out\\PrintPacket_QTY_20260408_110723.pdf", "pages": 26, "missing": 0}
+{"ts_utc": "2026-04-08T15:08:27.855+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\I-STOCK-INVENTORY\\I58763\\I58763\\I58763.rpd"}
+{"ts_utc": "2026-04-08T15:08:30.916+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 3060, "part_count": 26}
+{"ts_utc": "2026-04-08T15:08:42.446+00:00", "feature": "prepare_kits", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\I-STOCK-INVENTORY\\I58763\\I58763\\I58763.rpd", "part_count": 26}
+{"ts_utc": "2026-04-08T15:08:42.477+00:00", "feature": "prepare_kits", "phase": "progress", "done": 0, "total": 28, "status": "Preparing kits..."}
+{"ts_utc": "2026-04-08T15:08:43.050+00:00", "feature": "prepare_kits", "phase": "progress", "done": 28, "total": 28, "status": "Skipping invalid kit label"}
+{"ts_utc": "2026-04-08T15:08:43.832+00:00", "feature": "prepare_kits", "phase": "success", "elapsed_ms": 1385, "kit_count": 2}
+{"ts_utc": "2026-04-08T15:08:45.079+00:00", "feature": "build_packet", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\I-STOCK-INVENTORY\\I58763\\I58763\\I58763.rpd", "part_count": 26, "first_page_only": false, "page_cap": 0, "output_dir": "_out", "suppress_layer_0": true, "workers": "auto", "mode": "vector"}
+{"ts_utc": "2026-04-08T15:08:45.094+00:00", "feature": "packet_engine", "phase": "start", "out_pdf_path": "L:\\BATTLESHIELD\\I-STOCK-INVENTORY\\I58763\\I58763\\_out\\PrintPacket_QTY_20260408_110845.pdf", "total_parts": 26, "workers": 1, "dpi": 220, "jpeg_quality": 82, "suppress_layer_0": true}
+{"ts_utc": "2026-04-08T15:08:45.114+00:00", "feature": "build_packet", "phase": "progress", "done": 0, "total": 26, "status": "Starting packet build"}
+{"ts_utc": "2026-04-08T15:08:45.332+00:00", "feature": "packet_engine", "phase": "progress", "done": 1, "total": 26, "status": "P53881-1"}
+{"ts_utc": "2026-04-08T15:08:45.954+00:00", "feature": "build_packet", "phase": "progress", "done": 5, "total": 26, "status": "P58213-15"}
+{"ts_utc": "2026-04-08T15:08:46.181+00:00", "feature": "packet_engine", "phase": "progress", "done": 7, "total": 26, "status": "P58213-21"}
+{"ts_utc": "2026-04-08T15:08:46.652+00:00", "feature": "packet_engine", "phase": "skip", "reason": "user_canceled", "elapsed_ms": 1550, "pages": 9, "missing": 0, "processed_parts": 9}
+{"ts_utc": "2026-04-08T15:08:46.666+00:00", "feature": "build_packet", "phase": "skip", "reason": "user_canceled", "elapsed_ms": 1577}
+{"ts_utc": "2026-04-08T15:08:47.774+00:00", "feature": "write_rpd", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\I-STOCK-INVENTORY\\I58763\\I58763\\I58763.rpd", "part_count": 26}
+{"ts_utc": "2026-04-08T15:08:48.772+00:00", "feature": "write_rpd", "phase": "success", "elapsed_ms": 1001, "backup_path": "L:\\BATTLESHIELD\\I-STOCK-INVENTORY\\I58763\\I58763\\_bak\\I58763.rpd.20260408_110847.bak"}
+{"ts_utc": "2026-04-08T17:24:12.093+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F56139\\EXTERIOR PACK\\F56139 EXTERIOR PACK\\F56139 EXTERIOR PACK.rpd"}
+{"ts_utc": "2026-04-08T17:24:15.088+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 2998, "part_count": 11}
+{"ts_utc": "2026-04-08T17:34:45.644+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F56139\\INTERIOR PACK\\F56139 INTERIOR PACK\\F56139 INTERIOR PACK.rpd"}
+{"ts_utc": "2026-04-08T17:36:31.995+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 106362, "part_count": 11}
+{"ts_utc": "2026-04-08T18:11:40.394+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F56139\\INTERIOR PACK\\F56139 INTERIOR PACK\\F56139 INTERIOR PACK.rpd"}
+{"ts_utc": "2026-04-08T18:14:51.119+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 190725, "part_count": 11}
+{"ts_utc": "2026-04-08T18:39:53.031+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F56139\\INTERIOR PACK\\F56139 INTERIOR PACK\\F56139 INTERIOR PACK.rpd"}
+{"ts_utc": "2026-04-08T18:42:42.058+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 169032, "part_count": 11}
+{"ts_utc": "2026-04-08T18:43:02.175+00:00", "feature": "packet_engine", "phase": "start", "out_pdf_path": "c:\\Tools\\radan_kitter\\_tmp_packet_out.pdf", "total_parts": 1, "workers": 1, "dpi": 220, "jpeg_quality": 82, "suppress_layer_0": true}
+{"ts_utc": "2026-04-08T18:43:02.203+00:00", "feature": "packet_engine", "phase": "progress", "done": 1, "total": 1, "status": "fixture"}
+{"ts_utc": "2026-04-08T18:43:02.214+00:00", "feature": "packet_engine", "phase": "skip", "reason": "no_packet_pages", "elapsed_ms": 38, "pages": 0, "missing": 1, "processed_parts": 1}
+{"ts_utc": "2026-04-08T18:44:16.121+00:00", "feature": "packet_engine", "phase": "start", "out_pdf_path": "c:\\Tools\\radan_kitter\\_tmp_packet_out.pdf", "total_parts": 1, "workers": 1, "dpi": 220, "jpeg_quality": 82, "suppress_layer_0": true}
+{"ts_utc": "2026-04-08T18:44:16.144+00:00", "feature": "packet_engine", "phase": "start", "out_pdf_path": "c:\\Tools\\radan_kitter\\_tmp_packet_out_raster.pdf", "total_parts": 1, "workers": 1, "dpi": 220, "jpeg_quality": 82, "suppress_layer_0": true}
+{"ts_utc": "2026-04-08T18:44:16.148+00:00", "feature": "packet_engine", "phase": "progress", "done": 1, "total": 1, "status": "fixture"}
+{"ts_utc": "2026-04-08T18:44:16.167+00:00", "feature": "packet_engine", "phase": "success", "elapsed_ms": 45, "pages": 1, "missing": 0, "out_size_bytes": 32940, "avg_part_ms": 1, "max_part_ms": 1}
+{"ts_utc": "2026-04-08T18:44:16.222+00:00", "feature": "packet_engine", "phase": "progress", "done": 1, "total": 1, "status": "fixture"}
+{"ts_utc": "2026-04-08T18:44:16.242+00:00", "feature": "packet_engine", "phase": "success", "elapsed_ms": 98, "pages": 1, "missing": 0, "out_size_bytes": 26635, "avg_part_ms": 61, "max_part_ms": 61}
+{"ts_utc": "2026-04-08T18:47:33.152+00:00", "feature": "packet_engine", "phase": "start", "out_pdf_path": "C:\\Tools\\radan_kitter\\tests\\_tmp\\packet_raster_604d113cdea54cb7869c1b5b09b3b66a\\raster_packet.pdf", "total_parts": 1, "workers": 1, "dpi": 220, "jpeg_quality": 82, "suppress_layer_0": true}
+{"ts_utc": "2026-04-08T18:47:33.210+00:00", "feature": "packet_engine", "phase": "progress", "done": 1, "total": 1, "status": "fixture"}
+{"ts_utc": "2026-04-08T18:47:33.228+00:00", "feature": "packet_engine", "phase": "success", "elapsed_ms": 76, "pages": 1, "missing": 0, "out_size_bytes": 26620, "avg_part_ms": 52, "max_part_ms": 52}
+{"ts_utc": "2026-04-08T18:47:33.248+00:00", "feature": "packet_engine", "phase": "start", "out_pdf_path": "C:\\Tools\\radan_kitter\\tests\\_tmp\\packet_vector_08785c7413094fb4b5950f62086168a8\\vector_packet.pdf", "total_parts": 1, "workers": 1, "dpi": 220, "jpeg_quality": 82, "suppress_layer_0": true}
+{"ts_utc": "2026-04-08T18:47:33.280+00:00", "feature": "packet_engine", "phase": "progress", "done": 1, "total": 1, "status": "fixture"}
+{"ts_utc": "2026-04-08T18:47:33.297+00:00", "feature": "packet_engine", "phase": "success", "elapsed_ms": 49, "pages": 1, "missing": 0, "out_size_bytes": 32925, "avg_part_ms": 0, "max_part_ms": 0}
+{"ts_utc": "2026-04-08T19:21:47.874+00:00", "feature": "packet_engine", "phase": "start", "out_pdf_path": "C:\\Tools\\radan_kitter\\tests\\_tmp\\packet_bad_pdf_7cb7eb7e145c48f9b28bbfb37441f432\\out.pdf", "total_parts": 1, "workers": 1, "dpi": 220, "jpeg_quality": 82, "suppress_layer_0": true}
+{"ts_utc": "2026-04-08T19:21:47.878+00:00", "feature": "packet_engine", "phase": "progress", "done": 1, "total": 1, "status": "fixture (open failed: FileDataError: Failed to open file 'C:\\\\Tools\\\\radan_kitter\\\\tests\\\\_tmp\\\\packet_bad_pdf_7cb7eb7e145c48f9b28bbfb37441f432\\\\bad.pdf'.)"}
+{"ts_utc": "2026-04-08T19:21:47.889+00:00", "feature": "packet_engine", "phase": "skip", "reason": "no_packet_pages", "elapsed_ms": 15, "pages": 0, "missing": 1, "processed_parts": 1}
+{"ts_utc": "2026-04-08T19:21:47.900+00:00", "feature": "packet_engine", "phase": "start", "out_pdf_path": "C:\\Tools\\radan_kitter\\tests\\_tmp\\packet_raster_7b78353a72e2418f994652c865a15d5b\\raster_packet.pdf", "total_parts": 1, "workers": 1, "dpi": 220, "jpeg_quality": 82, "suppress_layer_0": true}
+{"ts_utc": "2026-04-08T19:21:47.974+00:00", "feature": "packet_engine", "phase": "progress", "done": 1, "total": 1, "status": "fixture"}
+{"ts_utc": "2026-04-08T19:21:47.997+00:00", "feature": "packet_engine", "phase": "success", "elapsed_ms": 96, "pages": 1, "missing": 0, "out_size_bytes": 26620, "avg_part_ms": 57, "max_part_ms": 57}
+{"ts_utc": "2026-04-08T19:21:48.019+00:00", "feature": "packet_engine", "phase": "start", "out_pdf_path": "C:\\Tools\\radan_kitter\\tests\\_tmp\\packet_vector_3137400b1489454fb1f86895ca3cfc05\\vector_packet.pdf", "total_parts": 1, "workers": 1, "dpi": 220, "jpeg_quality": 82, "suppress_layer_0": true}
+{"ts_utc": "2026-04-08T19:21:48.054+00:00", "feature": "packet_engine", "phase": "progress", "done": 1, "total": 1, "status": "fixture"}
+{"ts_utc": "2026-04-08T19:21:48.073+00:00", "feature": "packet_engine", "phase": "success", "elapsed_ms": 54, "pages": 1, "missing": 0, "out_size_bytes": 32925, "avg_part_ms": 1, "max_part_ms": 1}
+{"ts_utc": "2026-04-08T20:08:39.573+00:00", "feature": "packet_engine", "phase": "start", "out_pdf_path": "C:\\Tools\\radan_kitter\\tests\\_tmp\\packet_mixed_assets_7b5b7b05787845d7be5f7492ce5709df\\mixed_packet.pdf", "total_parts": 2, "workers": 1, "dpi": 220, "jpeg_quality": 82, "suppress_layer_0": true}
+{"ts_utc": "2026-04-08T20:08:39.602+00:00", "feature": "packet_engine", "phase": "progress", "done": 1, "total": 2, "status": "good"}
+{"ts_utc": "2026-04-08T20:08:39.620+00:00", "feature": "packet_engine", "phase": "progress", "done": 2, "total": 2, "status": "missing (missing PDF)"}
+{"ts_utc": "2026-04-08T20:08:39.642+00:00", "feature": "packet_engine", "phase": "success", "elapsed_ms": 70, "pages": 1, "missing": 1, "out_size_bytes": 32925, "avg_part_ms": 0, "max_part_ms": 0}
+{"ts_utc": "2026-04-08T20:08:39.662+00:00", "feature": "packet_engine", "phase": "start", "out_pdf_path": "C:\\Tools\\radan_kitter\\tests\\_tmp\\packet_bad_pdf_9783c5015b9c4dc4ab70e27df058e8ef\\out.pdf", "total_parts": 1, "workers": 1, "dpi": 220, "jpeg_quality": 82, "suppress_layer_0": true}
+{"ts_utc": "2026-04-08T20:08:39.677+00:00", "feature": "packet_engine", "phase": "progress", "done": 1, "total": 1, "status": "fixture (open failed: FileDataError: Failed to open file 'C:\\\\Tools\\\\radan_kitter\\\\tests\\\\_tmp\\\\packet_bad_pdf_9783c5015b9c4dc4ab70e27df058e8ef\\\\bad.pdf'.)"}
+{"ts_utc": "2026-04-08T20:08:39.682+00:00", "feature": "packet_engine", "phase": "skip", "reason": "no_packet_pages", "elapsed_ms": 24, "pages": 0, "missing": 1, "processed_parts": 1}
+{"ts_utc": "2026-04-08T20:08:39.701+00:00", "feature": "packet_engine", "phase": "start", "out_pdf_path": "C:\\Tools\\radan_kitter\\tests\\_tmp\\packet_order_e2e_08511ecc3b0f45fb8e4c451cee170ac0\\job\\_out\\PrintPacket_QTY_20260408_160839.pdf", "total_parts": 3, "workers": 1, "dpi": 220, "jpeg_quality": 82, "suppress_layer_0": true}
+{"ts_utc": "2026-04-08T20:08:39.719+00:00", "feature": "packet_engine", "phase": "progress", "done": 1, "total": 3, "status": "part1"}
+{"ts_utc": "2026-04-08T20:08:39.746+00:00", "feature": "packet_engine", "phase": "progress", "done": 3, "total": 3, "status": "part10"}
+{"ts_utc": "2026-04-08T20:08:39.768+00:00", "feature": "packet_engine", "phase": "success", "elapsed_ms": 69, "pages": 3, "missing": 0, "out_size_bytes": 96597, "avg_part_ms": 0, "max_part_ms": 0}
+{"ts_utc": "2026-04-08T20:08:39.800+00:00", "feature": "packet_engine", "phase": "start", "out_pdf_path": "C:\\Tools\\radan_kitter\\tests\\_tmp\\packet_raster_6b277e156f7e412cb8a951a7dde8e4ff\\raster_packet.pdf", "total_parts": 1, "workers": 1, "dpi": 220, "jpeg_quality": 82, "suppress_layer_0": true}
+{"ts_utc": "2026-04-08T20:08:39.871+00:00", "feature": "packet_engine", "phase": "progress", "done": 1, "total": 1, "status": "fixture"}
+{"ts_utc": "2026-04-08T20:08:39.889+00:00", "feature": "packet_engine", "phase": "success", "elapsed_ms": 91, "pages": 1, "missing": 0, "out_size_bytes": 26620, "avg_part_ms": 56, "max_part_ms": 56}
+{"ts_utc": "2026-04-08T20:08:39.912+00:00", "feature": "packet_engine", "phase": "start", "out_pdf_path": "C:\\Tools\\radan_kitter\\tests\\_tmp\\packet_vector_f0bbe506304548e2908dc8b1357a50ce\\vector_packet.pdf", "total_parts": 1, "workers": 1, "dpi": 220, "jpeg_quality": 82, "suppress_layer_0": true}
+{"ts_utc": "2026-04-08T20:08:39.936+00:00", "feature": "packet_engine", "phase": "progress", "done": 1, "total": 1, "status": "fixture"}
+{"ts_utc": "2026-04-08T20:08:39.965+00:00", "feature": "packet_engine", "phase": "success", "elapsed_ms": 52, "pages": 1, "missing": 0, "out_size_bytes": 32925, "avg_part_ms": 0, "max_part_ms": 0}
+{"ts_utc": "2026-04-08T20:08:39.987+00:00", "feature": "packet_engine", "phase": "start", "out_pdf_path": "C:\\Tools\\radan_kitter\\tests\\_tmp\\packet_layer_zero_a69e854486604785941dd0ba00455fd3\\layer_zero_packet.pdf", "total_parts": 1, "workers": 1, "dpi": 220, "jpeg_quality": 82, "suppress_layer_0": true}
+{"ts_utc": "2026-04-08T20:08:40.013+00:00", "feature": "packet_engine", "phase": "progress", "done": 1, "total": 1, "status": "layer-zero"}
+{"ts_utc": "2026-04-08T20:08:40.033+00:00", "feature": "packet_engine", "phase": "success", "elapsed_ms": 44, "pages": 1, "missing": 0, "out_size_bytes": 32561, "avg_part_ms": 0, "max_part_ms": 0}
+{"ts_utc": "2026-04-08T20:16:42.455+00:00", "feature": "packet_engine", "phase": "start", "out_pdf_path": "C:\\Tools\\radan_kitter\\tests\\_tmp\\packet_mixed_assets_fbab203ba9a74d95b0436560cf6f0001\\mixed_packet.pdf", "total_parts": 2, "workers": 1, "dpi": 220, "jpeg_quality": 82, "suppress_layer_0": true}
+{"ts_utc": "2026-04-08T20:16:42.494+00:00", "feature": "packet_engine", "phase": "progress", "done": 1, "total": 2, "status": "good"}
+{"ts_utc": "2026-04-08T20:16:42.507+00:00", "feature": "packet_engine", "phase": "progress", "done": 2, "total": 2, "status": "missing (missing PDF)"}
+{"ts_utc": "2026-04-08T20:16:42.610+00:00", "feature": "packet_engine", "phase": "success", "elapsed_ms": 153, "pages": 1, "missing": 1, "out_size_bytes": 32925, "avg_part_ms": 0, "max_part_ms": 1}
+{"ts_utc": "2026-04-08T20:16:42.636+00:00", "feature": "packet_engine", "phase": "start", "out_pdf_path": "C:\\Tools\\radan_kitter\\tests\\_tmp\\packet_bad_pdf_14a6796d778b404b972bfc14ad9b778f\\out.pdf", "total_parts": 1, "workers": 1, "dpi": 220, "jpeg_quality": 82, "suppress_layer_0": true}
+{"ts_utc": "2026-04-08T20:16:42.659+00:00", "feature": "packet_engine", "phase": "progress", "done": 1, "total": 1, "status": "fixture (open failed: FileDataError: Failed to open file 'C:\\\\Tools\\\\radan_kitter\\\\tests\\\\_tmp\\\\packet_bad_pdf_14a6796d778b404b972bfc14ad9b778f\\\\bad.pdf'.)"}
+{"ts_utc": "2026-04-08T20:16:42.673+00:00", "feature": "packet_engine", "phase": "skip", "reason": "no_packet_pages", "elapsed_ms": 36, "pages": 0, "missing": 1, "processed_parts": 1}
+{"ts_utc": "2026-04-08T20:16:42.689+00:00", "feature": "packet_engine", "phase": "start", "out_pdf_path": "C:\\Tools\\radan_kitter\\tests\\_tmp\\packet_order_e2e_f5552611f0094a6b9d1cc1a90c5dad80\\job\\_out\\PrintPacket_QTY_20260408_161642.pdf", "total_parts": 3, "workers": 1, "dpi": 220, "jpeg_quality": 82, "suppress_layer_0": true}
+{"ts_utc": "2026-04-08T20:16:42.714+00:00", "feature": "packet_engine", "phase": "progress", "done": 1, "total": 3, "status": "part1"}
+{"ts_utc": "2026-04-08T20:16:42.748+00:00", "feature": "packet_engine", "phase": "progress", "done": 3, "total": 3, "status": "part10"}
+{"ts_utc": "2026-04-08T20:16:42.774+00:00", "feature": "packet_engine", "phase": "success", "elapsed_ms": 83, "pages": 3, "missing": 0, "out_size_bytes": 96597, "avg_part_ms": 0, "max_part_ms": 1}
+{"ts_utc": "2026-04-08T20:16:42.812+00:00", "feature": "packet_engine", "phase": "start", "out_pdf_path": "C:\\Tools\\radan_kitter\\tests\\_tmp\\packet_raster_9e5b48fb7df5441b939f57f715521828\\raster_packet.pdf", "total_parts": 1, "workers": 1, "dpi": 220, "jpeg_quality": 82, "suppress_layer_0": true}
+{"ts_utc": "2026-04-08T20:16:42.920+00:00", "feature": "packet_engine", "phase": "progress", "done": 1, "total": 1, "status": "fixture"}
+{"ts_utc": "2026-04-08T20:16:42.945+00:00", "feature": "packet_engine", "phase": "success", "elapsed_ms": 133, "pages": 1, "missing": 0, "out_size_bytes": 26620, "avg_part_ms": 86, "max_part_ms": 86}
+{"ts_utc": "2026-04-08T20:16:42.975+00:00", "feature": "packet_engine", "phase": "start", "out_pdf_path": "C:\\Tools\\radan_kitter\\tests\\_tmp\\packet_vector_5189ffca06d04c79bfc7b9316bd0d24f\\vector_packet.pdf", "total_parts": 1, "workers": 1, "dpi": 220, "jpeg_quality": 82, "suppress_layer_0": true}
+{"ts_utc": "2026-04-08T20:16:43.016+00:00", "feature": "packet_engine", "phase": "progress", "done": 1, "total": 1, "status": "fixture"}
+{"ts_utc": "2026-04-08T20:16:43.043+00:00", "feature": "packet_engine", "phase": "success", "elapsed_ms": 67, "pages": 1, "missing": 0, "out_size_bytes": 32925, "avg_part_ms": 1, "max_part_ms": 1}
+{"ts_utc": "2026-04-08T20:16:43.074+00:00", "feature": "packet_engine", "phase": "start", "out_pdf_path": "C:\\Tools\\radan_kitter\\tests\\_tmp\\packet_layer_zero_970870b15d0c415fb7fb33701dbaf6c1\\layer_zero_packet.pdf", "total_parts": 1, "workers": 1, "dpi": 220, "jpeg_quality": 82, "suppress_layer_0": true}
+{"ts_utc": "2026-04-08T20:16:43.110+00:00", "feature": "packet_engine", "phase": "progress", "done": 1, "total": 1, "status": "layer-zero"}
+{"ts_utc": "2026-04-08T20:16:43.140+00:00", "feature": "packet_engine", "phase": "success", "elapsed_ms": 65, "pages": 1, "missing": 0, "out_size_bytes": 32561, "avg_part_ms": 1, "max_part_ms": 1}
+{"ts_utc": "2026-04-08T20:17:12.527+00:00", "feature": "packet_engine", "phase": "start", "out_pdf_path": "c:\\Tools\\radan_kitter\\_smoke_aefa7d2e0a1644d198e2f8fb12aa3992\\job\\_out\\PrintPacket_QTY_20260408_161712.pdf", "total_parts": 3, "workers": 1, "dpi": 220, "jpeg_quality": 82, "suppress_layer_0": true}
+{"ts_utc": "2026-04-08T20:17:12.570+00:00", "feature": "packet_engine", "phase": "progress", "done": 1, "total": 3, "status": "part1"}
+{"ts_utc": "2026-04-08T20:17:12.653+00:00", "feature": "packet_engine", "phase": "progress", "done": 3, "total": 3, "status": "part10"}
+{"ts_utc": "2026-04-08T20:17:12.690+00:00", "feature": "packet_engine", "phase": "success", "elapsed_ms": 161, "pages": 3, "missing": 0, "out_size_bytes": 96597, "avg_part_ms": 1, "max_part_ms": 2}
+{"ts_utc": "2026-04-08T20:17:12.736+00:00", "feature": "packet_engine", "phase": "start", "out_pdf_path": "c:\\Tools\\radan_kitter\\_smoke_aefa7d2e0a1644d198e2f8fb12aa3992\\layer_zero.pdf", "total_parts": 1, "workers": 1, "dpi": 220, "jpeg_quality": 82, "suppress_layer_0": true}
+{"ts_utc": "2026-04-08T20:17:12.768+00:00", "feature": "packet_engine", "phase": "progress", "done": 1, "total": 1, "status": "layer-zero"}
+{"ts_utc": "2026-04-08T20:17:12.794+00:00", "feature": "packet_engine", "phase": "success", "elapsed_ms": 57, "pages": 1, "missing": 0, "out_size_bytes": 32561, "avg_part_ms": 1, "max_part_ms": 1}
