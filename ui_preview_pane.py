@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from typing import Callable, Dict, List, Optional, Sequence
+from typing import Callable, List, Optional, Sequence
 
 from PySide6.QtWidgets import QTableView
 
@@ -20,7 +20,6 @@ class PreviewCoordinator:
         numpad_legend: NumpadLegendWidget,
         resolve_asset_fn: Callable[[str, str], Optional[str]],
         canon_kits: Sequence[str],
-        kit_abbr: Dict[str, str],
         sanitize_kit_name_fn: Callable[[str], str],
     ) -> None:
         self._table = table
@@ -28,7 +27,6 @@ class PreviewCoordinator:
         self._numpad_legend = numpad_legend
         self._resolve_asset = resolve_asset_fn
         self._canon_kits = list(canon_kits)
-        self._kit_abbr = dict(kit_abbr)
         self._sanitize_kit_name = sanitize_kit_name_fn
 
     def update_numpad_legend(self, model: Optional[PartsModel], row: Optional[int]) -> None:

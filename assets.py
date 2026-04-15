@@ -28,6 +28,7 @@ _BASE_W_RELEASE_ROOT = DEFAULT_W_RELEASE_ROOT
 _BASE_ENG_RELEASE_MAP: List[Tuple[str, str]] = list(DEFAULT_ENG_RELEASE_MAP)
 _ASSET_ROOT_SOURCE = "default"
 _TREE_INDEX_CACHE: Dict[Tuple[str, str], Tuple[Dict[str, str], Dict[str, List[str]]]] = {}
+_RESOLVE_RESULT_CACHE: Dict[Tuple[str, str, str], str] = {}
 ASSET_INDEX_TRACE_MIN_MS = 150
 ASSET_RESOLVE_TRACE_MIN_MS = 75
 
@@ -39,6 +40,7 @@ def _normalize_path(path: object) -> str:
 
 def _clear_search_cache() -> None:
     _TREE_INDEX_CACHE.clear()
+    _RESOLVE_RESULT_CACHE.clear()
 
 
 def _normalize_release_map(pairs: List[Tuple[str, str]]) -> List[Tuple[str, str]]:
@@ -254,11 +256,20 @@ def _normalize_part_stem(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", "", str(text or "").lower())
 
 
-def _match_immediate_dir(dir_path: str, base: str, ext: str) -> Optional[str]:
+def _match_immediate_dir(
+    dir_path: str,
+    base: str,
+    ext: str,
+    *,
+    allow_fuzzy_listing: bool = True,
+) -> Optional[str]:
     for fname in _candidate_filenames(base, ext):
         cand = os.path.join(dir_path, fname)
         if os.path.exists(cand):
             return cand
+
+    if not allow_fuzzy_listing:
+        return None
 
     try:
         names = os.listdir(dir_path)
@@ -295,8 +306,6 @@ def _candidate_asset_dirs(sym_path: str) -> List[str]:
         out.append(os.path.join(mapped_dir, "Parts"))
 
     if root:
-        out.append(root)
-        out.append(os.path.join(root, "Parts"))
         if fnum:
             out.append(os.path.join(root, fnum))
             out.append(os.path.join(root, fnum, "Parts"))
@@ -309,6 +318,10 @@ def _candidate_asset_dirs(sym_path: str) -> List[str]:
     if sym_dir:
         out.append(sym_dir)
         out.append(os.path.join(sym_dir, "Parts"))
+
+    if root:
+        out.append(root)
+        out.append(os.path.join(root, "Parts"))
 
     return _unique_norm_paths(out)
 
@@ -336,15 +349,59 @@ def _candidate_search_roots(sym_path: str) -> List[str]:
 
     if root:
         override_active = bool(state.get("override_active", False))
-        if override_active or _root_contains_fnum(root, fnum) or not fnum:
+        if fnum and _root_contains_fnum(root, fnum):
             out.append(root)
-        if fnum and not _root_contains_fnum(root, fnum):
+        elif fnum:
             out.append(os.path.join(root, fnum))
+        elif override_active:
+            out.append(root)
 
     if sym_dir:
         out.append(sym_dir)
 
     return _unique_norm_paths(out)
+
+
+def _resolve_cache_key(sym_path: str, ext: str, search_mode: str) -> Tuple[str, str, str, str]:
+    return (
+        _normalize_path(sym_path).lower(),
+        str(ext or "").strip().lower(),
+        _normalize_path(W_RELEASE_ROOT).lower(),
+        str(search_mode or "full").strip().lower(),
+    )
+
+
+def _allow_fuzzy_dir_scan(dir_path: str, sym_path: str) -> bool:
+    dir_norm = _normalize_path(dir_path)
+    if not dir_norm:
+        return False
+
+    sym_norm = _normalize_path(sym_path)
+    sym_dir = os.path.dirname(sym_norm)
+    fnum, _tail = _extract_fnum_tail(sym_dir)
+    root = _normalize_path(W_RELEASE_ROOT)
+
+    local_dirs = _unique_norm_paths([sym_dir, os.path.join(sym_dir, "Parts")])
+    if dir_norm.lower() in {p.lower() for p in local_dirs}:
+        return True
+
+    mapped_dirs: List[str] = []
+    for mapped_dir in map_to_eng_release(sym_dir):
+        mapped_dirs.append(mapped_dir)
+        mapped_dirs.append(os.path.join(mapped_dir, "Parts"))
+    if dir_norm.lower() in {p.lower() for p in _unique_norm_paths(mapped_dirs)}:
+        return True
+
+    if fnum and _root_contains_fnum(dir_norm, fnum):
+        return True
+
+    if root and dir_norm.lower() in {
+        root.lower(),
+        os.path.join(root, "Parts").lower(),
+    }:
+        return False
+
+    return False
 
 
 def _index_tree(root_dir: str, ext: str) -> Tuple[Dict[str, str], Dict[str, List[str]]]:
@@ -440,7 +497,13 @@ def _match_subtree(root_dir: str, base: str, ext: str, preferred_dirs: List[str]
     return _pick_best_match(matches, preferred_dirs=preferred_dirs)
 
 
-def resolve_asset(sym_path: str, ext: str) -> Optional[str]:
+def _resolve_asset(
+    sym_path: str,
+    ext: str,
+    *,
+    allow_subtree_search: bool,
+    search_mode: str,
+) -> Optional[str]:
     t0 = time.perf_counter()
     sp = _normalize_path(sym_path)
     if not sp:
@@ -450,13 +513,24 @@ def resolve_asset(sym_path: str, ext: str) -> Optional[str]:
     if not ext.startswith("."):
         ext = "." + ext
 
+    cache_key = _resolve_cache_key(sp, ext, search_mode)
+    cached = _RESOLVE_RESULT_CACHE.get(cache_key)
+    if cached is not None:
+        return cached or None
+
     base = os.path.splitext(os.path.basename(sp))[0]
     candidate_dirs = _candidate_asset_dirs(sp)
     search_roots = _candidate_search_roots(sp)
 
     for dir_path in candidate_dirs:
-        hit = _match_immediate_dir(dir_path, base, ext)
+        hit = _match_immediate_dir(
+            dir_path,
+            base,
+            ext,
+            allow_fuzzy_listing=_allow_fuzzy_dir_scan(dir_path, sp),
+        )
         if hit:
+            _RESOLVE_RESULT_CACHE[cache_key] = hit
             elapsed_ms = int((time.perf_counter() - t0) * 1000.0)
             if elapsed_ms >= ASSET_RESOLVE_TRACE_MIN_MS:
                 rt.event(
@@ -469,29 +543,34 @@ def resolve_asset(sym_path: str, ext: str) -> Optional[str]:
                     strategy="candidate_dir",
                     candidate_dir_count=len(candidate_dirs),
                     search_root_count=len(search_roots),
+                    search_mode=search_mode,
                     hit_path=hit,
                 )
             return hit
 
-    for root_dir in search_roots:
-        hit = _match_subtree(root_dir, base, ext, preferred_dirs=candidate_dirs)
-        if hit:
-            elapsed_ms = int((time.perf_counter() - t0) * 1000.0)
-            if elapsed_ms >= ASSET_RESOLVE_TRACE_MIN_MS:
-                rt.event(
-                    "asset_lookup",
-                    "resolve",
-                    elapsed_ms=elapsed_ms,
-                    sym_path=sp,
-                    ext=ext,
-                    result="hit",
-                    strategy="search_root",
-                    candidate_dir_count=len(candidate_dirs),
-                    search_root_count=len(search_roots),
-                    hit_path=hit,
-                )
-            return hit
+    if allow_subtree_search:
+        for root_dir in search_roots:
+            hit = _match_subtree(root_dir, base, ext, preferred_dirs=candidate_dirs)
+            if hit:
+                _RESOLVE_RESULT_CACHE[cache_key] = hit
+                elapsed_ms = int((time.perf_counter() - t0) * 1000.0)
+                if elapsed_ms >= ASSET_RESOLVE_TRACE_MIN_MS:
+                    rt.event(
+                        "asset_lookup",
+                        "resolve",
+                        elapsed_ms=elapsed_ms,
+                        sym_path=sp,
+                        ext=ext,
+                        result="hit",
+                        strategy="search_root",
+                        candidate_dir_count=len(candidate_dirs),
+                        search_root_count=len(search_roots),
+                        search_mode=search_mode,
+                        hit_path=hit,
+                    )
+                return hit
 
+    _RESOLVE_RESULT_CACHE[cache_key] = ""
     rt.event(
         "asset_lookup",
         "resolve",
@@ -502,6 +581,25 @@ def resolve_asset(sym_path: str, ext: str) -> Optional[str]:
         strategy="miss",
         candidate_dir_count=len(candidate_dirs),
         search_root_count=len(search_roots),
+        search_mode=search_mode,
         hit_path="",
     )
     return None
+
+
+def resolve_asset(sym_path: str, ext: str) -> Optional[str]:
+    return _resolve_asset(
+        sym_path,
+        ext,
+        allow_subtree_search=True,
+        search_mode="full",
+    )
+
+
+def resolve_asset_fast(sym_path: str, ext: str) -> Optional[str]:
+    return _resolve_asset(
+        sym_path,
+        ext,
+        allow_subtree_search=False,
+        search_mode="fast",
+    )

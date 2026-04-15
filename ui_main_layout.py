@@ -175,8 +175,6 @@ def build_main_layout(
     on_write_rpd: Callable[[], None],
     on_build_packet: Callable[[], None],
     on_ml_log: Callable[[], None],
-    on_ml_plot: Callable[[], None],
-    on_ml_recompute: Callable[[], None],
     on_rf_suggest: Callable[[], None],
     on_clear_selected: Callable[[], None],
     on_numpad_legend_action: Callable[[str], None],
@@ -280,10 +278,6 @@ def build_main_layout(
     packet_btn.clicked.connect(on_build_packet)
     ml_log_btn = QPushButton("ML Log")
     ml_log_btn.clicked.connect(on_ml_log)
-    ml_plot_btn = QPushButton("ML Plot")
-    ml_plot_btn.clicked.connect(on_ml_plot)
-    ml_recompute_btn = QPushButton("ML Recompute All")
-    ml_recompute_btn.clicked.connect(on_ml_recompute)
     rf_suggest_btn = QPushButton("RF Suggest")
     rf_suggest_btn.clicked.connect(on_rf_suggest)
     clear_btn = QPushButton("Clear kits (selected)")
@@ -295,8 +289,6 @@ def build_main_layout(
         write_rpd_btn,
         packet_btn,
         ml_log_btn,
-        ml_plot_btn,
-        ml_recompute_btn,
         rf_suggest_btn,
         clear_btn,
     ]
@@ -339,8 +331,6 @@ def build_main_layout(
     top.addWidget(packet_btn)
     top.addWidget(prep_kits_btn)
     top.addWidget(ml_log_btn)
-    top.addWidget(ml_plot_btn)
-    top.addWidget(ml_recompute_btn)
     top.addWidget(rf_suggest_btn)
     top.addWidget(clear_btn)
     top.addWidget(logo_banner, 1, Qt.AlignRight | Qt.AlignVCenter)

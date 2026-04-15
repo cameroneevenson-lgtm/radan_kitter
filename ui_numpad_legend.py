@@ -59,7 +59,7 @@ class NumpadLegendWidget(QWidget):
         btn.setCursor(Qt.PointingHandCursor)
         btn.setAutoDefault(False)
         btn.setDefault(False)
-        btn.setMinimumHeight(48)
+        btn.setMinimumHeight(56)
         btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         btn.clicked.connect(lambda _checked=False, target=href: self._on_action(target))
         return btn
@@ -73,7 +73,7 @@ class NumpadLegendWidget(QWidget):
     def _make_placeholder_button(self, text: str) -> QPushButton:
         btn = QPushButton(text, self)
         btn.setEnabled(False)
-        btn.setMinimumHeight(48)
+        btn.setMinimumHeight(56)
         btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         btn.setStyleSheet(self._op_button_style(enabled=False))
         return btn
@@ -140,6 +140,7 @@ class NumpadLegendWidget(QWidget):
             btn = self._kit_buttons[kit_idx]
             label = self._canon_kits[kit_idx] if 0 <= kit_idx < len(self._canon_kits) else ""
             btn.setText(f"{key}\n{self._format_kit_label(label)}")
+            btn.setToolTip(label)
             btn.setStyleSheet(
                 self._kit_button_style(
                     selected=(kit_idx == selected_idx),

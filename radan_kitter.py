@@ -58,7 +58,6 @@ from config import (
     HOT_RELOAD_REQUEST_PATH,
     HOT_RELOAD_RESPONSE_PATH,
     KITS_DIRNAME,
-    KIT_ABBR,
     KIT_TO_PRIORITY,
     OUT_DIRNAME,
     RF_FEATURES,
@@ -103,8 +102,6 @@ class Main(QMainWindow):
             on_write_rpd=self.write_rpd_only,
             on_build_packet=self.build_packet_only,
             on_ml_log=self.run_ml_log,
-            on_ml_plot=self.run_ml_signal_plot,
-            on_ml_recompute=self.run_ml_recompute_all,
             on_rf_suggest=self.run_rf_suggestions,
             on_clear_selected=self.clear_selected_kits,
             on_numpad_legend_action=self._on_numpad_legend_action,
@@ -116,9 +113,8 @@ class Main(QMainWindow):
             table=self.table,
             pdf_view=self.pdf_view,
             numpad_legend=self.numpad_legend,
-            resolve_asset_fn=assets.resolve_asset,
+            resolve_asset_fn=assets.resolve_asset_fast,
             canon_kits=CANON_KITS,
-            kit_abbr=KIT_ABBR,
             sanitize_kit_name_fn=sanitize_kit_name,
         )
         self._update_numpad_legend(None)
@@ -268,6 +264,7 @@ class Main(QMainWindow):
 
     def _refresh_asset_root_indicator(self) -> None:
         lbl = getattr(self, "asset_root_label", None)
+        choose_btn = getattr(self, "asset_root_button", None)
         reset_btn = getattr(self, "asset_root_reset_button", None)
         if lbl is None:
             return
@@ -276,26 +273,52 @@ class Main(QMainWindow):
         root = os.path.normpath(str(state.get("root") or "").strip())
         source = str(state.get("source") or "default").strip().lower() or "default"
         override_active = bool(state.get("override_active", False))
+        root_hint = root or "(none)"
+        source_hint = "default W: root"
+        if source == "env":
+            source_hint = "env override root"
+        elif source != "default":
+            source_hint = "saved override root"
+        lookup_tip = (
+            f"Current root: {root_hint}\n"
+            f"Source: {source_hint}\n\n"
+            "Lookup order:\n"
+            "1. Matching release folders under the current root\n"
+            "2. Same folder as the .sym file\n"
+            "3. The .sym file's Parts subfolder\n\n"
+            "Preview, packet, RF suggest, and ML log all use this fast lookup.\n"
+            "No recursive crawl is done after these checks."
+        )
         if not root:
             text = "PDF/DXF Root: (none)"
-            tip = ""
+            tip = lookup_tip
         elif source == "default":
             text = f"PDF/DXF Root: {root} (default)"
-            tip = root
+            tip = lookup_tip
         elif source == "env":
             text = f"PDF/DXF Root: {root} (env override)"
-            tip = f"{root}\nSet by RADAN_KITTER_ASSET_ROOT"
+            tip = lookup_tip + "\n\nSet by RADAN_KITTER_ASSET_ROOT."
         else:
             text = f"PDF/DXF Root: {root} (saved override)"
-            tip = root
+            tip = lookup_tip
         try:
             lbl.setText(text)
             lbl.setToolTip(tip)
         except Exception:
             pass
+        if choose_btn is not None:
+            try:
+                choose_btn.setToolTip(
+                    tip + "\n\nChoose a different root if the PDFs or DXFs live somewhere else."
+                )
+            except Exception:
+                pass
         if reset_btn is not None:
             try:
                 reset_btn.setEnabled(override_active)
+                reset_btn.setToolTip(
+                    tip + "\n\nReset back to the default W: release root."
+                )
             except Exception:
                 pass
 
@@ -381,7 +404,7 @@ class Main(QMainWindow):
             parts=self.parts,
             rpd_path=self.rpd_path,
             out_dirname=OUT_DIRNAME,
-            resolve_asset_fn=assets.resolve_asset,
+            resolve_asset_fn=assets.resolve_asset_fast,
             packet_mode="vector",
         )
 
@@ -397,7 +420,7 @@ class Main(QMainWindow):
             meta_path=RF_META_PATH,
             feature_cols=RF_FEATURES,
             allowed_labels=CANON_KITS + [BALANCE_KIT],
-            resolve_asset_fn=assets.resolve_asset,
+            resolve_asset_fn=assets.resolve_asset_fast,
             refresh_ui_cb=lambda: self._update_numpad_legend(self.table.currentIndex().row()),
         )
 
@@ -407,7 +430,7 @@ class Main(QMainWindow):
             tree=self.tree,
             parts=self.parts,
             rpd_path=self.rpd_path,
-            resolve_asset_fn=assets.resolve_asset,
+            resolve_asset_fn=assets.resolve_asset_fast,
             sanitize_kit_name_fn=sanitize_kit_name,
             balance_kit=BALANCE_KIT,
             run_dir=GLOBAL_RUNS_DIR,
