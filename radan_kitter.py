@@ -77,7 +77,7 @@ class Main(QMainWindow):
     - Crisp single-page PDF preview (cached)
     - Kit assignment via table edit + numpad 3x3 mapping
     - Clear kits (selected) sets priority to 5 (per request)
-    - Commit writes kit+priority to ORIGINAL RPD (Option A) + generates kit .sym from donor + creates print packet
+    - Commit writes kit+priority to ORIGINAL RPD (Option A) + generates kit .sym from donor
     """
 
     def __init__(self):

@@ -274,8 +274,6 @@ def build_main_layout(
     prep_kits_btn.clicked.connect(on_prepare_kits)
     write_rpd_btn = QPushButton("Write RPD")
     write_rpd_btn.clicked.connect(on_write_rpd)
-    packet_btn = QPushButton("Build Packet")
-    packet_btn.clicked.connect(on_build_packet)
     ml_log_btn = QPushButton("ML Log")
     ml_log_btn.clicked.connect(on_ml_log)
     rf_suggest_btn = QPushButton("RF Suggest")
@@ -287,12 +285,11 @@ def build_main_layout(
         open_btn,
         prep_kits_btn,
         write_rpd_btn,
-        packet_btn,
         ml_log_btn,
         rf_suggest_btn,
         clear_btn,
     ]
-    primary_buttons = {open_btn, write_rpd_btn, packet_btn}
+    primary_buttons = {open_btn, write_rpd_btn}
     for b in action_buttons:
         b.setMinimumHeight(34)
         b.setMaximumHeight(34)
@@ -328,7 +325,6 @@ def build_main_layout(
     top.setSpacing(6)
     top.addWidget(open_btn)
     top.addWidget(write_rpd_btn)
-    top.addWidget(packet_btn)
     top.addWidget(prep_kits_btn)
     top.addWidget(ml_log_btn)
     top.addWidget(rf_suggest_btn)
