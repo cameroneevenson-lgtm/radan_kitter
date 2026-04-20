@@ -43,3 +43,12 @@ Behavior:
 - Generated kit `.sym` files can require opening and saving once in RADAN to finalize displayed geometry and thumbnail preview.
   - Kit membership and references are written correctly by the generator.
   - This is treated as an expected post-generation RADAN refresh step.
+
+## Headless RADAN Refresh Foundation
+
+This repo now includes `automation_bridge.py`, which can call the sibling `c:\Tools\radan_automation\refresh_document_headless.py` helper to open and save a document in a hidden RADAN automation instance.
+
+Current scope:
+- Uses typed/headless RADAN automation only; no keyboard UI automation.
+- Supports future post-generation kit refresh work.
+- Not wired into the main UI flow yet.

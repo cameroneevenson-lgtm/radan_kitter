@@ -55,6 +55,7 @@ def prepare_kits(
     kits_dirname: str,
     kit_to_priority: Dict[str, str],
     progress_cb: Optional[Callable[[int, int, str], None]] = None,
+    refresh_kit_fn: Optional[Callable[[str], None]] = None,
 ) -> int:
     def _emit(done: int, total: int, status: str) -> None:
         if progress_cb is None:
@@ -101,7 +102,8 @@ def prepare_kits(
         is_valid_kit_name=is_valid_kit_name,
     )
 
-    total_steps = max(1, len(part_sym_rows) + len(kits_to_parts))
+    refresh_steps = len(kits_to_parts) if refresh_kit_fn is not None else 0
+    total_steps = max(1, len(part_sym_rows) + len(kits_to_parts) + refresh_steps)
     done_steps = 0
     _emit(done_steps, total_steps, "Preparing kits...")
 
@@ -114,6 +116,7 @@ def prepare_kits(
 
     for kit_label, plist in kits_to_parts.items():
         status = "Skipping invalid kit label"
+        out_path = ""
         clean_kit = sanitize_kit_name(kit_label)
         if clean_kit and is_valid_kit_name(clean_kit):
             member_syms = [force_l_drive_path(p.sym) for p in plist]
@@ -127,6 +130,10 @@ def prepare_kits(
             status = f"Building kit: {clean_kit}"
         done_steps += 1
         _emit(done_steps, total_steps, status)
+        if refresh_kit_fn is not None and out_path:
+            refresh_kit_fn(out_path)
+            done_steps += 1
+            _emit(done_steps, total_steps, f"Refreshing kit in RADAN: {clean_kit}")
     return len(kits_to_parts)
 
 
