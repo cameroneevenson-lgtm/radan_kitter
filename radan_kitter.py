@@ -78,6 +78,7 @@ class Main(QMainWindow):
     - Kit assignment via table edit + numpad 3x3 mapping
     - Clear kits (selected) sets priority to 5 (per request)
     - Commit writes kit+priority to ORIGINAL RPD (Option A) + generates kit .sym from donor
+    - Print Packet builds the QTY print packet from the loaded RPD
     """
 
     def __init__(self):

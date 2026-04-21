@@ -230,8 +230,8 @@ def run_build_packet(
         return False
     setattr(parent, "_rk_build_packet_running", True)
 
-    progress = QProgressDialog("Building packet...", "Cancel", 0, max(1, len(build_parts)), parent)
-    progress.setWindowTitle("Build Packet")
+    progress = QProgressDialog("Building print packet...", "Cancel", 0, max(1, len(build_parts)), parent)
+    progress.setWindowTitle("Print Packet")
     progress.setWindowModality(Qt.WindowModal)
     progress.setMinimumDuration(0)
     progress.setAutoClose(True)
@@ -239,7 +239,7 @@ def run_build_packet(
     started_at = time.perf_counter()
     last_done = 0
     last_total = max(1, len(build_parts))
-    last_status = "Starting packet build"
+    last_status = "Starting print packet build"
 
     def _fmt_elapsed(seconds: float) -> str:
         sec = max(0, int(seconds))
@@ -255,7 +255,7 @@ def run_build_packet(
         progress.setValue(max(0, int(last_done)))
         elapsed_txt = _fmt_elapsed(time.perf_counter() - started_at)
         progress.setLabelText(
-            f"Building packet... {int(last_done)}/{int(last_total)} | {elapsed_txt} | Mode: {mode}\n{last_status}"
+            f"Building print packet... {int(last_done)}/{int(last_total)} | {elapsed_txt} | Mode: {mode}\n{last_status}"
         )
 
     ticker = QTimer(progress)
@@ -307,7 +307,7 @@ def run_build_packet(
         span.skip(reason="no_packet_pages", pages=int(pages), missing=int(missing))
         QMessageBox.information(
             parent,
-            "Build Packet",
+            "Print Packet",
             (
                 f"{message}\n"
                 f"Missing PDFs: {int(missing)}"
@@ -317,7 +317,7 @@ def run_build_packet(
     def _on_error(tb: str) -> None:
         _cleanup()
         span.fail(RuntimeError("Packet worker failed"))
-        QMessageBox.critical(parent, "Build Packet failed", str(tb or "").strip() or "Packet worker failed.")
+        QMessageBox.critical(parent, "Print Packet failed", str(tb or "").strip() or "Packet worker failed.")
 
     worker.signals.progress.connect(_on_progress)
     worker.signals.done.connect(_on_done)
