@@ -77,7 +77,7 @@ def load_rpd_into_table(
         header.setSectionResizeMode(QHeaderView.Stretch)
 
     try:
-        kit_col = 1
+        kit_col = PartsModel.KIT_COL
         fm = table.fontMetrics()
         maxw = max(fm.horizontalAdvance(k) for k in canon_kits) + 28
         table.setColumnWidth(kit_col, max(table.columnWidth(kit_col), maxw))
@@ -91,6 +91,12 @@ def load_rpd_into_table(
             if str(h or "").strip().lower() == "priority"
         )
         table.setColumnHidden(int(pri_col), True)
+    except Exception:
+        pass
+
+    try:
+        header.setSectionResizeMode(PartsModel.QTY_COL, QHeaderView.ResizeToContents)
+        table.resizeColumnToContents(PartsModel.QTY_COL)
     except Exception:
         pass
 

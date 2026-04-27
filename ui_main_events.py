@@ -60,8 +60,8 @@ def clear_selected_kits(
             sel = [model.index(idx.row(), 0)]
     rows = sorted({i.row() for i in sel if i.isValid()})
     for r in rows:
-        kit_idx = model.index(r, 1)
-        pri_idx = model.index(r, 2)
+        kit_idx = model.index(r, PartsModel.KIT_COL)
+        pri_idx = model.index(r, PartsModel.PRIORITY_COL)
         model.setData(kit_idx, "", Qt.EditRole)
         model.setData(pri_idx, "5", Qt.EditRole)
     preview_current_cb()

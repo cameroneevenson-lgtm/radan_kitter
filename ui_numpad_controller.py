@@ -123,8 +123,8 @@ class NumpadController:
         row = self._current_row(model)
         if row < 0:
             return False
-        kit_idx = model.index(row, 1)
-        pri_idx = model.index(row, 2)
+        kit_idx = model.index(row, PartsModel.KIT_COL)
+        pri_idx = model.index(row, PartsModel.PRIORITY_COL)
         model.setData(kit_idx, "", Qt.EditRole)
         model.setData(pri_idx, "5", Qt.EditRole)
         self._preview_current()
@@ -140,12 +140,12 @@ class NumpadController:
         sug = self._sanitize_kit_name(model.rows[row].suggested_kit)
         if not sug:
             return False
-        kit_idx = model.index(row, 1)
+        kit_idx = model.index(row, PartsModel.KIT_COL)
         model.setData(kit_idx, sug, Qt.EditRole)
         model.rows[row].approved = True
         model.rows[row].pending_suggest = False
-        ok_idx = model.index(row, 5)
-        rv_idx = model.index(row, 6)
+        ok_idx = model.index(row, PartsModel.OK_COL)
+        rv_idx = model.index(row, PartsModel.REVIEW_COL)
         tl = model.index(row, 0)
         model.dataChanged.emit(tl, rv_idx)
         self._preview_current()
@@ -191,7 +191,7 @@ class NumpadController:
             return
         kit_index = max(0, min(len(self._canon_kits) - 1, int(kit_index)))
         kit = self._canon_kits[kit_index]
-        kit_idx = model.index(row, 1)
-        pri_idx = model.index(row, 2)
+        kit_idx = model.index(row, PartsModel.KIT_COL)
+        pri_idx = model.index(row, PartsModel.PRIORITY_COL)
         model.setData(kit_idx, kit, Qt.EditRole)
         model.setData(pri_idx, self._kit_to_priority.get(kit, "9"), Qt.EditRole)

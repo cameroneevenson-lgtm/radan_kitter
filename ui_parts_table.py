@@ -51,8 +51,15 @@ class PrioritySpinDelegate(QStyledItemDelegate):
 
 
 class PartsModel(QAbstractTableModel):
-    # 0 Part, 1 Kit, 2 Priority, 3 Suggest, 4 Conf, 5 OK, 6 Review
-    HEADERS = ["Part", "Kit", "Priority", "Suggest", "Conf", "OK", "Review"]
+    PART_COL = 0
+    QTY_COL = 1
+    KIT_COL = 2
+    PRIORITY_COL = 3
+    SUGGEST_COL = 4
+    CONF_COL = 5
+    OK_COL = 6
+    REVIEW_COL = 7
+    HEADERS = ["Part", "Qty", "Kit", "Priority", "Suggest", "Conf", "OK", "Review"]
 
     def __init__(
         self,
@@ -68,6 +75,13 @@ class PartsModel(QAbstractTableModel):
         self._kit_text_for_rpd = kit_text_for_rpd_fn
         self._safe_int_1_9 = safe_int_1_9_fn
         self._kit_to_priority = dict(kit_to_priority)
+
+    @staticmethod
+    def _qty(r: PartRow) -> int:
+        try:
+            return max(1, int(getattr(r, "qty", 1) or 1))
+        except Exception:
+            return 1
 
     def rowCount(self, _=None):
         return len(self.rows)
@@ -104,19 +118,21 @@ class PartsModel(QAbstractTableModel):
             return None
 
         if role in (Qt.DisplayRole, Qt.EditRole):
-            if c == 0:
+            if c == self.PART_COL:
                 return r.part
-            if c == 1:
+            if c == self.QTY_COL:
+                return self._qty(r)
+            if c == self.KIT_COL:
                 return r.kit_label
-            if c == 2:
+            if c == self.PRIORITY_COL:
                 return int(self._safe_int_1_9(r.priority, default=9))
-            if c == 3:
+            if c == self.SUGGEST_COL:
                 return r.suggested_kit
-            if c == 4:
+            if c == self.CONF_COL:
                 return f"{r.suggested_conf:.2f}" if r.suggested_kit else ""
-            if c == 5:
+            if c == self.OK_COL:
                 return "Y" if r.approved else ""
-            if c == 6:
+            if c == self.REVIEW_COL:
                 return "!" if self._compute_review(r) else ""
         return None
 
@@ -124,7 +140,7 @@ class PartsModel(QAbstractTableModel):
         if not idx.isValid():
             return Qt.ItemIsEnabled
         f = Qt.ItemIsSelectable | Qt.ItemIsEnabled
-        if idx.column() in (1, 2):
+        if idx.column() in (self.KIT_COL, self.PRIORITY_COL):
             f |= Qt.ItemIsEditable
         return f
 
@@ -134,7 +150,7 @@ class PartsModel(QAbstractTableModel):
         r = self.rows[idx.row()]
         c = idx.column()
 
-        if c == 1:  # Kit
+        if c == self.KIT_COL:
             kit_label = self._sanitize_kit_name(str(val or ""))
             r.kit_label = kit_label
             r.kit_text = self._kit_text_for_rpd(r.sym, kit_label) if kit_label else ""
@@ -143,14 +159,14 @@ class PartsModel(QAbstractTableModel):
             r.approved = False
             r.pending_suggest = False
             self.dataChanged.emit(idx, idx)
-            pri_idx = self.index(idx.row(), 2)
+            pri_idx = self.index(idx.row(), self.PRIORITY_COL)
             self.dataChanged.emit(pri_idx, pri_idx)
-            ok_idx = self.index(idx.row(), 5)
-            rv_idx = self.index(idx.row(), 6)
+            ok_idx = self.index(idx.row(), self.OK_COL)
+            rv_idx = self.index(idx.row(), self.REVIEW_COL)
             self.dataChanged.emit(ok_idx, rv_idx)
             return True
 
-        if c == 2:  # Priority
+        if c == self.PRIORITY_COL:
             r.priority = str(self._safe_int_1_9(val, default=9))
             self.dataChanged.emit(idx, idx)
             return True
@@ -164,26 +180,28 @@ class PartsModel(QAbstractTableModel):
             row.pending_suggest = False
         if self.rowCount():
             tl = self.index(0, 0)
-            br = self.index(self.rowCount() - 1, 6)
+            br = self.index(self.rowCount() - 1, self.REVIEW_COL)
             self.dataChanged.emit(tl, br)
 
     def sort(self, column: int, order: Qt.SortOrder = Qt.AscendingOrder) -> None:
         reverse = order == Qt.DescendingOrder
 
         def key(p: PartRow):
-            if column == 0:
+            if column == self.PART_COL:
                 return windows_natural_sort_key(p.part)
-            if column == 1:
+            if column == self.QTY_COL:
+                return self._qty(p)
+            if column == self.KIT_COL:
                 return (p.kit_label or "").upper()
-            if column == 2:
+            if column == self.PRIORITY_COL:
                 return int(self._safe_int_1_9(p.priority, default=9))
-            if column == 3:
+            if column == self.SUGGEST_COL:
                 return (p.suggested_kit or "").upper()
-            if column == 4:
+            if column == self.CONF_COL:
                 return float(p.suggested_conf or 0.0)
-            if column == 5:
+            if column == self.OK_COL:
                 return 1 if p.approved else 0
-            if column == 6:
+            if column == self.REVIEW_COL:
                 sug = (p.suggested_kit or "").strip()
                 kit = (p.kit_label or "").strip()
                 needs = False
