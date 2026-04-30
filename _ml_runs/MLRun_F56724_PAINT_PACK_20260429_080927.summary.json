@@ -1,0 +1,25 @@
+{
+  "total_rows": 85,
+  "processed_rows": 85,
+  "written_rows": 84,
+  "skipped_duplicate_rows": 0,
+  "skipped_missing_pdf_rows": 1,
+  "missing_pdf_rows": 1,
+  "missing_dxf_rows": 0,
+  "feature_error_rows": 0,
+  "dxf_feature_error_rows": 0,
+  "pdf_feature_error_rows": 0,
+  "append_error_rows": 0,
+  "warning_examples": [],
+  "error_examples": [],
+  "missing_pdf_examples": [
+    "B-184 -> (missing path)"
+  ],
+  "stopped": false,
+  "workers": 2,
+  "run_name": "MLRun_F56724_PAINT_PACK_20260429_080927",
+  "dataset_path": "C:\\Tools\\radan_kitter\\ml_dataset.csv",
+  "run_dir": "C:\\Tools\\radan_kitter\\_ml_runs",
+  "timestamp_utc": "2026-04-29T12:09:42+00:00",
+  "duration_sec": 15.699
+}
