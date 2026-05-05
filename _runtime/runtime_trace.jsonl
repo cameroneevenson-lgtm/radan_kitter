@@ -4039,3 +4039,12 @@
 {"ts_utc": "2026-04-30T13:02:58.898+00:00", "feature": "packet_engine", "phase": "start", "out_pdf_path": "C:\\Tools\\radan_kitter\\_smoke_7f5edef7a6fa4886bb19f61b6c69ab52\\layer_zero.pdf", "total_parts": 1, "workers": 1, "dpi": 220, "jpeg_quality": 82, "suppress_layer_0": true}
 {"ts_utc": "2026-04-30T13:02:58.920+00:00", "feature": "packet_engine", "phase": "progress", "done": 1, "total": 1, "status": "layer-zero"}
 {"ts_utc": "2026-04-30T13:02:58.937+00:00", "feature": "packet_engine", "phase": "success", "elapsed_ms": 38, "pages": 1, "missing": 0, "out_size_bytes": 32561, "avg_part_ms": 2, "max_part_ms": 2}
+{"ts_utc": "2026-05-01T11:46:12.537+00:00", "feature": "packet_engine", "phase": "start", "out_pdf_path": "L:\\BATTLESHIELD\\F-LARGE FLEET\\F56724\\INTERIOR PACK\\F56724 INTERIOR PACK\\_out\\PrintPacket_QTY_20260501_074612.pdf", "total_parts": 22, "workers": 1, "dpi": 220, "jpeg_quality": 82, "suppress_layer_0": true}
+{"ts_utc": "2026-05-01T11:46:12.774+00:00", "feature": "packet_engine", "phase": "progress", "done": 1, "total": 22, "status": "F54525-B-279"}
+{"ts_utc": "2026-05-01T11:46:13.542+00:00", "feature": "packet_engine", "phase": "progress", "done": 3, "total": 22, "status": "F54525-B-281"}
+{"ts_utc": "2026-05-01T11:46:14.365+00:00", "feature": "packet_engine", "phase": "progress", "done": 7, "total": 22, "status": "I-47"}
+{"ts_utc": "2026-05-01T11:46:15.375+00:00", "feature": "packet_engine", "phase": "progress", "done": 11, "total": 22, "status": "I-51"}
+{"ts_utc": "2026-05-01T11:46:16.265+00:00", "feature": "packet_engine", "phase": "progress", "done": 16, "total": 22, "status": "I-149"}
+{"ts_utc": "2026-05-01T11:46:17.199+00:00", "feature": "packet_engine", "phase": "progress", "done": 19, "total": 22, "status": "I-152"}
+{"ts_utc": "2026-05-01T11:46:17.816+00:00", "feature": "packet_engine", "phase": "progress", "done": 22, "total": 22, "status": "I-228"}
+{"ts_utc": "2026-05-01T11:46:18.051+00:00", "feature": "packet_engine", "phase": "success", "elapsed_ms": 5523, "pages": 22, "missing": 0, "out_size_bytes": 1982586, "avg_part_ms": 17, "max_part_ms": 88}
