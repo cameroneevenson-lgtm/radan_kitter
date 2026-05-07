@@ -4048,3 +4048,45 @@
 {"ts_utc": "2026-05-01T11:46:17.199+00:00", "feature": "packet_engine", "phase": "progress", "done": 19, "total": 22, "status": "I-152"}
 {"ts_utc": "2026-05-01T11:46:17.816+00:00", "feature": "packet_engine", "phase": "progress", "done": 22, "total": 22, "status": "I-228"}
 {"ts_utc": "2026-05-01T11:46:18.051+00:00", "feature": "packet_engine", "phase": "success", "elapsed_ms": 5523, "pages": 22, "missing": 0, "out_size_bytes": 1982586, "avg_part_ms": 17, "max_part_ms": 88}
+{"ts_utc": "2026-05-06T17:16:52.092+00:00", "feature": "asset_lookup", "phase": "resolve", "elapsed_ms": 22, "sym_path": "\\\\SVRDC\\Laser\\BATTLESHIELD\\P-SMALL FLEET\\P58511\\MAY 5\\P58511-11.sym", "ext": ".pdf", "result": "miss", "strategy": "miss", "candidate_dir_count": 4, "search_root_count": 1, "search_mode": "full", "hit_path": ""}
+{"ts_utc": "2026-05-06T20:24:42.967+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:\\BATTLESHIELD\\P-SMALL FLEET\\P58512\\P58512 WALL PACK\\P58512 WALL PACK.rpd"}
+{"ts_utc": "2026-05-06T20:24:43.008+00:00", "feature": "load_rpd_path", "phase": "stage", "elapsed_ms": 35, "rpd_path": "L:\\BATTLESHIELD\\P-SMALL FLEET\\P58512\\P58512 WALL PACK\\P58512 WALL PACK.rpd", "part_count": 26, "sample_child_tags": "Bin,CCut,ColourWhenPartSaved,Exclude,ID,Kit,Made,Material,MaxCCut,Mirror,NestMode,NumExtra,Number,Orient,OrientationMode,PickingCluster,Priority,Strategy,Symbol,ThickUnits,Thickness", "stage": "parse_rpd"}
+{"ts_utc": "2026-05-06T20:24:43.060+00:00", "feature": "load_rpd_path", "phase": "stage", "elapsed_ms": 29, "part_count": 26, "stage": "resize_table_columns"}
+{"ts_utc": "2026-05-06T20:24:43.178+00:00", "feature": "pdf_preview", "phase": "stage", "elapsed_ms": 102, "pdf_path": "\\\\SVRDC\\Laser\\BATTLESHIELD\\P-SMALL FLEET\\P58512\\P58512 WALL PACK\\P55356-44.pdf", "dpi": 500, "viewport_w": 640, "viewport_h": 480, "image_w": 1243, "image_h": 960, "stage": "render_page"}
+{"ts_utc": "2026-05-06T20:24:43.198+00:00", "feature": "load_rpd_path", "phase": "stage", "elapsed_ms": 119, "part_count": 26, "stage": "refresh_preview"}
+{"ts_utc": "2026-05-06T20:24:46.159+00:00", "feature": "load_rpd_path", "phase": "stage", "elapsed_ms": 2950, "part_count": 26, "stage": "refresh_ml_plot"}
+{"ts_utc": "2026-05-06T20:24:46.168+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 3202, "part_count": 26}
+{"ts_utc": "2026-05-06T20:24:49.384+00:00", "feature": "pdf_preview", "phase": "stage", "elapsed_ms": 48, "pdf_path": "\\\\SVRDC\\Laser\\BATTLESHIELD\\P-SMALL FLEET\\P58512\\P58512 WALL PACK\\P55356-44.pdf", "dpi": 500, "viewport_w": 1280, "viewport_h": 640, "image_w": 1657, "image_h": 1280, "stage": "render_page"}
+{"ts_utc": "2026-05-06T20:25:14.842+00:00", "feature": "open_rpd_dialog", "phase": "start"}
+{"ts_utc": "2026-05-06T20:25:22.190+00:00", "feature": "load_rpd_path", "phase": "start", "rpd_path": "L:/BATTLESHIELD/P-SMALL FLEET/P58512/P58512 WALL PACK/P58512 WALL PACK.rpd"}
+{"ts_utc": "2026-05-06T20:25:22.246+00:00", "feature": "load_rpd_path", "phase": "stage", "elapsed_ms": 26, "part_count": 26, "stage": "resize_table_columns"}
+{"ts_utc": "2026-05-06T20:25:22.337+00:00", "feature": "pdf_preview", "phase": "stage", "elapsed_ms": 65, "pdf_path": "\\\\SVRDC\\Laser\\BATTLESHIELD\\P-SMALL FLEET\\P58512\\P58512 WALL PACK\\P55356-44.pdf", "dpi": 500, "viewport_w": 1280, "viewport_h": 640, "image_w": 1657, "image_h": 1280, "stage": "render_page"}
+{"ts_utc": "2026-05-06T20:25:22.350+00:00", "feature": "load_rpd_path", "phase": "stage", "elapsed_ms": 84, "part_count": 26, "stage": "refresh_preview"}
+{"ts_utc": "2026-05-06T20:25:25.300+00:00", "feature": "load_rpd_path", "phase": "stage", "elapsed_ms": 2952, "part_count": 26, "stage": "refresh_ml_plot"}
+{"ts_utc": "2026-05-06T20:25:25.323+00:00", "feature": "load_rpd_path", "phase": "success", "elapsed_ms": 3125, "part_count": 26}
+{"ts_utc": "2026-05-06T20:25:25.330+00:00", "feature": "open_rpd_dialog", "phase": "success", "elapsed_ms": 10489, "rpd_path": "L:/BATTLESHIELD/P-SMALL FLEET/P58512/P58512 WALL PACK/P58512 WALL PACK.rpd"}
+{"ts_utc": "2026-05-06T20:25:29.961+00:00", "feature": "pdf_preview", "phase": "stage", "elapsed_ms": 49, "pdf_path": "\\\\SVRDC\\Laser\\BATTLESHIELD\\P-SMALL FLEET\\P58512\\P58512 WALL PACK\\P55356-55-R2.pdf", "dpi": 500, "viewport_w": 1280, "viewport_h": 640, "image_w": 1657, "image_h": 1280, "stage": "render_page"}
+{"ts_utc": "2026-05-06T20:25:31.471+00:00", "feature": "pdf_preview", "phase": "stage", "elapsed_ms": 46, "pdf_path": "\\\\SVRDC\\Laser\\BATTLESHIELD\\P-SMALL FLEET\\P58512\\P58512 WALL PACK\\P55356-56-R2.pdf", "dpi": 500, "viewport_w": 1280, "viewport_h": 640, "image_w": 1657, "image_h": 1280, "stage": "render_page"}
+{"ts_utc": "2026-05-06T20:25:32.164+00:00", "feature": "pdf_preview", "phase": "stage", "elapsed_ms": 73, "pdf_path": "\\\\SVRDC\\Laser\\BATTLESHIELD\\P-SMALL FLEET\\P58512\\P58512 WALL PACK\\P55504-2.pdf", "dpi": 500, "viewport_w": 1280, "viewport_h": 640, "image_w": 1657, "image_h": 1280, "stage": "render_page"}
+{"ts_utc": "2026-05-06T20:25:45.425+00:00", "feature": "pdf_preview", "phase": "stage", "elapsed_ms": 58, "pdf_path": "\\\\SVRDC\\Laser\\BATTLESHIELD\\P-SMALL FLEET\\P58512\\P58512 WALL PACK\\P55504-30.pdf", "dpi": 500, "viewport_w": 1280, "viewport_h": 640, "image_w": 1657, "image_h": 1280, "stage": "render_page"}
+{"ts_utc": "2026-05-06T20:35:37.233+00:00", "feature": "build_packet", "phase": "start", "rpd_path": "L:/BATTLESHIELD/P-SMALL FLEET/P58512/P58512 WALL PACK/P58512 WALL PACK.rpd", "part_count": 26, "first_page_only": false, "page_cap": 0, "output_dir": "_out", "suppress_layer_0": true, "workers": "auto", "mode": "vector"}
+{"ts_utc": "2026-05-06T20:35:37.253+00:00", "feature": "packet_engine", "phase": "start", "out_pdf_path": "L:/BATTLESHIELD/P-SMALL FLEET/P58512/P58512 WALL PACK\\_out\\PrintPacket_QTY_20260506_163537.pdf", "total_parts": 26, "workers": 1, "dpi": 220, "jpeg_quality": 82, "suppress_layer_0": true}
+{"ts_utc": "2026-05-06T20:35:37.270+00:00", "feature": "build_packet", "phase": "progress", "done": 0, "total": 26, "status": "Starting packet build"}
+{"ts_utc": "2026-05-06T20:35:37.487+00:00", "feature": "packet_engine", "phase": "progress", "done": 1, "total": 26, "status": "P55356-44"}
+{"ts_utc": "2026-05-06T20:35:38.076+00:00", "feature": "build_packet", "phase": "progress", "done": 2, "total": 26, "status": "P55356-55-R2"}
+{"ts_utc": "2026-05-06T20:35:38.303+00:00", "feature": "packet_engine", "phase": "progress", "done": 6, "total": 26, "status": "P55504-3"}
+{"ts_utc": "2026-05-06T20:35:38.875+00:00", "feature": "build_packet", "phase": "progress", "done": 8, "total": 26, "status": "P55504-5"}
+{"ts_utc": "2026-05-06T20:35:39.076+00:00", "feature": "packet_engine", "phase": "progress", "done": 9, "total": 26, "status": "P55504-6"}
+{"ts_utc": "2026-05-06T20:35:39.728+00:00", "feature": "build_packet", "phase": "progress", "done": 12, "total": 26, "status": "P55504-31"}
+{"ts_utc": "2026-05-06T20:35:39.846+00:00", "feature": "packet_engine", "phase": "progress", "done": 13, "total": 26, "status": "P55504-32"}
+{"ts_utc": "2026-05-06T20:35:40.615+00:00", "feature": "packet_engine", "phase": "progress", "done": 17, "total": 26, "status": "P55504-41-R1"}
+{"ts_utc": "2026-05-06T20:35:40.617+00:00", "feature": "build_packet", "phase": "progress", "done": 17, "total": 26, "status": "P55504-41-R1"}
+{"ts_utc": "2026-05-06T20:35:41.480+00:00", "feature": "packet_engine", "phase": "progress", "done": 23, "total": 26, "status": "P55504-67"}
+{"ts_utc": "2026-05-06T20:35:41.482+00:00", "feature": "build_packet", "phase": "progress", "done": 23, "total": 26, "status": "P55504-67"}
+{"ts_utc": "2026-05-06T20:35:41.902+00:00", "feature": "packet_engine", "phase": "progress", "done": 26, "total": 26, "status": "P56112-102-R1"}
+{"ts_utc": "2026-05-06T20:35:41.908+00:00", "feature": "build_packet", "phase": "progress", "done": 26, "total": 26, "status": "P56112-102-R1"}
+{"ts_utc": "2026-05-06T20:35:41.945+00:00", "feature": "build_packet", "phase": "progress", "done": 26, "total": 26, "status": "Saving packet to temp file"}
+{"ts_utc": "2026-05-06T20:35:41.968+00:00", "feature": "build_packet", "phase": "progress", "done": 26, "total": 26, "status": "Copying packet file"}
+{"ts_utc": "2026-05-06T20:35:42.248+00:00", "feature": "packet_engine", "phase": "success", "elapsed_ms": 4994, "pages": 26, "missing": 0, "out_size_bytes": 2188528, "avg_part_ms": 13, "max_part_ms": 43}
+{"ts_utc": "2026-05-06T20:35:42.279+00:00", "feature": "build_packet", "phase": "progress", "done": 26, "total": 26, "status": "Packet complete"}
+{"ts_utc": "2026-05-06T20:35:42.322+00:00", "feature": "build_packet", "phase": "success", "elapsed_ms": 5077, "packet_path": "L:/BATTLESHIELD/P-SMALL FLEET/P58512/P58512 WALL PACK\\_out\\PrintPacket_QTY_20260506_163537.pdf", "pages": 26, "missing": 0}
