@@ -6,89 +6,23 @@
 import sys
 import os
 from PySide6.QtWidgets import QApplication
-from PySide6.QtCore import QTimer, Qt
-from PySide6.QtGui import QGuiApplication
-import assets
+from PySide6.QtCore import QTimer
 from config import ENG_RELEASE_MAP, W_RELEASE_ROOT
 from radan_kitter import Main
+from startup.assets_setup import configure_assets
+from startup.window_placement import (
+    bring_to_front as _bring_to_front,
+    place_maximized_on_screen2 as _place_maximized_on_screen2,
+)
 
-def _bring_to_front(w: Main) -> None:
-    # Qt-level focus attempt.
-    w.setWindowState((w.windowState() & ~Qt.WindowMinimized) | Qt.WindowActive)
-    w.raise_()
-    w.activateWindow()
-
-    # Top-most toggle is a reliable fallback on Windows.
-    try:
-        w.setWindowFlag(Qt.WindowStaysOnTopHint, True)
-        w.show()
-        w.setWindowFlag(Qt.WindowStaysOnTopHint, False)
-        w.show()
-        w.raise_()
-        w.activateWindow()
-    except Exception:
-        pass
-
-    # Native foreground request (Windows).
-    try:
-        import ctypes
-        user32 = ctypes.windll.user32
-        hwnd = int(w.winId())
-        SW_RESTORE = 9
-        user32.ShowWindow(hwnd, SW_RESTORE)
-        user32.SetForegroundWindow(hwnd)
-    except Exception:
-        pass
-
-
-def _target_screen():
-    screens = QGuiApplication.screens()
-    if len(screens) >= 2:
-        return screens[1]  # "screen 2" by index
-    return QGuiApplication.primaryScreen()
-
-def _lock_to_screen_maximized(w: Main, screen) -> None:
-    if screen is None:
-        w.showMaximized()
-        return
-    try:
-        g = screen.availableGeometry()
-        w.setMinimumSize(g.size())
-        w.setMaximumSize(g.size())
-        w.move(g.topLeft())
-    except Exception:
-        pass
-    # Win+Up style maximized state.
-    w.showMaximized()
-
-
-def _place_maximized_on_screen2(w: Main) -> None:
-    screen = _target_screen()
-    if screen is None:
-        _lock_to_screen_maximized(w, QGuiApplication.primaryScreen())
-        return
-
-    # Attach window to target screen first, then maximize (Win+Up equivalent).
-    handle = w.windowHandle()
-    if handle is not None:
-        try:
-            handle.setScreen(screen)
-        except Exception:
-            pass
-    try:
-        w.move(screen.geometry().topLeft())
-    except Exception:
-        pass
-    _lock_to_screen_maximized(w, screen)
 
 def main():
     app = QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(True)
-    assets.configure_release_mapping(
+    configure_assets(
         w_release_root=W_RELEASE_ROOT,
         eng_release_map=ENG_RELEASE_MAP,
     )
-    assets.load_asset_root_preferences()
     w = Main()
     _place_maximized_on_screen2(w)
     is_hot_reload = str(os.environ.get("RK_HOT_RELOAD_ACTIVE", "")).strip().lower() in ("1", "true", "yes", "on")
