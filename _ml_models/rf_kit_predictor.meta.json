@@ -1,7 +1,7 @@
 {
-  "trained_at_utc": "2026-04-09T19:15:59+00:00",
+  "trained_at_utc": "2026-05-22T17:34:59+00:00",
   "dataset_path": "C:\\Tools\\radan_kitter\\ml_dataset.csv",
-  "dataset_mtime": 1775560300.5064979,
+  "dataset_mtime": 1777464582.8324418,
   "requested_features": [
     "dxf_perimeter_area_ratio",
     "dxf_internal_void_area_ratio",
@@ -52,5 +52,5 @@
     "Walls",
     "Wheel Wells"
   ],
-  "n_rows": 261
+  "n_rows": 329
 }

@@ -145,7 +145,11 @@ def build_kit_sym_from_donor(
         sym_short = os.path.splitext(os.path.basename(sym_path))[0]
 
         block[path_rel] = block[path_rel].replace(placeholder, sym_path)
-        block[head_rel] = re.sub(rf"(\$/){re.escape(ph_short)}(\s*)$", rf"\1{sym_short}\2", block[head_rel])
+        block[head_rel] = re.sub(
+            rf"(\$/){re.escape(ph_short)}(\s*)$",
+            lambda match, short=sym_short: f"{match.group(1)}{short}{match.group(2)}",
+            block[head_rel],
+        )
         generated.extend(block)
 
     new_text = "".join(prefix + generated + suffix)
@@ -165,7 +169,7 @@ def build_kit_sym_from_donor(
         first_short = os.path.splitext(os.path.basename(member_part_syms[0]))[0]
         new_text = re.sub(
             r'(<Symbol\s+name=")[^"]+("\s+count="\d+")',
-            rf"\1{first_short}\2",
+            lambda match: f"{match.group(1)}{first_short}{match.group(2)}",
             new_text,
             count=1,
         )

@@ -6,6 +6,7 @@ import unittest
 
 import kit_service
 from rpd_io import PartRow
+import sym_io
 from test_support import workspace_temp_dir
 
 
@@ -47,6 +48,31 @@ class KitServiceTests(unittest.TestCase):
             self.assertEqual(len(refresh_calls), 1)
             self.assertTrue(refresh_calls[0].endswith(os.path.join("_kits", "Walls.sym")))
             self.assertTrue(os.path.exists(refresh_calls[0]))
+
+    def test_build_kit_sym_from_donor_allows_digit_starting_part_names(self) -> None:
+        with workspace_temp_dir("kit_sym_digit_names") as tmpdir:
+            donor_path = os.path.join(tmpdir, "Donor.sym")
+            out_path = os.path.join(tmpdir, "Kit.sym")
+            member_path = os.path.join(tmpdir, "18_SHORT.sym")
+            placeholder = r"C:\Donor\PLACEHOLDER.sym"
+            donor_text = (
+                '<Symbol name="PLACEHOLDER" count="1">\n'
+                '<Info num="0" name="Number of Loops" value="1">\n'
+                "U,,,,2\n"
+                "F,example$/PLACEHOLDER\n"
+                "C,$\n"
+                f"U,,{placeholder}$\n"
+                "U,$\n"
+            )
+            with open(donor_path, "w", encoding="utf-8") as handle:
+                handle.write(donor_text)
+
+            sym_io.build_kit_sym_from_donor(donor_path, [member_path], out_path)
+
+            generated = open(out_path, encoding="utf-8").read()
+            self.assertIn("$/18_SHORT", generated)
+            self.assertIn('Symbol name="18_SHORT" count="1"', generated)
+            self.assertIn(member_path, generated)
 
 
 if __name__ == "__main__":

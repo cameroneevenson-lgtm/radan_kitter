@@ -26,6 +26,19 @@ def _refresh_script_path() -> str:
     return os.path.normpath(os.path.join(_automation_repo_dir(), "refresh_document_headless.py"))
 
 
+def _hidden_process_kwargs() -> Dict[str, Any]:
+    kwargs: Dict[str, Any] = {}
+    if os.name == "nt":
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= getattr(subprocess, "STARTF_USESHOWWINDOW", 1)
+        startupinfo.wShowWindow = getattr(subprocess, "SW_HIDE", 0)
+        kwargs["startupinfo"] = startupinfo
+        creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+        if creationflags:
+            kwargs["creationflags"] = creationflags
+    return kwargs
+
+
 def is_headless_refresh_available() -> bool:
     return os.path.exists(_refresh_script_path())
 
@@ -61,6 +74,7 @@ def refresh_document_headless(
         timeout=max(1, int(timeout_sec)),
         cwd=_automation_repo_dir(),
         check=False,
+        **_hidden_process_kwargs(),
     )
     stdout = str(completed.stdout or "").strip()
     stderr = str(completed.stderr or "").strip()
