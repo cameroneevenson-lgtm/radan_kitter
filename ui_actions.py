@@ -13,6 +13,7 @@ import kit_service
 import ml_runtime
 import packet_service
 import packet_runtime
+import pdf_asset_review
 import rf_service
 import runtime_trace as rt
 import ui_ml_signal_plot
@@ -24,6 +25,7 @@ from config import (
     PACKET_TEMP_FIRST_PAGE_ONLY,
     PACKET_TEMP_LOCAL_OUTPUT_DIR,
     PACKET_TEMP_LOCAL_OUTPUT_ENABLED,
+    OUT_DIRNAME,
     W_RELEASE_ROOT,
 )
 from rpd_io import PartRow
@@ -82,6 +84,34 @@ def _format_example_lines(title: str, values: Sequence[str], limit: int = 3) -> 
     if remaining > 0:
         out.append(f"- ... and {remaining} more")
     return "\n".join(out)
+
+
+def _review_pdf_assets_before_action(
+    *,
+    parent: QWidget,
+    action_name: str,
+    parts: Sequence[PartRow],
+    rpd_path: str,
+    resolve_asset_fn: Callable[[str, str], Optional[str]],
+    span,
+) -> bool:
+    try:
+        reviewed = pdf_asset_review.review_pdf_assets_for_action(
+            parent=parent,
+            action_name=action_name,
+            parts=parts,
+            rpd_path=rpd_path,
+            resolve_asset_fn=resolve_asset_fn,
+            out_dirname=OUT_DIRNAME,
+        )
+    except Exception as exc:
+        span.fail(exc, pdf_asset_review="failed")
+        QMessageBox.critical(parent, "PDF Asset Review failed", traceback.format_exc())
+        return False
+    if not reviewed:
+        span.skip(reason="pdf_asset_review_not_acknowledged")
+        return False
+    return True
 
 
 def run_prepare_kits(
@@ -228,6 +258,15 @@ def run_build_packet(
     if not _require_rpd_loaded(parent, tree, rpd_path):
         span.skip(reason="no_rpd")
         return False
+    if not _review_pdf_assets_before_action(
+        parent=parent,
+        action_name="Print Packet",
+        parts=build_parts,
+        rpd_path=rpd_path,
+        resolve_asset_fn=resolve_asset_fn,
+        span=span,
+    ):
+        return False
     setattr(parent, "_rk_build_packet_running", True)
 
     progress = QProgressDialog("Building print packet...", "Cancel", 0, max(1, len(build_parts)), parent)
@@ -349,6 +388,15 @@ def run_rf_suggest(
     if not _require_rpd_loaded(parent, tree, rpd_path) or model is None:
         span.skip(reason="no_rpd_or_model")
         return
+    if not _review_pdf_assets_before_action(
+        parent=parent,
+        action_name="RF Suggest",
+        parts=parts,
+        rpd_path=rpd_path,
+        resolve_asset_fn=resolve_asset_fn,
+        span=span,
+    ):
+        return
     try:
         total = len(parts)
         progress = QProgressDialog("RF: extracting features...", "Cancel", 0, max(1, total), parent)
@@ -415,6 +463,15 @@ def run_ml_log(
     span = rt.begin("ml_log", rpd_path=rpd_path, part_count=len(parts))
     if not _require_rpd_loaded(parent, tree, rpd_path):
         span.skip(reason="no_rpd")
+        return
+    if not _review_pdf_assets_before_action(
+        parent=parent,
+        action_name="ML Log",
+        parts=parts,
+        rpd_path=rpd_path,
+        resolve_asset_fn=resolve_asset_fn,
+        span=span,
+    ):
         return
     total = len(parts)
     progress = QProgressDialog("ML: scanning and logging...", "Cancel", 0, max(1, total), parent)
