@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from dxf_preview import DxfPreviewView
 from pdf_preview import PdfPreviewView
 from ui_numpad_legend import NumpadLegendWidget
 
@@ -219,7 +220,7 @@ def build_main_layout(
     table.verticalHeader().setDefaultSectionSize(40)
     table.verticalHeader().setMinimumSectionSize(28)
 
-    pdf_view = PdfPreviewView()
+    pdf_view = PdfPreviewView(min_width=360)
     pdf_view.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
     pdf_view.setStyleSheet("QGraphicsView { background: #000000; }")
     if company_logo_path and os.path.exists(company_logo_path):
@@ -231,6 +232,11 @@ def build_main_layout(
     else:
         pdf_view.set_viewport_background(fill_color=QColor("#000000"))
     window.pdf_view = pdf_view  # type: ignore[attr-defined]
+
+    dxf_view = DxfPreviewView()
+    dxf_view.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+    dxf_view.setStyleSheet("QGraphicsView { background: #05070a; }")
+    window.dxf_view = dxf_view  # type: ignore[attr-defined]
 
     numpad_legend = NumpadLegendWidget(
         canon_kits=canon_kits,
@@ -446,7 +452,51 @@ def build_main_layout(
     ml_plot_box_lay.addWidget(ml_plot_scroll, 1)
     top_right_lay.addWidget(ml_plot_box, 4)
     right_lay.addWidget(top_right, 0)
-    right_lay.addWidget(pdf_view, 1)
+
+    preview_label_style = (
+        "QLabel {"
+        " color: #d8dee9;"
+        " background: #111827;"
+        " border: 1px solid #263241;"
+        " padding: 2px 8px;"
+        " font-size: 13px;"
+        " font-weight: 650;"
+        " }"
+    )
+    pdf_label = QLabel("PDF")
+    dxf_label = QLabel("DXF")
+    for label in (pdf_label, dxf_label):
+        label.setFixedHeight(24)
+        label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        label.setStyleSheet(preview_label_style)
+
+    pdf_panel = QWidget()
+    pdf_panel_lay = QVBoxLayout(pdf_panel)
+    pdf_panel_lay.setContentsMargins(0, 0, 0, 0)
+    pdf_panel_lay.setSpacing(2)
+    pdf_panel_lay.addWidget(pdf_label, 0)
+    pdf_panel_lay.addWidget(pdf_view, 1)
+
+    dxf_panel = QWidget()
+    dxf_panel_lay = QVBoxLayout(dxf_panel)
+    dxf_panel_lay.setContentsMargins(0, 0, 0, 0)
+    dxf_panel_lay.setSpacing(2)
+    dxf_panel_lay.addWidget(dxf_label, 0)
+    dxf_panel_lay.addWidget(dxf_view, 1)
+
+    preview_splitter = QSplitter(Qt.Horizontal)
+    preview_splitter.setChildrenCollapsible(False)
+    preview_splitter.setHandleWidth(5)
+    preview_splitter.setStyleSheet(
+        "QSplitter::handle { background: #263241; margin: 0px 1px; }"
+    )
+    preview_splitter.addWidget(pdf_panel)
+    preview_splitter.addWidget(dxf_panel)
+    preview_splitter.setStretchFactor(0, 3)
+    preview_splitter.setStretchFactor(1, 2)
+    preview_splitter.setSizes([660, 480])
+    window.preview_splitter = preview_splitter  # type: ignore[attr-defined]
+    right_lay.addWidget(preview_splitter, 1)
     splitter.addWidget(right)
     splitter.setStretchFactor(0, 2)
     splitter.setStretchFactor(1, 3)

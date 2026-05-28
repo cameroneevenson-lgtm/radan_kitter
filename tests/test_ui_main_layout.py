@@ -7,6 +7,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PySide6.QtWidgets import QApplication, QMainWindow, QPushButton
 
+from dxf_preview import DxfPreviewView
 import ui_main_layout
 
 
@@ -46,6 +47,8 @@ class MainLayoutTests(unittest.TestCase):
             "assembly drawing print pack is still broken",
             buttons["Print Packet"].toolTip().lower(),
         )
+        self.assertIsInstance(window.dxf_view, DxfPreviewView)
+        self.assertEqual(window.preview_splitter.count(), 2)
 
         window.close()
 

@@ -5,6 +5,7 @@ from typing import Callable, List, Optional, Sequence
 
 from PySide6.QtWidgets import QTableView
 
+from dxf_preview import DxfPreviewView
 from pdf_preview import PdfPreviewView
 from rpd_io import PartRow
 from ui_parts_table import PartsModel
@@ -17,6 +18,7 @@ class PreviewCoordinator:
         *,
         table: QTableView,
         pdf_view: PdfPreviewView,
+        dxf_view: DxfPreviewView,
         numpad_legend: NumpadLegendWidget,
         resolve_asset_fn: Callable[[str, str], Optional[str]],
         canon_kits: Sequence[str],
@@ -24,6 +26,7 @@ class PreviewCoordinator:
     ) -> None:
         self._table = table
         self._pdf_view = pdf_view
+        self._dxf_view = dxf_view
         self._numpad_legend = numpad_legend
         self._resolve_asset = resolve_asset_fn
         self._canon_kits = list(canon_kits)
@@ -47,6 +50,7 @@ class PreviewCoordinator:
     def preview_current(self, model: Optional[PartsModel], parts: List[PartRow]) -> None:
         if model is None or not parts:
             self._pdf_view.set_pdf(None)
+            self._dxf_view.set_dxf(None)
             self.update_numpad_legend(model, None)
             return
 
@@ -56,13 +60,22 @@ class PreviewCoordinator:
             self._table.setCurrentIndex(idx)
         row = idx.row()
         if row < 0 or row >= len(parts):
+            self._pdf_view.set_pdf(None)
+            self._dxf_view.set_dxf(None)
             self.update_numpad_legend(model, None)
             return
 
         self.update_numpad_legend(model, row)
         part = parts[row]
         pdf_path = self._resolve_asset(part.sym, ".pdf")
-        if not pdf_path or not os.path.exists(pdf_path):
+        dxf_path = self._resolve_asset(part.sym, ".dxf")
+
+        if pdf_path and os.path.exists(pdf_path):
+            self._pdf_view.set_pdf(pdf_path)
+        else:
             self._pdf_view.set_pdf(None)
-            return
-        self._pdf_view.set_pdf(pdf_path)
+
+        if dxf_path and os.path.exists(dxf_path):
+            self._dxf_view.set_dxf(dxf_path)
+        else:
+            self._dxf_view.set_dxf(None, message="DXF missing")

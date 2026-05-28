@@ -18,7 +18,7 @@ The app is built with PySide6 and is intended for the Battleshield fabrication w
   - Walls
   - Flat Parts
 - Supports fast numpad-driven kit assignment and navigation.
-- Previews the matching part PDF while reviewing rows.
+- Previews the matching part PDF and DXF side by side while reviewing rows.
 - Writes kit and priority values back to the original `.rpd`, with backups.
 - Generates kit `.sym` files from `KitDonor-100Instances.sym`.
 - Builds a combined print packet PDF in natural Windows part order.
@@ -76,7 +76,7 @@ An `.rpd` path can also be passed as the first argument:
 ## Operator Workflow
 
 1. Click **Open RPD** and choose the RADAN project file.
-2. Review the part list and PDF preview.
+2. Review the part list and PDF/DXF previews.
 3. Assign kits manually in the table, with the numpad, or with RF suggestions.
 4. Use **Prepare Kits** to update part `.sym` comments and generate kit `.sym` files.
 5. Use **Write RPD** to write kit and priority values to the original `.rpd`.

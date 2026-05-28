@@ -113,6 +113,7 @@ class Main(QMainWindow):
         self.preview_coordinator = PreviewCoordinator(
             table=self.table,
             pdf_view=self.pdf_view,
+            dxf_view=self.dxf_view,
             numpad_legend=self.numpad_legend,
             resolve_asset_fn=assets.resolve_asset_fast,
             canon_kits=CANON_KITS,
