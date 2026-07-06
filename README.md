@@ -175,6 +175,6 @@ Treat runtime traces, one-off ML runs, packets, and local launch logs as generat
 ## Operational Notes
 
 - `Write RPD` writes kit and priority metadata to the original `.rpd` after creating a backup.
-- `Prepare Kits` writes kit labels into part `.sym` Attr 109 and generates donor-based kit `.sym` files.
+- `Prepare Kits` writes kit labels into part comments and generates donor-based kit `.sym` files.
 - Generated kit `.sym` files may need to be opened and saved once in RADAN so RADAN refreshes displayed geometry and thumbnails.
 - Headless RADAN refresh plumbing exists in `automation_bridge.py`, but it is not wired into the main UI flow yet.

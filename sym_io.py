@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import html
 import os
 import re
 from typing import Callable, Dict, List, Optional, Tuple, TypeVar
@@ -180,20 +181,39 @@ def build_kit_sym_from_donor(
     write_text_utf8(out_kit_sym_path, new_text)
 
 
-def set_sym_attr_109_comment(sym_path: str, comment: str) -> bool:
+def part_comment_from_text(text: str) -> str:
+    """Read the RADAN part comment field, stored internally as attribute 109."""
+    match = re.search(r'<Attr\s+num="109"[^>]*\bvalue="([^"]*)"', str(text or ""), flags=re.IGNORECASE)
+    if not match:
+        return ""
+    return html.unescape(match.group(1))
+
+
+def set_part_comment_text(text: str, comment: str) -> tuple[str, bool]:
+    """Set the RADAN part comment field in text, stored internally as attribute 109."""
+    text = str(text or "")
+    pat = r'(<Attr\s+num="109"[^>]*)(>)'
+    m = re.search(pat, text, flags=re.IGNORECASE)
+    if not m:
+        return text, False
+    open_tag = m.group(1)
+    escaped = html.escape(str(comment or ""), quote=True)
+    if re.search(r'\bvalue="[^"]*"', open_tag, flags=re.IGNORECASE):
+        open_tag2 = re.sub(r'\bvalue="[^"]*"', f'value="{escaped}"', open_tag, flags=re.IGNORECASE)
+    else:
+        open_tag2 = open_tag + f' value="{escaped}"'
+    new_txt = text[:m.start(1)] + open_tag2 + text[m.end(1):]
+    return new_txt, True
+
+
+def set_part_comment(sym_path: str, comment: str) -> bool:
+    """Set the RADAN part comment field, stored internally as attribute 109."""
     if not sym_path or not os.path.exists(sym_path):
         return False
     txt = read_text_fallback(sym_path)
-    pat = r'(<Attr\s+num="109"[^>]*)(>)'
-    m = re.search(pat, txt, flags=re.IGNORECASE)
-    if not m:
+    new_txt, found_comment = set_part_comment_text(txt, comment)
+    if not found_comment:
         return False
-    open_tag = m.group(1)
-    if re.search(r'\bvalue="[^"]*"', open_tag, flags=re.IGNORECASE):
-        open_tag2 = re.sub(r'\bvalue="[^"]*"', f'value="{comment}"', open_tag, flags=re.IGNORECASE)
-    else:
-        open_tag2 = open_tag + f' value="{comment}"'
-    new_txt = txt[:m.start(1)] + open_tag2 + txt[m.end(1):]
     if new_txt != txt:
         write_text_utf8(sym_path, new_txt)
     return True

@@ -56,6 +56,7 @@ def prepare_kits(
     kit_to_priority: Dict[str, str],
     progress_cb: Optional[Callable[[int, int, str], None]] = None,
     refresh_kit_fn: Optional[Callable[[str], None]] = None,
+    write_part_kit_comments: bool = True,
 ) -> int:
     def _emit(done: int, total: int, status: str) -> None:
         if progress_cb is None:
@@ -73,22 +74,20 @@ def prepare_kits(
 
     base_dir = os.path.dirname(rpd_path)
 
-    # Write kit name into Attr 109 (Comments) on each part .sym from RPD paths.
-    parts_backup_dir = os.path.join(base_dir, bak_dirname, "parts")
-    ensure_dir(parts_backup_dir)
-    touched: set[str] = set()
     part_sym_rows: List[tuple[str, str]] = []
-    for p in parts:
-        kit_name = sanitize_kit_name(p.kit_label)
-        if not kit_name:
-            continue
-        sym_path = os.path.normpath(p.sym or "")
-        if not sym_path or sym_path.lower() in touched:
-            continue
-        if f"\\{kits_dirname}\\" in sym_path.lower():
-            continue
-        touched.add(sym_path.lower())
-        part_sym_rows.append((sym_path, kit_name))
+    if write_part_kit_comments:
+        touched: set[str] = set()
+        for p in parts:
+            kit_name = sanitize_kit_name(p.kit_label)
+            if not kit_name:
+                continue
+            sym_path = os.path.normpath(p.sym or "")
+            if not sym_path or sym_path.lower() in touched:
+                continue
+            if f"\\{kits_dirname}\\" in sym_path.lower():
+                continue
+            touched.add(sym_path.lower())
+            part_sym_rows.append((sym_path, kit_name))
 
     # Build kit .sym files from donor.
     if not os.path.exists(donor_template_path):
@@ -107,12 +106,14 @@ def prepare_kits(
     done_steps = 0
     _emit(done_steps, total_steps, "Preparing kits...")
 
-    for sym_path, kit_name in part_sym_rows:
-        if os.path.exists(sym_path):
-            backup_file(sym_path, parts_backup_dir)
-            sym_io.set_sym_attr_109_comment(sym_path, kit_name)
-        done_steps += 1
-        _emit(done_steps, total_steps, f"Updating Attr109: {os.path.basename(sym_path)}")
+    if write_part_kit_comments:
+        parts_backup_dir = os.path.join(base_dir, bak_dirname, "parts")
+        for sym_path, kit_name in part_sym_rows:
+            if os.path.exists(sym_path):
+                backup_file(sym_path, parts_backup_dir)
+                sym_io.set_part_comment(sym_path, kit_name)
+            done_steps += 1
+            _emit(done_steps, total_steps, f"Updating part comment: {os.path.basename(sym_path)}")
 
     for kit_label, plist in kits_to_parts.items():
         status = "Skipping invalid kit label"
