@@ -291,6 +291,13 @@ def run_scan_and_log(
     """
     Scan parts, append labels/features to dataset, and log run artifacts.
 
+    Dedupe is intentionally by part_name (see ``global_dedupe_by_part`` in the
+    run meta): re-scanning a part with the same name is treated as a
+    correction and supersedes its prior training row, even if that prior row
+    came from a different job/PDF/DXF. This is deliberate, not a collision
+    bug - it lets an operator re-label a part and have the dataset reflect
+    only the latest label for that part name.
+
     Returns a summary dict with run_name, dataset_path, run_dir, and row counts.
     """
     ensure_dataset_exists()
@@ -558,6 +565,10 @@ def run_scan_and_log(
 
     if rows_to_upsert:
         try:
+            # Intentional supersede-on-rescan: dropping existing rows by
+            # part_name (not part_key) means re-scanning a part always
+            # overwrites its prior training row, even across different
+            # jobs/PDF/DXF paths. See the global_dedupe_by_part note above.
             part_names = {
                 str(r.get("part_name") or "").strip()
                 for r in rows_to_upsert

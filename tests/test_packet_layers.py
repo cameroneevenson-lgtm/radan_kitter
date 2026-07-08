@@ -9,6 +9,8 @@ from packet_layers import (
     first_toggle_layer_aliases,
     is_layer_zero_name,
     matches_zero_layer_alias,
+    set_layer0_only,
+    suppress_layer_zero,
 )
 
 
@@ -65,6 +67,43 @@ class PacketLayersTests(unittest.TestCase):
         last_call = doc.layer_calls[-1]
         self.assertIn(22, last_call.get("on", []))
         self.assertIn(11, last_call.get("off", []))
+        self.assertIn(33, last_call.get("off", []))
+
+    def test_suppress_layer_zero_turns_off_only_the_zero_layer(self) -> None:
+        doc = _FakeDoc()
+        suppress_layer_zero(doc)
+        self.assertEqual(doc.ui_states.get(0), 2)
+        self.assertNotIn(1, doc.ui_states)
+        self.assertNotIn(2, doc.ui_states)
+        self.assertTrue(doc.layer_calls)
+        last_call = doc.layer_calls[-1]
+        self.assertIn(11, last_call.get("off", []))
+        self.assertNotIn(22, last_call.get("off", []))
+        self.assertNotIn(33, last_call.get("off", []))
+
+    def test_suppress_layer_zero_falls_back_to_first_layer_when_no_zero_named_layer(self) -> None:
+        doc = _FakeDoc()
+        doc.ui_cfgs = [
+            {"number": 0, "text": "Visible", "xref": 22},
+            {"number": 1, "text": "Hidden", "xref": 33},
+        ]
+        doc.ocgs = {22: {"name": "Visible"}, 33: {"name": "Hidden"}}
+        suppress_layer_zero(doc)
+        # No layer named "0" exists, so the fallback suppresses the first toggleable entry.
+        self.assertEqual(doc.ui_states.get(0), 2)
+        self.assertTrue(doc.layer_calls)
+        self.assertIn(22, doc.layer_calls[-1].get("off", []))
+
+    def test_set_layer0_only_turns_on_only_the_zero_layer(self) -> None:
+        doc = _FakeDoc()
+        set_layer0_only(doc)
+        self.assertEqual(doc.ui_states.get(0), 1)
+        self.assertEqual(doc.ui_states.get(1), 2)
+        self.assertEqual(doc.ui_states.get(2), 2)
+        self.assertTrue(doc.layer_calls)
+        last_call = doc.layer_calls[-1]
+        self.assertIn(11, last_call.get("on", []))
+        self.assertIn(22, last_call.get("off", []))
         self.assertIn(33, last_call.get("off", []))
 
     def test_collect_layer_zero_masks_filters_to_layer_zero_content(self) -> None:

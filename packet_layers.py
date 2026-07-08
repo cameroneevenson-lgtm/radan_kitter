@@ -30,6 +30,79 @@ def is_layer_zero_name(text: object) -> bool:
     return False
 
 
+def iter_ui_layer_entries(doc) -> List[Tuple[int, str, Optional[int]]]:
+    """Return [(number, name, xref)] for each parseable, non-negative UI layer config, safely."""
+    try:
+        ui_cfgs = doc.layer_ui_configs() or []
+    except _DOC_ERRORS:
+        return []
+    entries: List[Tuple[int, str, Optional[int]]] = []
+    for cfg in ui_cfgs:
+        try:
+            num = int(cfg.get("number"))
+        except _PARSE_ERRORS:
+            continue
+        if num < 0:
+            continue
+        name = str(cfg.get("text", "") or cfg.get("name", "") or cfg.get("label", ""))
+        entries.append((num, name, ui_cfg_xref(cfg)))
+    return entries
+
+
+def iter_ocg_entries(doc) -> List[Tuple[int, str]]:
+    """Return [(xref, name)] for each parseable OCG layer entry, safely."""
+    try:
+        ocgs = doc.get_ocgs() or {}
+    except _DOC_ERRORS:
+        return []
+    entries: List[Tuple[int, str]] = []
+    if isinstance(ocgs, dict):
+        for key, value in ocgs.items():
+            try:
+                xref = int(key)
+            except _PARSE_ERRORS:
+                continue
+            name = ""
+            if isinstance(value, dict):
+                name = str(value.get("name") or value.get("text") or "")
+            entries.append((xref, name))
+    return entries
+
+
+def set_ui_config_safe(doc, num: int, state: int) -> bool:
+    try:
+        doc.set_layer_ui_config(num, state)
+        return True
+    except _DOC_ERRORS:
+        return False
+
+
+def set_ocg_visibility_safe(
+    doc,
+    *,
+    on_xrefs: List[int],
+    off_xrefs: List[int],
+    basestate: Optional[str] = None,
+) -> bool:
+    """Call doc.set_layer(-1, ...), retrying without basestate if the PDF SDK build doesn't support it."""
+    kwargs = {"on": list(on_xrefs), "off": list(off_xrefs)}
+    if basestate is not None:
+        kwargs["basestate"] = basestate
+    try:
+        doc.set_layer(-1, **kwargs)
+        return True
+    except TypeError:
+        if basestate is None:
+            return False
+        try:
+            doc.set_layer(-1, on=list(on_xrefs), off=list(off_xrefs))
+            return True
+        except _DOC_ERRORS:
+            return False
+    except _DOC_ERRORS:
+        return False
+
+
 def ui_cfg_xref(cfg: dict) -> Optional[int]:
     for key in ("xref", "ocg", "oc"):
         try:
@@ -50,23 +123,15 @@ def first_toggle_layer_aliases(doc) -> List[str]:
     Return normalized aliases for the first toggleable UI layer entry.
     Exporter-specific fallback: this is expected to be layer 0.
     """
-    aliases: List[str] = []
-    try:
-        ui_cfgs = doc.layer_ui_configs() or []
-    except _DOC_ERRORS:
-        ui_cfgs = []
-    for cfg in ui_cfgs:
-        try:
-            num = int(cfg.get("number"))
-        except _PARSE_ERRORS:
-            continue
-        if num < 0:
-            continue
-        raw = str(cfg.get("text", "") or cfg.get("name", "") or cfg.get("label", "")).strip()
-        if raw:
-            aliases.append(norm_layer_name(raw))
-        break
-    return [alias for alias in aliases if alias]
+    entries = iter_ui_layer_entries(doc)
+    if not entries:
+        return []
+    _num, raw, _xref = entries[0]
+    raw = raw.strip()
+    if not raw:
+        return []
+    alias = norm_layer_name(raw)
+    return [alias] if alias else []
 
 
 def matches_zero_layer_alias(layer_name: object, aliases: List[str]) -> bool:
@@ -80,26 +145,10 @@ def matches_zero_layer_alias(layer_name: object, aliases: List[str]) -> bool:
 
 def suppress_layer_zero(doc) -> None:
     """Force OCG layer named '0' OFF if present."""
-    zero_xrefs: List[int] = []
-    all_ocg_xrefs: List[int] = []
-    matched_by_name = False
-    try:
-        ocgs = doc.get_ocgs() or {}
-    except _DOC_ERRORS:
-        ocgs = {}
-    if isinstance(ocgs, dict):
-        for key, value in ocgs.items():
-            try:
-                xref = int(key)
-            except _PARSE_ERRORS:
-                continue
-            all_ocg_xrefs.append(xref)
-            name = ""
-            if isinstance(value, dict):
-                name = str(value.get("name") or value.get("text") or "")
-            if is_layer_zero_name(name):
-                zero_xrefs.append(xref)
-                matched_by_name = True
+    ocg_entries = iter_ocg_entries(doc)
+    all_ocg_xrefs = [xref for xref, _name in ocg_entries]
+    zero_xrefs = [xref for xref, name in ocg_entries if is_layer_zero_name(name)]
+    matched_by_name = bool(zero_xrefs)
 
     if zero_xrefs:
         try:
@@ -115,46 +164,24 @@ def suppress_layer_zero(doc) -> None:
             except _DOC_ERRORS:
                 pass
 
-    try:
-        ui_cfgs = doc.layer_ui_configs()
-    except _DOC_ERRORS:
-        return
-    if not ui_cfgs:
+    ui_entries = iter_ui_layer_entries(doc)
+    if not ui_entries:
         return
 
     ui_hit = False
-    for cfg in ui_cfgs:
-        cfg_name = cfg.get("text", "") or cfg.get("name", "") or cfg.get("label", "")
-        if not is_layer_zero_name(cfg_name):
+    for num, name, _xref in ui_entries:
+        if not is_layer_zero_name(name):
             continue
-        try:
-            num = int(cfg.get("number"))
-        except _PARSE_ERRORS:
-            continue
-        if num < 0:
-            continue
-        try:
-            doc.set_layer_ui_config(num, 2)
+        if set_ui_config_safe(doc, num, 2):
             ui_hit = True
-        except _DOC_ERRORS:
-            pass
 
     if not ui_hit and not matched_by_name:
-        first_ui_num = None
-        for cfg in ui_cfgs:
-            try:
-                num = int(cfg.get("number"))
-            except _DOC_ERRORS:
-                continue
-            if num < 0:
-                continue
-            try:
-                doc.set_layer_ui_config(num, 2)
-                first_ui_num = num
-            except Exception:
-                continue
-            break
-        if first_ui_num is not None:
+        first_num = None
+        for num, _name, _xref in ui_entries:
+            if set_ui_config_safe(doc, num, 2):
+                first_num = num
+                break
+        if first_num is not None:
             first_xref = None
             if all_ocg_xrefs:
                 first_xref = sorted(set(int(x) for x in all_ocg_xrefs if int(x) > 0))[0]
@@ -199,11 +226,8 @@ def apply_packet_layer_policy(doc) -> bool:
       - hidden variants
     - Fallback: at minimum suppress layer '0' / '0 (ANSI)'.
     """
-    try:
-        ui_cfgs = doc.layer_ui_configs()
-    except _DOC_ERRORS:
-        ui_cfgs = None
-    if not ui_cfgs:
+    ui_entries = iter_ui_layer_entries(doc)
+    if not ui_entries:
         suppress_layer_zero(doc)
         return False
 
@@ -212,19 +236,10 @@ def apply_packet_layer_policy(doc) -> bool:
     force_off_xrefs_from_ui: set[int] = set()
     first_ui_xref: Optional[int] = None
     layer_items: List[Tuple[int, str]] = []
-    for cfg in ui_cfgs:
-        try:
-            num = int(cfg.get("number"))
-        except _PARSE_ERRORS:
-            continue
-        if num < 0:
-            continue
-        xref = ui_cfg_xref(cfg)
+    for num, raw_name, xref in ui_entries:
         if first_ui_xref is None:
             first_ui_xref = xref
-        normalized = norm_layer_name(
-            cfg.get("text", "") or cfg.get("name", "") or cfg.get("label", "")
-        )
+        normalized = norm_layer_name(raw_name)
         layer_items.append((num, normalized))
         is_hidden = normalized == "hidden" or normalized.startswith("hidden")
         is_layer0 = is_layer_zero_name(normalized)
@@ -239,38 +254,22 @@ def apply_packet_layer_policy(doc) -> bool:
     changed = False
     if keep_nums:
         for num, _ in layer_items:
-            try:
-                doc.set_layer_ui_config(num, 2)
+            if set_ui_config_safe(doc, num, 2):
                 changed = True
-            except _DOC_ERRORS:
-                pass
         for num in sorted(keep_nums):
-            try:
-                doc.set_layer_ui_config(num, 1)
+            if set_ui_config_safe(doc, num, 1):
                 changed = True
-            except _DOC_ERRORS:
-                pass
     else:
         suppress_layer_zero(doc)
 
-    try:
-        ocgs = doc.get_ocgs() or {}
-    except _DOC_ERRORS:
-        ocgs = {}
-    if isinstance(ocgs, dict) and ocgs:
+    ocg_entries = iter_ocg_entries(doc)
+    if ocg_entries:
         all_xrefs: List[int] = []
         on_xrefs: List[int] = []
         zero_xrefs_by_name: List[int] = []
         hidden_xrefs_by_name: List[int] = []
-        for key, value in ocgs.items():
-            try:
-                xref = int(key)
-            except _PARSE_ERRORS:
-                continue
+        for xref, name in ocg_entries:
             all_xrefs.append(xref)
-            name = ""
-            if isinstance(value, dict):
-                name = str(value.get("name") or value.get("text") or "")
             if is_layer_zero_name(name):
                 zero_xrefs_by_name.append(xref)
                 continue
@@ -304,15 +303,8 @@ def apply_packet_layer_policy(doc) -> bool:
         else:
             off_xrefs = sorted(int(x) for x in force_off if int(x) > 0)
         if on_xrefs:
-            try:
-                doc.set_layer(-1, basestate="OFF", on=on_xrefs, off=off_xrefs)
+            if set_ocg_visibility_safe(doc, on_xrefs=on_xrefs, off_xrefs=off_xrefs, basestate="OFF"):
                 changed = True
-            except TypeError:
-                try:
-                    doc.set_layer(-1, on=on_xrefs, off=off_xrefs)
-                    changed = True
-                except _DOC_ERRORS:
-                    pass
         elif off_xrefs:
             try:
                 doc.set_layer(-1, off=off_xrefs)
@@ -492,22 +484,12 @@ def erase_layer_zero_overlays(
 def set_layer0_only(doc) -> None:
     if doc is None:
         return
-    try:
-        ui_cfgs = doc.layer_ui_configs() or []
-    except _DOC_ERRORS:
-        ui_cfgs = []
+    ui_entries = iter_ui_layer_entries(doc)
     on_nums: List[int] = []
     off_nums: List[int] = []
     toggle_nums: List[int] = []
-    for cfg in ui_cfgs:
-        try:
-            num = int(cfg.get("number"))
-        except _PARSE_ERRORS:
-            continue
-        if num < 0:
-            continue
+    for num, name, _xref in ui_entries:
         toggle_nums.append(num)
-        name = str(cfg.get("text", "") or cfg.get("name", "") or cfg.get("label", ""))
         if is_layer_zero_name(name):
             on_nums.append(num)
         else:
@@ -517,35 +499,19 @@ def set_layer0_only(doc) -> None:
         on_nums = [first_num]
         off_nums = [num for num in off_nums if int(num) != first_num]
     for num in off_nums:
-        try:
-            doc.set_layer_ui_config(num, 2)
-        except _DOC_ERRORS:
-            pass
+        set_ui_config_safe(doc, num, 2)
     for num in on_nums:
-        try:
-            doc.set_layer_ui_config(num, 1)
-        except _DOC_ERRORS:
-            pass
+        set_ui_config_safe(doc, num, 1)
 
-    try:
-        ocgs = doc.get_ocgs() or {}
-    except _DOC_ERRORS:
-        ocgs = {}
-    if isinstance(ocgs, dict) and ocgs:
+    ocg_entries = iter_ocg_entries(doc)
+    if ocg_entries:
         on_xrefs: List[int] = []
         off_xrefs: List[int] = []
         all_xrefs: List[int] = []
-        for key, value in ocgs.items():
-            try:
-                xref = int(key)
-            except _PARSE_ERRORS:
-                continue
+        for xref, name in ocg_entries:
             if xref <= 0:
                 continue
             all_xrefs.append(xref)
-            name = ""
-            if isinstance(value, dict):
-                name = str(value.get("name") or value.get("text") or "")
             if is_layer_zero_name(name):
                 on_xrefs.append(xref)
             else:
@@ -557,15 +523,7 @@ def set_layer0_only(doc) -> None:
         if on_xrefs or off_xrefs:
             on_xrefs = sorted(set(on_xrefs))
             off_xrefs = sorted(set(off_xrefs))
-            try:
-                doc.set_layer(-1, basestate="OFF", on=on_xrefs, off=off_xrefs)
-            except TypeError:
-                try:
-                    doc.set_layer(-1, on=on_xrefs, off=off_xrefs)
-                except _DOC_ERRORS:
-                    pass
-            except _DOC_ERRORS:
-                pass
+            set_ocg_visibility_safe(doc, on_xrefs=on_xrefs, off_xrefs=off_xrefs, basestate="OFF")
 
 
 def is_symbol_or_dimension_layer_name(name: object) -> bool:

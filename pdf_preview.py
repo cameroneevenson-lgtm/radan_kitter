@@ -10,6 +10,7 @@ from typing import Optional, Tuple
 # PyMuPDF
 import fitz  # pip: pymupdf
 
+from packet_layers import norm_layer_name
 from PySide6.QtCore import QEvent, QTimer, Qt, Signal
 from PySide6.QtGui import QColor, QImage, QMouseEvent, QPainter, QPixmap, QWheelEvent
 from PySide6.QtWidgets import QGraphicsPixmapItem, QGraphicsScene, QGraphicsView
@@ -86,10 +87,6 @@ def _render_pdf_page_to_qimage(
         doc.close()
 
 
-def _norm_layer_name(text: str) -> str:
-    return "".join(ch.lower() for ch in str(text) if ch.isalnum())
-
-
 def _apply_preferred_layers(doc: fitz.Document) -> bool:
     """
     Layer policy:
@@ -120,7 +117,7 @@ def _apply_preferred_layers(doc: fitz.Document) -> bool:
     }
     name_to_nums = {}
     for cfg in ui_cfgs:
-        nm = _norm_layer_name(cfg.get("text", ""))
+        nm = norm_layer_name(cfg.get("text", ""))
         try:
             num = int(cfg.get("number"))
         except Exception:
@@ -162,7 +159,7 @@ def _apply_preferred_layers(doc: fitz.Document) -> bool:
     # Fallback: no targets found. Hide requested non-preview layers by name.
     off_exact = {"0", "hidden", "border", "symbol"}
     for cfg in ui_cfgs:
-        nm = _norm_layer_name(cfg.get("text", ""))
+        nm = norm_layer_name(cfg.get("text", ""))
         if not (
             nm in off_exact
             or nm.startswith("symbol")

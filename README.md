@@ -119,6 +119,7 @@ The UI also has controls for setting or resetting the PDF/DXF root. Saved overri
 RADAN Kitter includes an RF suggestion workflow:
 
 - `ML Log` scans labeled rows and appends/upserts training rows in `ml_dataset.csv`.
+  - Upsert is keyed by part name, not by job/PDF/DXF path: re-scanning a part with the same name intentionally supersedes its prior training row, even if that row came from a different job. This lets an operator correct a label and have the dataset keep only the latest one for that part name.
 - `_ml_runs` stores per-run scan summaries.
 - `_ml_models` stores the trained random forest predictor artifacts.
 - `RF Suggest` computes features for the loaded project and fills suggested kit labels.
