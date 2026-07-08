@@ -12,11 +12,19 @@ T = TypeVar("T")
 
 def read_text_fallback(path: str) -> str:
     data = open(path, "rb").read()
-    for enc in ("utf-8", "utf-16", "latin-1"):
+    if data[:2] in (b"\xff\xfe", b"\xfe\xff"):
         try:
-            return data.decode(enc)
+            return data.decode("utf-16")
         except Exception:
-            continue
+            pass
+    try:
+        return data.decode("utf-8")
+    except Exception:
+        pass
+    try:
+        return data.decode("cp1252")
+    except Exception:
+        pass
     return data.decode("utf-8", errors="replace")
 
 

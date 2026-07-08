@@ -72,7 +72,8 @@ class PartRow:
 # --- public API ---
 
 def load_rpd(path: str) -> Tuple[ET.ElementTree, List[PartRow], Dict[str, str]]:
-    tree = ET.parse(path)
+    parser = ET.XMLParser(target=ET.TreeBuilder(insert_comments=True, insert_pis=True))
+    tree = ET.parse(path, parser=parser)
     root = tree.getroot()
     parts: List[PartRow] = []
     debug: Dict[str, str] = {}

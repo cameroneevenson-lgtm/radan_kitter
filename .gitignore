@@ -15,6 +15,16 @@ _bak/
 _out/
 radan_kitter_launch.log
 _runtime/profiles/
+_runtime/runtime_trace.jsonl
+graphify-out/
+_packet_debug_out/
+_ml_runs/
+_ml_models/
+
+# Test scratch output
+tests/_tmp/
+tests/_tmp_probe/
+_smoke_*/
 
 # OS/editor noise
 .DS_Store
