@@ -8,6 +8,19 @@ import rf_model
 from rpd_io import PartRow
 
 
+SINGLE_LABEL_COLLAPSE_MIN_ROWS = 10
+
+
+def _single_label_collapse_source(preds: Sequence[Tuple[str, float]]) -> str:
+    labels = [str(label or "").strip() for label, _conf in preds if str(label or "").strip()]
+    if len(labels) < SINGLE_LABEL_COLLAPSE_MIN_ROWS:
+        return ""
+    unique_labels = sorted(set(labels))
+    if len(unique_labels) != 1:
+        return ""
+    return f"single_label_collapse:{unique_labels[0]}:{len(labels)}"
+
+
 def run_rf_suggestions(
     parts: List[PartRow],
     *,
@@ -59,6 +72,9 @@ def run_rf_suggestions(
         force_train=False,
     )
     active_preds = rf_model.predict_with_rf(model, encoder, feat_names, feature_rows)
+    collapse_source = _single_label_collapse_source(active_preds)
+    if collapse_source:
+        return preds, collapse_source
     for row_idx, pred in zip(active_rows, active_preds):
         preds[row_idx] = pred
     return preds, source

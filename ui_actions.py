@@ -427,6 +427,19 @@ def run_rf_suggest(
         if source == "canceled":
             span.skip(reason="canceled")
             return
+        if source.startswith("single_label_collapse:"):
+            _prefix, label, count = (source.split(":", 2) + ["", ""])[:3]
+            progress.setValue(progress.maximum())
+            QMessageBox.warning(
+                parent,
+                "RF Suggest stopped",
+                (
+                    f"RF predicted {label or 'one kit'} for all {count or 'active'} rows.\n"
+                    "No suggestions were applied. Review the model/data before running RF Suggest again."
+                ),
+            )
+            span.skip(reason="single_label_collapse", label=label, pred_count=count)
+            return
         model.set_predictions(preds)
         refresh_ui_cb()
         progress.setValue(progress.maximum())
