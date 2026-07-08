@@ -100,6 +100,22 @@ def _model_key(model_path: str) -> str:
     return os.path.normcase(os.path.abspath(model_path or "")).lower()
 
 
+def _read_model_meta(meta_path: str) -> Dict[str, Any]:
+    try:
+        with open(meta_path, "r", encoding="utf-8") as f:
+            obj = json.load(f)
+        return obj if isinstance(obj, dict) else {}
+    except Exception:
+        return {}
+
+
+def _model_meta_matches_request(meta_path: str, *, dataset_mtime: float, wanted_features: Sequence[str]) -> bool:
+    meta_obj = _read_model_meta(meta_path)
+    meta_dataset_mtime = _safe_float(meta_obj.get("dataset_mtime", -1.0))
+    meta_requested_features = list(meta_obj.get("requested_features", []))
+    return meta_requested_features == list(wanted_features) and abs(meta_dataset_mtime - float(dataset_mtime)) <= 1e-6
+
+
 def _load_dataset_for_rf(
     dataset_path: str,
     feature_cols: Sequence[str],
@@ -181,6 +197,14 @@ def train_or_load_rf(
         and os.path.exists(meta_path)
         and model_mtime >= dataset_mtime
     )
+    if can_load:
+        if not _model_meta_matches_request(
+            meta_path,
+            dataset_mtime=float(dataset_mtime),
+            wanted_features=wanted_features,
+        ):
+            can_load = False
+
     if can_load:
         obj = load(model_path)
         if "requested_features" not in obj:
