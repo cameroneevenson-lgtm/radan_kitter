@@ -3,6 +3,7 @@ from __future__ import annotations
 import xml.etree.ElementTree as ET
 from typing import Callable, Dict, List, Tuple
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QHeaderView, QTableView
 
 import rpd_io
@@ -71,10 +72,13 @@ def load_rpd_into_table(
 
     header = table.horizontalHeader()
     with rt.stage("load_rpd_path", "resize_table_columns", min_elapsed_ms=10, part_count=len(parts)):
+        table.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        header.setStretchLastSection(False)
         header.setSectionResizeMode(QHeaderView.ResizeToContents)
         table.resizeColumnsToContents()
-        # Fill the table pane horizontally by stretching visible columns.
-        header.setSectionResizeMode(QHeaderView.Stretch)
+        # Preserve the content-sized widths while still allowing manual column resizing.
+        for col in range(model.columnCount()):
+            header.setSectionResizeMode(col, QHeaderView.Interactive)
 
     try:
         kit_col = PartsModel.KIT_COL
