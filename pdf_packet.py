@@ -272,18 +272,6 @@ def _grayscale_pixmap(pix):
         return pix
 
 
-def _layer_is_target(layer_name: object) -> bool:
-    s = str(layer_name or "").lower()
-    if not s:
-        return False
-    return "dimension" in s
-
-
-def _is_title_layer(layer_name: object) -> bool:
-    s = str(layer_name or "").lower()
-    return "title" in s
-
-
 def _is_red_rgb(color: object) -> bool:
     return _is_red_rgb_impl(color)
 

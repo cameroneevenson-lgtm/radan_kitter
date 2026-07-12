@@ -1,0 +1,6 @@
+target-version = "py312"
+
+# tests/_tmp and tests/_tmp_probe hold gitignored scratch dirs from past test
+# runs; some leftover subdirectories have ACLs that deny access even to
+# reads, which otherwise makes ruff warn "Access is denied" on every run.
+extend-exclude = ["tests/_tmp", "tests/_tmp_probe", "**/_tmp/**", "**/_tmp_probe/**"]
