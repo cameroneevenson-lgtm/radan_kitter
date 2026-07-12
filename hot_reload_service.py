@@ -5,7 +5,7 @@ import math
 import os
 import time
 from datetime import datetime, timezone
-from typing import Callable, Dict, Optional
+from typing import Callable, Optional
 
 
 def now_utc_iso() -> str:

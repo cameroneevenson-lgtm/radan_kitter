@@ -6,7 +6,7 @@ import threading
 import time
 import traceback
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from config import GLOBAL_RUNTIME_LOG_PATH
 

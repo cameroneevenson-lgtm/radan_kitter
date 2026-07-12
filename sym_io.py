@@ -5,7 +5,7 @@ import os
 import re
 from typing import Callable, Dict, List, Optional, Tuple, TypeVar
 
-from file_utils import atomic_write_bytes, backup_file, ensure_dir, now_stamp
+from file_utils import atomic_write_bytes, backup_file, ensure_dir
 
 T = TypeVar("T")
 

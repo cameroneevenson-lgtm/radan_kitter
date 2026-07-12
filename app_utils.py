@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import re
 
-from file_utils import atomic_write_bytes, backup_file, ensure_dir, now_stamp, safe_int_1_9
+from file_utils import backup_file, ensure_dir, now_stamp, safe_int_1_9  # noqa: F401 - backup_file/now_stamp/safe_int_1_9 re-exported for kit_service.py, packet_service.py, radan_kitter.py, ui_actions.py
 
 
 def kit_label_from_rpd_text(kit_text: str) -> str:

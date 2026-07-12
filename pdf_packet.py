@@ -14,7 +14,6 @@ import os
 import shutil
 import tempfile
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
-import time
 from typing import Callable, List, Optional, Tuple
 
 try:

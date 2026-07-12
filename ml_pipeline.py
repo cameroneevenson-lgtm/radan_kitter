@@ -22,7 +22,6 @@ from datetime import datetime, timezone
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple
 
 import pandas as pd
-import numpy as np
 from config import GLOBAL_DATASET_PATH
 from ml_dxf_features import compute_dxf_features as _compute_dxf_features_impl
 from ml_dataset_store import (

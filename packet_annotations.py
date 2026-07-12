@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from typing import Any, Callable, List, Optional, Tuple
+from typing import Callable, List, Optional, Tuple
 
 _PARSE_ERRORS = (AttributeError, IndexError, KeyError, TypeError, ValueError)
 _PAGE_READ_ERRORS = (AttributeError, RuntimeError, TypeError, ValueError)
