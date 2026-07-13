@@ -58,6 +58,7 @@ def apply_packet_result(
         mode = str(res.get("mode", "raster") or "raster").strip().lower()
         qty = int(res.get("qty", 1) or 1)
         extra = int(res.get("extra", 0) or 0)
+        assembly_note = str(res.get("assembly_note", "") or "").strip()
         dst_page = None
         if mode == "vector":
             pdf_path = str(res.get("pdf_path") or "").strip()
@@ -199,6 +200,35 @@ def apply_packet_result(
                 color=watermark_text_color,
                 fontname="helv",
             )
+
+            if assembly_note:
+                note_text = f"ASM: {assembly_note}"
+                note_font_size = 14 * watermark_text_scale
+                note_box_h = 26 * watermark_text_scale
+                note_gap = 6
+                note_y2 = y1 - note_gap
+                note_y1 = note_y2 - note_box_h
+                note_text_w = fitz_module.get_text_length(note_text, fontname="helv", fontsize=note_font_size)
+                max_text_w = max(40.0, rect.width - x1 - margin - (2 * pad_x))
+                if note_text_w > max_text_w:
+                    note_font_size = max(7.0, note_font_size * (max_text_w / note_text_w))
+                    note_text_w = fitz_module.get_text_length(note_text, fontname="helv", fontsize=note_font_size)
+                note_x2 = x1 + note_text_w + (2 * pad_x)
+                draw_rounded_stroke_rect_fn(
+                    dst_page,
+                    fitz_module.Rect(x1, note_y1, note_x2, note_y2),
+                    stroke_color=watermark_stroke_color,
+                    stroke_width=watermark_stroke_width,
+                    stroke_opacity=watermark_stroke_opacity,
+                    radius=watermark_radius * watermark_text_scale,
+                )
+                dst_page.insert_text(
+                    fitz_module.Point(x1 + pad_x, note_y1 + note_box_h * 0.72),
+                    note_text,
+                    fontsize=note_font_size,
+                    color=watermark_text_color,
+                    fontname="helv",
+                )
 
     if emit_progress:
         if progress_cb is not None:

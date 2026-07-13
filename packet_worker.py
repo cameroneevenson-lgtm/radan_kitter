@@ -58,6 +58,7 @@ def process_packet_part(
     status = part_name or f"Part {index}"
     qty = int(getattr(part, "qty", None) or 1)
     extra = int(getattr(part, "extra", None) or 0)
+    assembly_note = str(getattr(part, "assembly_note", "") or "").strip()
     pdf = resolver(part.sym, ".pdf")
     if not pdf or not os.path.exists(pdf):
         return _skip_result(index=index, status=status, stage="missing PDF", started_at=t0)
@@ -80,6 +81,7 @@ def process_packet_part(
                 "pdf_path": pdf,
                 "qty": qty,
                 "extra": extra,
+                "assembly_note": assembly_note,
                 "elapsed_ms": int((time.perf_counter() - t0) * 1000.0),
             }
 
@@ -121,6 +123,7 @@ def process_packet_part(
             "h": float(src_rect.height),
             "qty": qty,
             "extra": extra,
+            "assembly_note": assembly_note,
             "img_stream": stream,
             "open_ms": open_ms,
             "gate_ms": gate_ms,

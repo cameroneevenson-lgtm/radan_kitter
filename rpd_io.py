@@ -64,6 +64,12 @@ class PartRow:
     approved: bool = False
     needs_review: bool = False
 
+    # Transient, computed at packet-build time (not persisted to the .rpd) -
+    # the assembly name(s) this part was matched to, stamped on the print
+    # packet under the QTY box. See truck_nest_explorer's
+    # apply_assembly_context_to_sym_comments for the matching source of truth.
+    assembly_note: str = ""
+
     @property
     def part(self) -> str:
         return os.path.splitext(os.path.basename(self.sym))[0]

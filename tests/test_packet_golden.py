@@ -57,6 +57,46 @@ class PacketGoldenTests(unittest.TestCase):
         text = self._build_packet_text("raster")
         self.assertIn("QTY 2", text)
 
+    def _build_packet_text_with_assembly_note(self, render_mode: str, assembly_note: str) -> str:
+        part = PartRow(
+            pid="1",
+            sym="fixture.sym",
+            kit_text="",
+            priority="1",
+            qty=2,
+            material="",
+            thickness="",
+            extra=0,
+            assembly_note=assembly_note,
+        )
+        with workspace_temp_dir(f"packet_asm_{render_mode}") as tmp:
+            out_pdf = os.path.join(tmp, f"{render_mode}_asm_packet.pdf")
+            pages, missing = build_watermarked_packet(
+                [part],
+                out_pdf,
+                resolve_asset_fn=self._resolve_asset,
+                max_workers=1,
+                render_mode=render_mode,
+            )
+            self.assertEqual((pages, missing), (1, 0))
+            with fitz.open(out_pdf) as doc:
+                self.assertEqual(doc.page_count, 1)
+                return doc[0].get_text("text")
+
+    def test_vector_packet_stamps_full_assembly_name_under_qty(self) -> None:
+        text = self._build_packet_text_with_assembly_note("vector", "F55334-EXTERIOR PACK")
+        self.assertIn("QTY 2", text)
+        self.assertIn("ASM: F55334-EXTERIOR PACK", text)
+
+    def test_raster_packet_stamps_full_assembly_name_under_qty(self) -> None:
+        text = self._build_packet_text_with_assembly_note("raster", "F55334-EXTERIOR PACK")
+        self.assertIn("QTY 2", text)
+        self.assertIn("ASM: F55334-EXTERIOR PACK", text)
+
+    def test_packet_without_assembly_note_omits_asm_line(self) -> None:
+        text = self._build_packet_text("vector")
+        self.assertNotIn("ASM:", text)
+
     def test_vector_packet_suppresses_layer_zero_content(self) -> None:
         part = PartRow(
             pid="1",
