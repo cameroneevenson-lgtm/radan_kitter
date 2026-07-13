@@ -4,7 +4,7 @@ import os
 from typing import Callable, List, Optional, Tuple
 
 import pdf_packet
-from app_utils import ensure_dir, now_stamp, windows_natural_sort_key
+from app_utils import ensure_dir, windows_natural_sort_key
 from rpd_io import PartRow
 
 
@@ -32,7 +32,8 @@ def build_packet(
     base_dir = os.path.dirname(rpd_path)
     out_dir = os.path.join(base_dir, out_dirname)
     ensure_dir(out_dir)
-    packet_path = os.path.join(out_dir, f"PrintPacket_QTY_{now_stamp()}.pdf")
+    kit_name = os.path.splitext(os.path.basename(rpd_path))[0].strip() or "KIT"
+    packet_path = os.path.join(out_dir, f"{kit_name} PRINT PACKET.pdf")
     ordered_parts = sort_packet_parts(parts)
     pages, missing = pdf_packet.build_watermarked_packet(
         ordered_parts,
