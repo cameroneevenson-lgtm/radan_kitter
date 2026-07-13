@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import threading
 import time
 from typing import Dict, List, Optional, Tuple
 
@@ -29,6 +30,10 @@ _BASE_ENG_RELEASE_MAP: List[Tuple[str, str]] = list(DEFAULT_ENG_RELEASE_MAP)
 _ASSET_ROOT_SOURCE = "default"
 _TREE_INDEX_CACHE: Dict[Tuple[str, str], Tuple[Dict[str, str], Dict[str, List[str]]]] = {}
 _RESOLVE_RESULT_CACHE: Dict[Tuple[str, str, str], str] = {}
+# Both caches above are read/written from ThreadPoolExecutor workers
+# (see pdf_packet.py and ml_pipeline.py), so all access must go through
+# this lock to avoid concurrent-mutation races.
+_CACHE_LOCK = threading.RLock()
 ASSET_INDEX_TRACE_MIN_MS = 150
 ASSET_RESOLVE_TRACE_MIN_MS = 75
 
@@ -39,8 +44,9 @@ def _normalize_path(path: object) -> str:
 
 
 def _clear_search_cache() -> None:
-    _TREE_INDEX_CACHE.clear()
-    _RESOLVE_RESULT_CACHE.clear()
+    with _CACHE_LOCK:
+        _TREE_INDEX_CACHE.clear()
+        _RESOLVE_RESULT_CACHE.clear()
 
 
 def _normalize_release_map(pairs: List[Tuple[str, str]]) -> List[Tuple[str, str]]:
@@ -407,9 +413,10 @@ def _allow_fuzzy_dir_scan(dir_path: str, sym_path: str) -> bool:
 def _index_tree(root_dir: str, ext: str) -> Tuple[Dict[str, str], Dict[str, List[str]]]:
     norm_root = _normalize_path(root_dir)
     cache_key = (norm_root.lower(), ext.lower())
-    cached = _TREE_INDEX_CACHE.get(cache_key)
-    if cached is not None:
-        return cached
+    with _CACHE_LOCK:
+        cached = _TREE_INDEX_CACHE.get(cache_key)
+        if cached is not None:
+            return cached
 
     exact: Dict[str, str] = {}
     stem_matches: Dict[str, List[str]] = {}
@@ -453,7 +460,10 @@ def _index_tree(root_dir: str, ext: str) -> Tuple[Dict[str, str], Dict[str, List
     )
 
     cached = (exact, stem_matches)
-    _TREE_INDEX_CACHE[cache_key] = cached
+    with _CACHE_LOCK:
+        # Another thread may have indexed the same root/ext concurrently;
+        # last write wins, both results are equivalent.
+        _TREE_INDEX_CACHE[cache_key] = cached
     return cached
 
 
@@ -514,7 +524,8 @@ def _resolve_asset(
         ext = "." + ext
 
     cache_key = _resolve_cache_key(sp, ext, search_mode)
-    cached = _RESOLVE_RESULT_CACHE.get(cache_key)
+    with _CACHE_LOCK:
+        cached = _RESOLVE_RESULT_CACHE.get(cache_key)
     if cached is not None:
         return cached or None
 
@@ -530,7 +541,8 @@ def _resolve_asset(
             allow_fuzzy_listing=_allow_fuzzy_dir_scan(dir_path, sp),
         )
         if hit:
-            _RESOLVE_RESULT_CACHE[cache_key] = hit
+            with _CACHE_LOCK:
+                _RESOLVE_RESULT_CACHE[cache_key] = hit
             elapsed_ms = int((time.perf_counter() - t0) * 1000.0)
             if elapsed_ms >= ASSET_RESOLVE_TRACE_MIN_MS:
                 rt.event(
@@ -552,7 +564,8 @@ def _resolve_asset(
         for root_dir in search_roots:
             hit = _match_subtree(root_dir, base, ext, preferred_dirs=candidate_dirs)
             if hit:
-                _RESOLVE_RESULT_CACHE[cache_key] = hit
+                with _CACHE_LOCK:
+                    _RESOLVE_RESULT_CACHE[cache_key] = hit
                 elapsed_ms = int((time.perf_counter() - t0) * 1000.0)
                 if elapsed_ms >= ASSET_RESOLVE_TRACE_MIN_MS:
                     rt.event(
@@ -570,7 +583,8 @@ def _resolve_asset(
                     )
                 return hit
 
-    _RESOLVE_RESULT_CACHE[cache_key] = ""
+    with _CACHE_LOCK:
+        _RESOLVE_RESULT_CACHE[cache_key] = ""
     rt.event(
         "asset_lookup",
         "resolve",
