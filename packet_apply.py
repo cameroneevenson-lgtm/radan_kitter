@@ -204,26 +204,44 @@ def apply_packet_result(
             if assembly_note:
                 note_text = f"ASM: {assembly_note}"
                 note_font_size = 14 * watermark_text_scale
-                note_box_h = 26 * watermark_text_scale
-                note_gap = 6
-                note_y2 = y1 - note_gap
-                note_y1 = note_y2 - note_box_h
-                note_text_w = fitz_module.get_text_length(note_text, fontname="helv", fontsize=note_font_size)
-                max_text_w = max(40.0, rect.width - x1 - margin - (2 * pad_x))
-                if note_text_w > max_text_w:
-                    note_font_size = max(7.0, note_font_size * (max_text_w / note_text_w))
-                    note_text_w = fitz_module.get_text_length(note_text, fontname="helv", fontsize=note_font_size)
-                note_x2 = x1 + note_text_w + (2 * pad_x)
+                note_box_h = box_h
+                note_gap = 10
+                min_reasonable_w = 60.0
+
+                def _fit_note_font(available_w: float, font_size: float) -> Tuple[float, float]:
+                    text_w = fitz_module.get_text_length(note_text, fontname="helv", fontsize=font_size)
+                    if text_w > available_w > 0:
+                        font_size = max(7.0, font_size * (available_w / text_w))
+                        text_w = fitz_module.get_text_length(note_text, fontname="helv", fontsize=font_size)
+                    return font_size, text_w
+
+                right_available_w = rect.width - (x2 + note_gap) - margin - (2 * pad_x)
+                if right_available_w >= min_reasonable_w:
+                    note_x1 = x2 + note_gap
+                    note_y1 = y1
+                    note_y2 = y2
+                    note_font_size, note_text_w = _fit_note_font(right_available_w, note_font_size)
+                else:
+                    # Not enough room beside the QTY box (narrow page, or a
+                    # long assembly name) - stack the note above it instead,
+                    # where the full page width is available.
+                    above_available_w = rect.width - x1 - margin - (2 * pad_x)
+                    note_x1 = x1
+                    note_y2 = y1 - 6
+                    note_y1 = note_y2 - note_box_h
+                    note_font_size, note_text_w = _fit_note_font(above_available_w, note_font_size)
+
+                note_x2 = note_x1 + note_text_w + (2 * pad_x)
                 draw_rounded_stroke_rect_fn(
                     dst_page,
-                    fitz_module.Rect(x1, note_y1, note_x2, note_y2),
+                    fitz_module.Rect(note_x1, note_y1, note_x2, note_y2),
                     stroke_color=watermark_stroke_color,
                     stroke_width=watermark_stroke_width,
                     stroke_opacity=watermark_stroke_opacity,
                     radius=watermark_radius * watermark_text_scale,
                 )
                 dst_page.insert_text(
-                    fitz_module.Point(x1 + pad_x, note_y1 + note_box_h * 0.72),
+                    fitz_module.Point(note_x1 + pad_x, note_y1 + note_box_h * 0.72),
                     note_text,
                     fontsize=note_font_size,
                     color=watermark_text_color,

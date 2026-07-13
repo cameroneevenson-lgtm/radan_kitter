@@ -83,12 +83,15 @@ class PacketGoldenTests(unittest.TestCase):
                 self.assertEqual(doc.page_count, 1)
                 return doc[0].get_text("text")
 
-    def test_vector_packet_stamps_full_assembly_name_under_qty(self) -> None:
+    def test_vector_packet_stamps_full_assembly_name_on_a_narrow_page(self) -> None:
+        # The fixture page (300x200pt) is too narrow to fit the ASM box
+        # beside the QTY box - this exercises the above-QTY fallback and
+        # confirms the full name still renders intact either way.
         text = self._build_packet_text_with_assembly_note("vector", "F55334-EXTERIOR PACK")
         self.assertIn("QTY 2", text)
         self.assertIn("ASM: F55334-EXTERIOR PACK", text)
 
-    def test_raster_packet_stamps_full_assembly_name_under_qty(self) -> None:
+    def test_raster_packet_stamps_full_assembly_name_on_a_narrow_page(self) -> None:
         text = self._build_packet_text_with_assembly_note("raster", "F55334-EXTERIOR PACK")
         self.assertIn("QTY 2", text)
         self.assertIn("ASM: F55334-EXTERIOR PACK", text)
@@ -96,6 +99,55 @@ class PacketGoldenTests(unittest.TestCase):
     def test_packet_without_assembly_note_omits_asm_line(self) -> None:
         text = self._build_packet_text("vector")
         self.assertNotIn("ASM:", text)
+
+    def test_wide_page_places_assembly_note_to_the_right_of_qty(self) -> None:
+        with workspace_temp_dir("packet_asm_wide") as tmp:
+            wide_source_pdf = os.path.join(tmp, "wide_source.pdf")
+            doc = fitz.open()
+            page = doc.new_page(width=1800.0, height=1200.0)
+            page.insert_text((72, 72), "WIDE TITLE", fontsize=24)
+            doc.save(wide_source_pdf)
+            doc.close()
+
+            part = PartRow(
+                pid="1",
+                sym="fixture.sym",
+                kit_text="",
+                priority="1",
+                qty=3,
+                material="",
+                thickness="",
+                extra=0,
+                assembly_note="F55334-EXTERIOR PACK",
+            )
+            out_pdf = os.path.join(tmp, "wide_asm_packet.pdf")
+            pages, missing = build_watermarked_packet(
+                [part],
+                out_pdf,
+                resolve_asset_fn=lambda _sym, ext: wide_source_pdf if ext == ".pdf" else None,
+                max_workers=1,
+                render_mode="vector",
+            )
+            self.assertEqual((pages, missing), (1, 0))
+            with fitz.open(out_pdf) as result_doc:
+                page = result_doc[0]
+                text = page.get_text("text")
+                self.assertIn("QTY 3", text)
+                self.assertIn("ASM: F55334-EXTERIOR PACK", text)
+
+                words = page.get_text("words")
+                qty_words = [w for w in words if w[4] == "QTY"]
+                asm_words = [w for w in words if w[4] == "ASM:"]
+                self.assertTrue(qty_words and asm_words)
+                qty_x1 = qty_words[0][2]
+                asm_x0 = asm_words[0][0]
+                # ASM box starts to the right of where the QTY box ends.
+                self.assertGreater(asm_x0, qty_x1)
+                # Same row as QTY, not stacked above it: the two boxes share
+                # the same top/height, so their word tops differ only by the
+                # smaller ASM font's shorter ascender (a few points), not by
+                # a full box height (~46pt) the way a stacked layout would.
+                self.assertLess(abs(qty_words[0][1] - asm_words[0][1]), 35.0)
 
     def test_vector_packet_suppresses_layer_zero_content(self) -> None:
         part = PartRow(
