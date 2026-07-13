@@ -21,14 +21,29 @@ def unique_norm_paths(paths: List[str]) -> List[str]:
 
 
 def map_to_eng_release(sym_path: str, *, eng_release_map: Sequence[Tuple[str, str]]) -> str:
-    """Map a symbol path to a release path using ENG_RELEASE_MAP when possible."""
+    """Map a symbol path to a release path using ENG_RELEASE_MAP when possible.
+
+    This is the single canonical implementation of the prefix-remap logic;
+    assets.py delegates to it so the matching rules stay in one place.
+    """
     normalized = os.path.normpath(sym_path or "")
     if not normalized:
         return normalized
     normalized_lower = normalized.lower()
     for src, dst in eng_release_map:
-        src_normalized = os.path.normpath(src)
-        if normalized_lower.startswith(src_normalized.lower()):
+        src_raw = str(src or "").strip()
+        if not src_raw:
+            continue
+        src_normalized = os.path.normpath(src_raw)
+        src_lower = src_normalized.lower()
+        # Require a full path-segment match (equal, or followed by a path
+        # separator) so a prefix like "L:\Foo" doesn't wrongly match
+        # "L:\FooBar\...".
+        if (
+            normalized_lower == src_lower
+            or normalized_lower.startswith(src_lower + os.sep.lower())
+            or normalized_lower.startswith(src_lower + "\\")
+        ):
             rel = normalized[len(src_normalized) :].lstrip(r"\/")
             return os.path.normpath(os.path.join(dst, rel))
     return normalized

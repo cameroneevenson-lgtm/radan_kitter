@@ -14,6 +14,7 @@ from config import (
     ENG_RELEASE_MAP as CFG_ENG_RELEASE_MAP,
     W_RELEASE_ROOT as CFG_W_RELEASE_ROOT,
 )
+from packet_paths import map_to_eng_release as _map_to_eng_release_impl
 
 DEFAULT_W_RELEASE_ROOT = os.path.normpath(CFG_W_RELEASE_ROOT)
 DEFAULT_ENG_RELEASE_MAP: List[Tuple[str, str]] = [
@@ -194,16 +195,7 @@ def _map_path_to_eng_release(source_path: str) -> str:
     sp = _normalize_path(source_path)
     if not sp:
         return ""
-    sp_low = sp.lower()
-    for src_prefix, dst_prefix in ENG_RELEASE_MAP:
-        src_norm = _normalize_path(src_prefix)
-        if not src_norm:
-            continue
-        src_low = src_norm.lower()
-        if sp_low == src_low or sp_low.startswith(src_low + os.sep.lower()) or sp_low.startswith(src_low + "\\"):
-            rel = sp[len(src_norm):].lstrip("\\/")
-            return _normalize_path(os.path.join(dst_prefix, rel))
-    return sp
+    return _map_to_eng_release_impl(sp, eng_release_map=ENG_RELEASE_MAP)
 
 
 def map_to_eng_release(sym_dir: str) -> List[str]:

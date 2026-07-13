@@ -52,11 +52,7 @@ from packet_layers import (
     is_symbol_or_dimension_layer_name as _is_symbol_or_dimension_layer_name,
     layer_is_target as _layer_is_target,
 )
-from packet_paths import (
-    force_w_candidates as _force_w_candidates_impl,
-    map_to_eng_release as _map_to_eng_release_impl,
-    resolve_asset as _resolve_asset_impl,
-)
+from packet_paths import resolve_asset as _resolve_asset_impl
 from packet_worker import process_packet_part as _process_packet_part_impl
 import runtime_trace as rt
 from rpd_io import PartRow
@@ -433,16 +429,6 @@ def _draw_rounded_stroke_rect(page, rect, stroke_color, stroke_width: float, str
         stroke_opacity=stroke_opacity,
     )
     sh.commit()
-def map_to_eng_release(sym_path: str) -> str:
-    return _map_to_eng_release_impl(sym_path, eng_release_map=ENG_RELEASE_MAP)
-
-
-def _force_w_candidates(sym_path: str) -> List[str]:
-    return _force_w_candidates_impl(
-        sym_path,
-        w_release_root=W_RELEASE_ROOT,
-        eng_release_map=ENG_RELEASE_MAP,
-    )
 
 
 def _process_packet_part(
