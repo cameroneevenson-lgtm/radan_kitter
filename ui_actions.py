@@ -2,13 +2,16 @@ from __future__ import annotations
 
 import os
 import subprocess
+import sys
 import time
 import traceback
+from pathlib import Path
 from typing import Callable, Dict, List, Optional, Sequence
 
 from PySide6.QtCore import Qt, QTimer, QThreadPool
 from PySide6.QtWidgets import QApplication, QMessageBox, QProgressDialog, QWidget
 
+import assets
 import kit_service
 import ml_runtime
 import packet_service
@@ -207,6 +210,76 @@ def run_write_rpd(
         return False
 
 
+def _load_truck_nest_explorer_packet_build_service():
+    # Mirrors truck_nest_explorer's own _ensure_radan_kitter_on_path/
+    # _load_radan_kitter_modules (packet_build_service.py) - the assembly
+    # scan/stamp logic lives there, not here, so standalone radan_kitter
+    # reaches into the sibling repo the same way, just in reverse.
+    tne_dir = Path(__file__).resolve().parents[1] / "truck_nest_explorer"
+    if not tne_dir.exists():
+        return None
+    tne_dir_text = str(tne_dir)
+    if tne_dir_text not in sys.path:
+        sys.path.append(tne_dir_text)
+    try:
+        import packet_build_service as tne_packet_build_service  # type: ignore[import-not-found]
+    except Exception:
+        return None
+    return tne_packet_build_service
+
+
+def _scan_and_stamp_assembly_context(parts: List[PartRow], rpd_path: str) -> None:
+    """Best-effort: find assembly drawing PDFs, match parts to them, set
+    PartRow.assembly_note for the print packet, and update .sym comments -
+    same behavior as truck_nest_explorer's Full Flow / Build Print Packet,
+    for when radan_kitter is run standalone (e.g. one-off jobs with an
+    asset_root_override that live outside the normal W/L truck structure).
+    Search roots: the open .rpd's own folder, plus the active asset-root
+    override (assets.W_RELEASE_ROOT) if one is set - that override is
+    exactly where a one-off job's assembly drawings are expected to live.
+    """
+    tne = _load_truck_nest_explorer_packet_build_service()
+    if tne is None:
+        return
+
+    search_roots: List[Path] = []
+    seen: set[str] = set()
+    for candidate in (os.path.dirname(rpd_path or ""), assets.W_RELEASE_ROOT):
+        text = str(candidate or "").strip()
+        if not text or not os.path.isdir(text):
+            continue
+        key = os.path.normpath(text).lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        search_roots.append(Path(text))
+    if not search_roots:
+        return
+
+    try:
+        assembly_source_pdfs = tne.collect_unused_tabloid_pdfs(
+            parts,
+            search_roots=search_roots,
+            resolve_asset_fn=assets.resolve_asset_fast,
+        )
+        if not assembly_source_pdfs:
+            return
+        assembly_context = tne.scan_assembly_bom_context(
+            parts=parts,
+            source_pdfs=assembly_source_pdfs,
+        )
+        tne.apply_assembly_notes_to_parts(parts, assembly_context)
+        tne.apply_assembly_context_to_sym_comments(
+            parts=parts,
+            result=assembly_context,
+            backup_dir=Path(os.path.dirname(rpd_path or "")) / "_bak" / "assembly_comments",
+        )
+    except Exception:
+        # Best-effort: a failed assembly scan should not block the print
+        # packet build itself.
+        pass
+
+
 def run_build_packet(
     *,
     parent: QWidget,
@@ -267,6 +340,7 @@ def run_build_packet(
         span=span,
     ):
         return False
+    _scan_and_stamp_assembly_context(build_parts, rpd_path)
     setattr(parent, "_rk_build_packet_running", True)
 
     progress = QProgressDialog("Building print packet...", "Cancel", 0, max(1, len(build_parts)), parent)
