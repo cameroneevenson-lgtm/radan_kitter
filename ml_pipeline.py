@@ -17,7 +17,7 @@ from __future__ import annotations
 import math
 import os
 import time
-from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
+from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import datetime, timezone
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple
 
@@ -38,6 +38,7 @@ from ml_dataset_store import (
     safe_emit as _safe_emit_impl,
 )
 from ml_pdf_features import compute_pdf_features_vector as _compute_pdf_features_vector_impl
+from pool_runner import run_pooled as _run_pooled, shutdown_pool as _shutdown_pool
 
 try:
     import fitz  # PyMuPDF
@@ -522,8 +523,13 @@ def run_scan_and_log(
                 _handle_task_result(task, res, err)
                 submitted += 1
         else:
+            # NOTE: this stays a `with` block (unlike the other two pooled
+            # sites) so a stop request still lets any already-running tasks
+            # finish and shut the pool down via the context manager's own
+            # wait=True exit, rather than canceling in flight work - that is
+            # existing behavior for this call site, preserved as-is.
             with ThreadPoolExecutor(max_workers=workers) as pool:
-                in_flight: Dict[Any, Dict[str, Any]] = {}
+                in_flight: Dict[Future, Dict[str, Any]] = {}
 
                 def _submit_next() -> bool:
                     nonlocal submitted
@@ -535,32 +541,24 @@ def run_scan_and_log(
                     in_flight[fut] = task
                     return True
 
-                for _ in range(min(workers, total_tasks)):
-                    _submit_next()
+                def _handle_completed_task(task: Dict[str, Any], fut: Future) -> None:
+                    err = ""
+                    res = None
+                    try:
+                        res = fut.result()
+                    except Exception as e:
+                        err = str(e)
+                    _handle_task_result(task, res, err)
 
-                while in_flight:
-                    if should_stop is not None:
-                        try:
-                            if should_stop():
-                                stopped = True
-                                break
-                        except Exception:
-                            pass
-
-                    done_set, _ = wait(set(in_flight.keys()), timeout=0.2, return_when=FIRST_COMPLETED)
-                    if not done_set:
-                        continue
-                    for fut in done_set:
-                        task = in_flight.pop(fut)
-                        err = ""
-                        res = None
-                        try:
-                            res = fut.result()
-                        except Exception as e:
-                            err = str(e)
-                        _handle_task_result(task, res, err)
-                        if not stopped:
-                            _submit_next()
+                stopped = _run_pooled(
+                    pool,
+                    in_flight,
+                    _submit_next,
+                    _handle_completed_task,
+                    max_workers=workers,
+                    total_items=total_tasks,
+                    should_cancel=should_stop,
+                )
 
     if rows_to_upsert:
         try:
@@ -757,59 +755,43 @@ def recompute_dataset_signals(
             _apply_row_result(idx, pdf_path, dxf_path, feats, feature_errors, hard_error)
     else:
         submitted = 0
-        in_flight: Dict[Any, Tuple[int, str, str]] = {}
+        in_flight: Dict[Future, Tuple[int, str, str]] = {}
         pool = ThreadPoolExecutor(max_workers=workers)
+
+        def _submit_next() -> bool:
+            nonlocal submitted
+            if submitted >= len(tasks):
+                return False
+            idx, pdf_path, dxf_path = tasks[submitted]
+            submitted += 1
+            fut = pool.submit(_compute_phase2_signals_detail, pdf_path, dxf_path)
+            in_flight[fut] = (idx, pdf_path, dxf_path)
+            return True
+
+        def _handle_completed_row(context: Tuple[int, str, str], fut: Future) -> None:
+            idx, pdf_path, dxf_path = context
+            feats: Optional[Dict[str, float]] = None
+            feature_errors: Dict[str, str] = {}
+            hard_error = ""
+            try:
+                feats, feature_errors = fut.result()
+            except Exception as exc:
+                hard_error = _format_error(exc)
+                feats = None
+            _apply_row_result(idx, pdf_path, dxf_path, feats, feature_errors, hard_error)
+
         try:
-            def _submit_next() -> bool:
-                nonlocal submitted
-                if submitted >= len(tasks):
-                    return False
-                idx, pdf_path, dxf_path = tasks[submitted]
-                submitted += 1
-                fut = pool.submit(_compute_phase2_signals_detail, pdf_path, dxf_path)
-                in_flight[fut] = (idx, pdf_path, dxf_path)
-                return True
-
-            for _ in range(min(workers, len(tasks))):
-                _submit_next()
-
-            while in_flight:
-                if should_stop is not None:
-                    try:
-                        if should_stop():
-                            stopped = True
-                            break
-                    except Exception:
-                        pass
-                done_set, _ = wait(set(in_flight.keys()), timeout=0.2, return_when=FIRST_COMPLETED)
-                if not done_set:
-                    continue
-                for fut in done_set:
-                    idx, pdf_path, dxf_path = in_flight.pop(fut)
-                    feats: Optional[Dict[str, float]] = None
-                    feature_errors: Dict[str, str] = {}
-                    hard_error = ""
-                    try:
-                        feats, feature_errors = fut.result()
-                    except Exception as exc:
-                        hard_error = _format_error(exc)
-                        feats = None
-                    _apply_row_result(idx, pdf_path, dxf_path, feats, feature_errors, hard_error)
-                    if not stopped:
-                        _submit_next()
+            stopped = _run_pooled(
+                pool,
+                in_flight,
+                _submit_next,
+                _handle_completed_row,
+                max_workers=workers,
+                total_items=len(tasks),
+                should_cancel=should_stop,
+            )
         finally:
-            if stopped:
-                for fut in list(in_flight.keys()):
-                    try:
-                        fut.cancel()
-                    except Exception:
-                        pass
-                try:
-                    pool.shutdown(wait=False, cancel_futures=True)
-                except TypeError:
-                    pool.shutdown(wait=False)
-            else:
-                pool.shutdown(wait=True)
+            _shutdown_pool(pool, in_flight, stopped)
 
     # Persist partial progress if canceled.
     df.to_csv(dataset_path, index=False)
