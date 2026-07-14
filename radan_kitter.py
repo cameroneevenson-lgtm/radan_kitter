@@ -90,6 +90,21 @@ class Main(QMainWindow):
         self.model: Optional[PartsModel] = None
         self.numpad_controller: Optional[NumpadController] = None
 
+        # ui_actions.py injects worker handles / running-flags / dialogs /
+        # cached pixmaps onto this window via setattr/getattr(parent,
+        # "_rk_*", ...) rather than owning that state itself (see
+        # run_build_packet, run_ml_log, run_ml_recompute_all,
+        # run_ml_signal_plot, refresh_ml_plot_pane). Declaring them here
+        # with their defaults doesn't change that setattr/getattr usage,
+        # but documents the state surface directly on the class instead of
+        # leaving it implicit in a different file.
+        self._rk_build_packet_running: bool = False
+        self._rk_build_packet_worker: Optional[object] = None
+        self._rk_ml_log_worker: Optional[object] = None
+        self._rk_ml_recompute_worker: Optional[object] = None
+        self._rk_ml_signal_plot_dialog: Optional[object] = None
+        self._rk_ml_plot_pixmap: Optional[object] = None
+
         ui_main_layout.build_main_layout(
             self,
             canon_kits=CANON_KITS,
