@@ -30,7 +30,7 @@ from PySide6.QtGui import QKeyEvent
 from PySide6.QtWidgets import QFileDialog, QMainWindow, QMessageBox
 
 import assets
-import hot_reload_service
+from hot_reload_controller import HotReloadController
 from app_utils import (
     kit_text_for_rpd,
     safe_int_1_9,
@@ -128,16 +128,15 @@ class Main(QMainWindow):
         self._preview_timer.timeout.connect(self.preview_current)
         self.splitter.splitterMoved.connect(lambda *_: self._preview_timer.start(0))
 
-        self._hot_reload_request_id: str = ""
-        self._hot_reload_pending_action: str = ""
-        self._set_hot_reload_prompt(
-            visible=False,
-            message="Hot reload requested.",
-            enable_buttons=True,
+        self._hot_reload_controller = HotReloadController(
+            self,
+            HOT_RELOAD_REQUEST_PATH,
+            HOT_RELOAD_RESPONSE_PATH,
         )
+        self._hot_reload_controller.poll()
         self._hot_reload_timer = QTimer(self)
         self._hot_reload_timer.setInterval(400)
-        self._hot_reload_timer.timeout.connect(self._poll_hot_reload_request)
+        self._hot_reload_timer.timeout.connect(self._hot_reload_controller.poll)
         self._hot_reload_timer.start()
 
         # Trigger preview on mouse + keyboard navigation
@@ -463,80 +462,12 @@ class Main(QMainWindow):
             signal_cols=RF_FEATURES,
         )
 
-    def _set_hot_reload_prompt(self, *, visible: bool, message: str, enable_buttons: bool) -> None:
-        try:
-            self.hot_reload_label.setText(str(message or "Hot reload requested."))
-            self.hot_reload_accept_btn.setEnabled(bool(enable_buttons))
-            self.hot_reload_reject_btn.setEnabled(bool(enable_buttons))
-            self.hot_reload_bar.setVisible(bool(visible))
-        except Exception:
-            pass
-
-    def _write_hot_reload_response(self, request_id: str, action: str) -> None:
-        hot_reload_service.write_response(HOT_RELOAD_RESPONSE_PATH, request_id, action)
-
-    def _poll_hot_reload_request(self) -> None:
-        request = hot_reload_service.load_request(HOT_RELOAD_REQUEST_PATH)
-        rid = hot_reload_service.request_id(request)
-        if not rid:
-            self._hot_reload_request_id = ""
-            self._hot_reload_pending_action = ""
-            self._set_hot_reload_prompt(
-                visible=False,
-                message="Hot reload requested.",
-                enable_buttons=True,
-            )
-            return
-
-        # New request resets local action latch.
-        if rid != self._hot_reload_request_id:
-            self._hot_reload_request_id = rid
-            self._hot_reload_pending_action = ""
-
-        if self._hot_reload_pending_action == "accept":
-            self._set_hot_reload_prompt(
-                visible=True,
-                message="Hot reload accepted. Waiting for restart...",
-                enable_buttons=False,
-            )
-            return
-        if self._hot_reload_pending_action == "reject":
-            self._set_hot_reload_prompt(
-                visible=False,
-                message="Hot reload requested.",
-                enable_buttons=True,
-            )
-            return
-
-        msg = hot_reload_service.format_prompt_message(request)
-        self._set_hot_reload_prompt(visible=True, message=msg, enable_buttons=True)
-
+    # Dev-only hot-reload banner: polling/state lives in HotReloadController
+    # (see hot_reload_controller.py) which Main composes in __init__. These
+    # two thin pass-throughs remain on Main because ui_main_layout wires the
+    # Accept/Reject buttons directly to self.on_hot_reload_accept/reject.
     def on_hot_reload_accept(self) -> None:
-        rid = str(self._hot_reload_request_id or "").strip()
-        if not rid:
-            return
-        try:
-            self._write_hot_reload_response(rid, "accept")
-            self._hot_reload_pending_action = "accept"
-            self._set_hot_reload_prompt(
-                visible=True,
-                message="Hot reload accepted. Waiting for restart...",
-                enable_buttons=False,
-            )
-        except Exception:
-            QMessageBox.warning(self, "Hot Reload", "Failed to write reload accept response.")
+        self._hot_reload_controller.accept()
 
     def on_hot_reload_reject(self) -> None:
-        rid = str(self._hot_reload_request_id or "").strip()
-        if not rid:
-            return
-        try:
-            self._write_hot_reload_response(rid, "reject")
-            self._hot_reload_pending_action = "reject"
-            self._set_hot_reload_prompt(
-                visible=False,
-                message="Hot reload requested.",
-                enable_buttons=True,
-            )
-        except Exception:
-            QMessageBox.warning(self, "Hot Reload", "Failed to write reload reject response.")
+        self._hot_reload_controller.reject()
