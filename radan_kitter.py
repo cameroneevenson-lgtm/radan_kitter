@@ -30,6 +30,7 @@ from PySide6.QtGui import QKeyEvent
 from PySide6.QtWidgets import QFileDialog, QMainWindow, QMessageBox
 
 import assets
+from asset_root_controller import AssetRootController
 from hot_reload_controller import HotReloadController
 from app_utils import (
     kit_text_for_rpd,
@@ -105,6 +106,8 @@ class Main(QMainWindow):
         self._rk_ml_signal_plot_dialog: Optional[object] = None
         self._rk_ml_plot_pixmap: Optional[object] = None
 
+        self._asset_root_controller = AssetRootController(self)
+
         ui_main_layout.build_main_layout(
             self,
             canon_kits=CANON_KITS,
@@ -135,7 +138,7 @@ class Main(QMainWindow):
         )
         self._update_numpad_legend(None)
         self._refresh_open_rpd_indicator()
-        self._refresh_asset_root_indicator()
+        self._asset_root_controller.refresh_indicator()
         QTimer.singleShot(0, self._refresh_ml_plot_pane)
 
         self._preview_timer = QTimer()
@@ -277,95 +280,16 @@ class Main(QMainWindow):
             except Exception:
                 pass
 
-    def _refresh_asset_root_indicator(self) -> None:
-        lbl = getattr(self, "asset_root_label", None)
-        choose_btn = getattr(self, "asset_root_button", None)
-        reset_btn = getattr(self, "asset_root_reset_button", None)
-        if lbl is None:
-            return
-
-        state = assets.get_asset_root_state()
-        root = os.path.normpath(str(state.get("root") or "").strip())
-        source = str(state.get("source") or "default").strip().lower() or "default"
-        override_active = bool(state.get("override_active", False))
-        root_hint = root or "(none)"
-        source_hint = "default W: root"
-        if source == "env":
-            source_hint = "env override root"
-        elif source != "default":
-            source_hint = "saved override root"
-        lookup_tip = (
-            f"Current root: {root_hint}\n"
-            f"Source: {source_hint}\n\n"
-            "Lookup order:\n"
-            "1. Matching release folders under the current root\n"
-            "2. Same folder as the .sym file\n"
-            "3. The .sym file's Parts subfolder\n\n"
-            "Preview, packet, RF suggest, and ML log all use this fast lookup.\n"
-            "No recursive crawl is done after these checks."
-        )
-        if not root:
-            text = "PDF/DXF Root: (none)"
-            tip = lookup_tip
-        elif source == "default":
-            text = f"PDF/DXF Root: {root} (default)"
-            tip = lookup_tip
-        elif source == "env":
-            text = f"PDF/DXF Root: {root} (env override)"
-            tip = lookup_tip + "\n\nSet by RADAN_KITTER_ASSET_ROOT."
-        else:
-            text = f"PDF/DXF Root: {root} (saved override)"
-            tip = lookup_tip
-        try:
-            lbl.setText(text)
-            lbl.setToolTip(tip)
-        except Exception:
-            pass
-        if choose_btn is not None:
-            try:
-                choose_btn.setToolTip(
-                    tip + "\n\nChoose a different root if the PDFs or DXFs live somewhere else."
-                )
-            except Exception:
-                pass
-        if reset_btn is not None:
-            try:
-                reset_btn.setEnabled(override_active)
-                reset_btn.setToolTip(
-                    tip + "\n\nReset back to the default W: release root."
-                )
-            except Exception:
-                pass
-
+    # Asset-root override UI: indicator refresh + Choose/Reset handlers live
+    # in AssetRootController (see asset_root_controller.py), composed in
+    # __init__. These two thin pass-throughs remain on Main because
+    # ui_main_layout wires the Choose/Reset buttons directly to
+    # self.choose_asset_root/reset_asset_root.
     def choose_asset_root(self) -> None:
-        state = assets.get_asset_root_state()
-        start_dir = os.path.normpath(str(state.get("root") or "").strip())
-        path = QFileDialog.getExistingDirectory(
-            self,
-            "Select PDF/DXF Root Folder",
-            start_dir,
-        )
-        if not path:
-            return
-
-        try:
-            assets.set_asset_root_override(path, persist=True, source="saved")
-        except Exception:
-            QMessageBox.critical(self, "Set PDF/DXF Root failed", traceback.format_exc())
-            return
-
-        self._refresh_asset_root_indicator()
-        self.preview_current()
+        self._asset_root_controller.choose()
 
     def reset_asset_root(self) -> None:
-        try:
-            assets.set_asset_root_override(None, persist=True, source="default")
-        except Exception:
-            QMessageBox.critical(self, "Reset PDF/DXF Root failed", traceback.format_exc())
-            return
-
-        self._refresh_asset_root_indicator()
-        self.preview_current()
+        self._asset_root_controller.reset()
 
     def _update_numpad_legend(self, row: Optional[int]) -> None:
         self.preview_coordinator.update_numpad_legend(self.model, row)
