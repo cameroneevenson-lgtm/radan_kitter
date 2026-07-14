@@ -505,6 +505,18 @@ def _apply_packet_result(
     )
 
 
+def _resolve_packet_worker_count(requested_workers: Optional[int], total_parts: int) -> int:
+    """Clamp the requested worker count to [1, 8] and to at most one worker per part."""
+    configured_workers = int(PACKET_MAX_WORKERS)
+    if requested_workers is not None:
+        try:
+            configured_workers = int(requested_workers)
+        except Exception:
+            configured_workers = int(PACKET_MAX_WORKERS)
+    configured_workers = max(1, min(8, configured_workers))
+    return min(configured_workers, max(1, total_parts))
+
+
 def build_watermarked_packet(
     parts: List[PartRow],
     out_pdf_path: str,
@@ -533,14 +545,7 @@ def build_watermarked_packet(
     resolver = resolve_asset_fn or resolve_asset
     total = len(parts)
     progress_total = max(1, total)
-    configured_workers = int(PACKET_MAX_WORKERS)
-    if max_workers is not None:
-        try:
-            configured_workers = int(max_workers)
-        except Exception:
-            configured_workers = int(PACKET_MAX_WORKERS)
-    configured_workers = max(1, min(8, configured_workers))
-    max_workers = min(configured_workers, max(1, total))
+    max_workers = _resolve_packet_worker_count(max_workers, total)
     span = rt.begin(
         "packet_engine",
         out_pdf_path=out_pdf_path,
@@ -574,30 +579,106 @@ def build_watermarked_packet(
         except Exception:
             pass
 
-    try:
-        total_part_ms = 0
-        max_part_ms = 0
-        done_parts = 0
-        canceled = False
-        last_failure_status = ""
-        if max_workers <= 1:
-            for i, p in enumerate(parts, start=1):
-                if _should_cancel():
-                    canceled = True
-                    break
-                res = _process_packet_part(
-                    i,
-                    p,
-                    resolver=resolver,
-                    render_mode=render_mode,
-                )
+    total_part_ms = 0
+    max_part_ms = 0
+    done_parts = 0
+    canceled = False
+    last_failure_status = ""
+
+    def _run_sequential() -> None:
+        nonlocal missing, pages, total_part_ms, max_part_ms, done_parts, canceled, last_failure_status
+        for i, p in enumerate(parts, start=1):
+            if _should_cancel():
+                canceled = True
+                break
+            res = _process_packet_part(
+                i,
+                p,
+                resolver=resolver,
+                render_mode=render_mode,
+            )
+            miss_i, pages_i, elapsed_ms = _apply_packet_result(
+                dst,
+                res,
+                progress_done=i,
+                progress_total=progress_total,
+                progress_cb=progress_cb,
+                span=span,
+            )
+            missing += miss_i
+            pages += pages_i
+            total_part_ms += elapsed_ms
+            max_part_ms = max(max_part_ms, elapsed_ms)
+            done_parts += 1
+            if pages_i <= 0:
+                last_failure_status = str(res.get("status") or last_failure_status or f"Part {i}")
+
+    def _run_pooled_parts() -> None:
+        # Threaded processing with completion-driven progress + ordered writes.
+        nonlocal canceled
+        next_write_idx = 1
+        completed_count = 0
+        ready: dict[int, dict] = {}
+        idx_parts = list(enumerate(parts, start=1))
+        submitted = 0
+        pool = ThreadPoolExecutor(max_workers=max_workers)
+        in_flight: Dict[Future, int] = {}
+
+        def _submit_next() -> bool:
+            nonlocal submitted
+            if submitted >= len(idx_parts):
+                return False
+            idx, part = idx_parts[submitted]
+            submitted += 1
+            fut = pool.submit(
+                _process_packet_part,
+                idx,
+                part,
+                resolver=resolver,
+                render_mode=render_mode,
+            )
+            in_flight[fut] = idx
+            return True
+
+        def _handle_completed_part(idx: int, fut: Future) -> None:
+            nonlocal completed_count, next_write_idx
+            nonlocal missing, pages, total_part_ms, max_part_ms, done_parts, last_failure_status
+            try:
+                res = fut.result()
+            except Exception as exc:
+                detail = _format_error(exc)
+                res = {
+                    "idx": idx,
+                    "status": f"Part {idx} (worker failed: {detail})",
+                    "missing": 1,
+                    "skip": True,
+                    "error_stage": "worker_failed",
+                    "error": detail,
+                    "elapsed_ms": 0,
+                }
+            ready[idx] = res
+            completed_count += 1
+            status_done = str(res.get("status") or f"Part {idx}")
+            if progress_cb is not None:
+                try:
+                    progress_cb(completed_count, progress_total, status_done)
+                except Exception:
+                    pass
+            try:
+                span.progress(completed_count, progress_total, status_done)
+            except Exception:
+                pass
+            # Emit ordered results as soon as contiguous prefixes are available.
+            while next_write_idx in ready:
+                res2 = ready.pop(next_write_idx)
                 miss_i, pages_i, elapsed_ms = _apply_packet_result(
                     dst,
-                    res,
-                    progress_done=i,
+                    res2,
+                    progress_done=completed_count,
                     progress_total=progress_total,
                     progress_cb=progress_cb,
                     span=span,
+                    emit_progress=False,
                 )
                 missing += miss_i
                 pages += pages_i
@@ -605,137 +686,70 @@ def build_watermarked_packet(
                 max_part_ms = max(max_part_ms, elapsed_ms)
                 done_parts += 1
                 if pages_i <= 0:
-                    last_failure_status = str(res.get("status") or last_failure_status or f"Part {i}")
-        else:
-            # Threaded processing with completion-driven progress + ordered writes.
-            next_write_idx = 1
-            completed_count = 0
-            ready: dict[int, dict] = {}
-            idx_parts = list(enumerate(parts, start=1))
-            submitted = 0
-            pool = ThreadPoolExecutor(max_workers=max_workers)
-            in_flight: Dict[Future, int] = {}
-
-            def _submit_next() -> bool:
-                nonlocal submitted
-                if submitted >= len(idx_parts):
-                    return False
-                idx, part = idx_parts[submitted]
-                submitted += 1
-                fut = pool.submit(
-                    _process_packet_part,
-                    idx,
-                    part,
-                    resolver=resolver,
-                    render_mode=render_mode,
-                )
-                in_flight[fut] = idx
-                return True
-
-            def _handle_completed_part(idx: int, fut: Future) -> None:
-                nonlocal completed_count, next_write_idx
-                nonlocal missing, pages, total_part_ms, max_part_ms, done_parts, last_failure_status
-                try:
-                    res = fut.result()
-                except Exception as exc:
-                    detail = _format_error(exc)
-                    res = {
-                        "idx": idx,
-                        "status": f"Part {idx} (worker failed: {detail})",
-                        "missing": 1,
-                        "skip": True,
-                        "error_stage": "worker_failed",
-                        "error": detail,
-                        "elapsed_ms": 0,
-                    }
-                ready[idx] = res
-                completed_count += 1
-                status_done = str(res.get("status") or f"Part {idx}")
-                if progress_cb is not None:
-                    try:
-                        progress_cb(completed_count, progress_total, status_done)
-                    except Exception:
-                        pass
-                try:
-                    span.progress(completed_count, progress_total, status_done)
-                except Exception:
-                    pass
-                # Emit ordered results as soon as contiguous prefixes are available.
-                while next_write_idx in ready:
-                    res2 = ready.pop(next_write_idx)
-                    miss_i, pages_i, elapsed_ms = _apply_packet_result(
-                        dst,
-                        res2,
-                        progress_done=completed_count,
-                        progress_total=progress_total,
-                        progress_cb=progress_cb,
-                        span=span,
-                        emit_progress=False,
+                    last_failure_status = str(
+                        res2.get("status") or last_failure_status or f"Part {next_write_idx}"
                     )
-                    missing += miss_i
-                    pages += pages_i
-                    total_part_ms += elapsed_ms
-                    max_part_ms = max(max_part_ms, elapsed_ms)
-                    done_parts += 1
-                    if pages_i <= 0:
-                        last_failure_status = str(
-                            res2.get("status") or last_failure_status or f"Part {next_write_idx}"
-                        )
-                    next_write_idx += 1
+                next_write_idx += 1
 
+        try:
+            canceled = _run_pooled(
+                pool,
+                in_flight,
+                _submit_next,
+                _handle_completed_part,
+                max_workers=max_workers,
+                total_items=len(idx_parts),
+                should_cancel=_should_cancel,
+            )
+        finally:
+            _shutdown_pool(pool, in_flight, canceled)
+
+    def _raise_if_canceled() -> None:
+        if not canceled:
+            return
+        if progress_cb is not None:
             try:
-                canceled = _run_pooled(
-                    pool,
-                    in_flight,
-                    _submit_next,
-                    _handle_completed_part,
-                    max_workers=max_workers,
-                    total_items=len(idx_parts),
-                    should_cancel=_should_cancel,
-                )
-            finally:
-                _shutdown_pool(pool, in_flight, canceled)
+                progress_cb(done_parts, progress_total, "Packet build canceled")
+            except Exception:
+                pass
+        span.skip(
+            reason="user_canceled",
+            pages=int(pages),
+            missing=int(missing),
+            processed_parts=int(done_parts),
+        )
+        raise PacketBuildCanceled(
+            "Packet build canceled.",
+            pages=int(pages),
+            missing=int(missing),
+        )
 
-        if canceled:
-            if progress_cb is not None:
-                try:
-                    progress_cb(done_parts, progress_total, "Packet build canceled")
-                except Exception:
-                    pass
-            span.skip(
-                reason="user_canceled",
-                pages=int(pages),
-                missing=int(missing),
-                processed_parts=int(done_parts),
-            )
-            raise PacketBuildCanceled(
-                "Packet build canceled.",
-                pages=int(pages),
-                missing=int(missing),
-            )
+    def _raise_if_no_pages_produced() -> None:
+        if int(pages) > 0 and int(getattr(dst, "page_count", 0) or 0) > 0:
+            return
+        if progress_cb is not None:
+            try:
+                progress_cb(progress_total, progress_total, "No packet pages created")
+            except Exception:
+                pass
+        span.skip(
+            reason="no_packet_pages",
+            pages=int(pages),
+            missing=int(missing),
+            processed_parts=int(done_parts),
+        )
+        detail = str(last_failure_status or "").strip()
+        msg = "No packet pages were created from the selected rows."
+        if detail:
+            msg += f" Last failure: {detail}"
+        raise PacketBuildEmpty(
+            msg,
+            pages=int(pages),
+            missing=int(missing),
+        )
 
-        if int(pages) <= 0 or int(getattr(dst, "page_count", 0) or 0) <= 0:
-            if progress_cb is not None:
-                try:
-                    progress_cb(progress_total, progress_total, "No packet pages created")
-                except Exception:
-                    pass
-            span.skip(
-                reason="no_packet_pages",
-                pages=int(pages),
-                missing=int(missing),
-                processed_parts=int(done_parts),
-            )
-            detail = str(last_failure_status or "").strip()
-            msg = "No packet pages were created from the selected rows."
-            if detail:
-                msg += f" Last failure: {detail}"
-            raise PacketBuildEmpty(
-                msg,
-                pages=int(pages),
-                missing=int(missing),
-            )
-
+    def _save_packet_to_disk() -> int:
+        """Save dst to a temp file, then copy it into place. Returns the final file size in bytes."""
         if progress_cb is not None:
             try:
                 progress_cb(progress_total, progress_total, "Saving packet to temp file")
@@ -771,11 +785,21 @@ def build_watermarked_packet(
                     os.remove(tmp_pdf_path)
                 except Exception:
                     pass
-        out_size = 0
         try:
-            out_size = int(os.path.getsize(out_pdf_path))
+            return int(os.path.getsize(out_pdf_path))
         except Exception:
-            out_size = 0
+            return 0
+
+    try:
+        if max_workers <= 1:
+            _run_sequential()
+        else:
+            _run_pooled_parts()
+
+        _raise_if_canceled()
+        _raise_if_no_pages_produced()
+
+        out_size = _save_packet_to_disk()
 
         if progress_cb is not None:
             try:
