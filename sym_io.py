@@ -205,7 +205,13 @@ def set_part_comment_text(text: str, comment: str) -> tuple[str, bool]:
     if not m:
         return text, False
     open_tag = m.group(1)
-    escaped = html.escape(str(comment or ""), quote=True)
+    # XML attribute-value normalization collapses any literal tab/CR/LF in the
+    # value to a single space, so a raw "\n" here would silently disappear
+    # when RADAN (or any conformant XML parser) reads the file back. Numeric
+    # character references are exempt from that normalization, so line breaks
+    # must be encoded as &#13;/&#10; to actually survive a round trip.
+    normalized_comment = str(comment or "").replace("\r\n", "\n").replace("\r", "\n")
+    escaped = html.escape(normalized_comment, quote=True).replace("\n", "&#10;")
     if re.search(r'\bvalue="[^"]*"', open_tag, flags=re.IGNORECASE):
         open_tag2 = re.sub(r'\bvalue="[^"]*"', f'value="{escaped}"', open_tag, flags=re.IGNORECASE)
     else:
