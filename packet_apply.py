@@ -54,201 +54,222 @@ def apply_packet_result(
     pages_inc = 0
     elapsed_ms = int(res.get("elapsed_ms", 0) or 0)
 
-    if not bool(res.get("skip", False)):
-        mode = str(res.get("mode", "raster") or "raster").strip().lower()
-        qty = int(res.get("qty", 1) or 1)
-        extra = int(res.get("extra", 0) or 0)
-        assembly_note = str(res.get("assembly_note", "") or "").strip()
+    def _apply_vector_mode() -> Optional[object]:
+        """
+        Render the vector (native source PDF) path for this part onto dst:
+        open the source PDF, apply layer/highlight policy, flatten OCG
+        layers, mask/overlay red dimension text, then copy the resulting
+        page into dst. Returns the new dst page, or None if nothing could
+        be rendered (missing_inc/status are updated accordingly).
+        """
+        nonlocal status, missing_inc, pages_inc
+        pdf_path = str(res.get("pdf_path") or "").strip()
+        src = None
+        flat = None
         dst_page = None
-        if mode == "vector":
-            pdf_path = str(res.get("pdf_path") or "").strip()
-            src = None
-            flat = None
-            try:
-                if pdf_path and os.path.exists(pdf_path):
-                    src = fitz_module.open(pdf_path)
-                    if src.page_count >= 1:
-                        src_page = src.load_page(0)
-                        zero_aliases = first_toggle_layer_aliases_fn(src)
-                        zero_draw_masks, zero_text_boxes, zero_page_area = collect_layer_zero_masks_fn(
-                            src_page,
-                            zero_layer_aliases=zero_aliases,
+        try:
+            if pdf_path and os.path.exists(pdf_path):
+                src = fitz_module.open(pdf_path)
+                if src.page_count >= 1:
+                    src_page = src.load_page(0)
+                    zero_aliases = first_toggle_layer_aliases_fn(src)
+                    zero_draw_masks, zero_text_boxes, zero_page_area = collect_layer_zero_masks_fn(
+                        src_page,
+                        zero_layer_aliases=zero_aliases,
+                    )
+                    apply_packet_layer_policy_fn(src)
+                    red_chars = collect_red_symbol_dimension_chars_fn(src_page)
+                    red_dim_text_runs: List[dict] = []
+                    dim_boxes: List[Tuple[float, float, float, float]] = []
+                    highlight_red_target_layers_fn(src_page, dim_boxes=dim_boxes, draw=False)
+                    highlight_red_text_fn(
+                        src_page,
+                        dim_boxes=dim_boxes,
+                        overlay_runs=red_dim_text_runs,
+                        draw=False,
+                    )
+
+                    try:
+                        src_page.recolor(1)
+                    except Exception:
+                        pass
+
+                    try:
+                        flat_bytes = src.convert_to_pdf()
+                        flat = fitz_module.open("pdf", flat_bytes)
+                    except Exception:
+                        flat = None
+
+                    render_doc = flat if (flat is not None and flat.page_count >= 1) else src
+                    render_page = render_doc.load_page(0)
+                    if zero_draw_masks or zero_text_boxes:
+                        erase_layer_zero_overlays_fn(
+                            render_page,
+                            zero_draw_masks,
+                            zero_text_boxes,
+                            zero_page_area,
+                            fitz_module=fitz_module,
                         )
-                        apply_packet_layer_policy_fn(src)
-                        red_chars = collect_red_symbol_dimension_chars_fn(src_page)
-                        red_dim_text_runs: List[dict] = []
-                        dim_boxes: List[Tuple[float, float, float, float]] = []
-                        highlight_red_target_layers_fn(src_page, dim_boxes=dim_boxes, draw=False)
-                        highlight_red_text_fn(
-                            src_page,
-                            dim_boxes=dim_boxes,
-                            overlay_runs=red_dim_text_runs,
-                            draw=False,
-                        )
 
+                    seen_dim = set()
+                    for bbox in dim_boxes:
                         try:
-                            src_page.recolor(1)
+                            x0, y0, x1, y1 = float(bbox[0]), float(bbox[1]), float(bbox[2]), float(bbox[3])
                         except Exception:
-                            pass
-
-                        try:
-                            flat_bytes = src.convert_to_pdf()
-                            flat = fitz_module.open("pdf", flat_bytes)
-                        except Exception:
-                            flat = None
-
-                        render_doc = flat if (flat is not None and flat.page_count >= 1) else src
-                        render_page = render_doc.load_page(0)
-                        if zero_draw_masks or zero_text_boxes:
-                            erase_layer_zero_overlays_fn(
-                                render_page,
-                                zero_draw_masks,
-                                zero_text_boxes,
-                                zero_page_area,
-                                fitz_module=fitz_module,
-                            )
-
-                        seen_dim = set()
-                        for bbox in dim_boxes:
-                            try:
-                                x0, y0, x1, y1 = float(bbox[0]), float(bbox[1]), float(bbox[2]), float(bbox[3])
-                            except Exception:
-                                continue
-                            key = (round(x0, 2), round(y0, 2), round(x1, 2), round(y1, 2))
-                            if key in seen_dim:
-                                continue
-                            seen_dim.add(key)
-                            draw_dim_mask_fn(render_page, fitz_module.Rect(x0, y0, x1, y1))
-                        overlay_red_symbol_dimension_chars_fn(render_page, red_chars, fitz_module=fitz_module)
-                        overlay_red_text_runs_fn(render_page, red_dim_text_runs, fitz_module=fitz_module)
-                        src_rect = render_page.rect
-                        if float(src_rect.width) <= 1e-6 or float(src_rect.height) <= 1e-6:
-                            missing_inc += 1
-                        else:
-                            dst_page = dst.new_page(width=float(src_rect.width), height=float(src_rect.height))
-                            try:
-                                dst_page.show_pdf_page(
-                                    dst_page.rect,
-                                    render_doc,
-                                    0,
-                                    keep_proportion=False,
-                                    overlay=True,
-                                )
-                            except TypeError:
-                                dst_page.show_pdf_page(dst_page.rect, render_doc, 0)
-                            except Exception:
-                                dst.delete_page(dst.page_count - 1)
-                                dst.insert_pdf(render_doc, from_page=0, to_page=0)
-                                dst_page = dst.load_page(dst.page_count - 1)
-                            if dst_page is not None:
-                                pages_inc = 1
-                            else:
-                                missing_inc += 1
-                    else:
+                            continue
+                        key = (round(x0, 2), round(y0, 2), round(x1, 2), round(y1, 2))
+                        if key in seen_dim:
+                            continue
+                        seen_dim.add(key)
+                        draw_dim_mask_fn(render_page, fitz_module.Rect(x0, y0, x1, y1))
+                    overlay_red_symbol_dimension_chars_fn(render_page, red_chars, fitz_module=fitz_module)
+                    overlay_red_text_runs_fn(render_page, red_dim_text_runs, fitz_module=fitz_module)
+                    src_rect = render_page.rect
+                    if float(src_rect.width) <= 1e-6 or float(src_rect.height) <= 1e-6:
                         missing_inc += 1
+                    else:
+                        dst_page = dst.new_page(width=float(src_rect.width), height=float(src_rect.height))
+                        try:
+                            dst_page.show_pdf_page(
+                                dst_page.rect,
+                                render_doc,
+                                0,
+                                keep_proportion=False,
+                                overlay=True,
+                            )
+                        except TypeError:
+                            dst_page.show_pdf_page(dst_page.rect, render_doc, 0)
+                        except Exception:
+                            dst.delete_page(dst.page_count - 1)
+                            dst.insert_pdf(render_doc, from_page=0, to_page=0)
+                            dst_page = dst.load_page(dst.page_count - 1)
+                        if dst_page is not None:
+                            pages_inc = 1
+                        else:
+                            missing_inc += 1
                 else:
                     missing_inc += 1
-            except Exception as exc:
-                status = _mark_apply_failure(res, status, "vector apply failed", exc)
+            else:
                 missing_inc += 1
-            finally:
-                if src is not None:
-                    try:
-                        src.close()
-                    except Exception:
-                        pass
-                if flat is not None:
-                    try:
-                        flat.close()
-                    except Exception:
-                        pass
-        else:
-            width = float(res.get("w", 0.0) or 0.0)
-            height = float(res.get("h", 0.0) or 0.0)
-            img_stream = res.get("img_stream", b"") or b""
-            if width > 1e-6 and height > 1e-6:
-                dst_page = dst.new_page(width=width, height=height)
-                rect = dst_page.rect
-                if img_stream:
-                    dst_page.insert_image(rect, stream=img_stream, keep_proportion=False, overlay=True)
-                pages_inc = 1
+        except Exception as exc:
+            status = _mark_apply_failure(res, status, "vector apply failed", exc)
+            missing_inc += 1
+        finally:
+            if src is not None:
+                try:
+                    src.close()
+                except Exception:
+                    pass
+            if flat is not None:
+                try:
+                    flat.close()
+                except Exception:
+                    pass
+        return dst_page
 
-        if dst_page is not None and pages_inc > 0:
+    def _apply_raster_mode() -> Optional[object]:
+        """
+        Render the raster (pre-rendered image) path for this part onto dst.
+        Returns the new dst page, or None if the source had no usable size.
+        """
+        nonlocal pages_inc
+        width = float(res.get("w", 0.0) or 0.0)
+        height = float(res.get("h", 0.0) or 0.0)
+        img_stream = res.get("img_stream", b"") or b""
+        dst_page = None
+        if width > 1e-6 and height > 1e-6:
+            dst_page = dst.new_page(width=width, height=height)
             rect = dst_page.rect
-            text = format_qty_watermark_text_fn(qty, extra)
-            margin = 18
-            font_size = 24 * watermark_text_scale
-            box_h = 46 * watermark_text_scale
-            x1 = margin
-            y1 = rect.height - margin - box_h
-            text_w = fitz_module.get_text_length(text, fontname="helv", fontsize=font_size)
-            pad_x = 12
-            x2 = x1 + text_w + (2 * pad_x)
-            y2 = y1 + box_h
-            draw_rounded_stroke_rect_fn(
-                dst_page,
-                fitz_module.Rect(x1, y1, x2, y2),
-                stroke_color=watermark_stroke_color,
-                stroke_width=watermark_stroke_width,
-                stroke_opacity=watermark_stroke_opacity,
-                radius=watermark_radius * watermark_text_scale,
-            )
-            dst_page.insert_text(
-                fitz_module.Point(x1 + pad_x, y1 + box_h * 0.72),
-                text,
-                fontsize=font_size,
-                color=watermark_text_color,
-                fontname="helv",
-            )
+            if img_stream:
+                dst_page.insert_image(rect, stream=img_stream, keep_proportion=False, overlay=True)
+            pages_inc = 1
+        return dst_page
 
-            if assembly_note:
-                note_text = f"ASM: {assembly_note}"
-                note_font_size = 14 * watermark_text_scale
-                note_box_h = box_h
-                note_gap = 10
-                min_reasonable_w = 60.0
+    def _stamp_watermarks(dst_page, qty: int, extra: int, assembly_note: str) -> None:
+        """
+        Stamp the QTY box (bottom-left, always) and - if present - the ASM
+        note box beside it (falling back to stacking above it on narrow
+        pages) onto a finished dst page.
+        """
+        rect = dst_page.rect
+        text = format_qty_watermark_text_fn(qty, extra)
+        margin = 18
+        font_size = 24 * watermark_text_scale
+        box_h = 46 * watermark_text_scale
+        x1 = margin
+        y1 = rect.height - margin - box_h
+        text_w = fitz_module.get_text_length(text, fontname="helv", fontsize=font_size)
+        pad_x = 12
+        x2 = x1 + text_w + (2 * pad_x)
+        y2 = y1 + box_h
+        draw_rounded_stroke_rect_fn(
+            dst_page,
+            fitz_module.Rect(x1, y1, x2, y2),
+            stroke_color=watermark_stroke_color,
+            stroke_width=watermark_stroke_width,
+            stroke_opacity=watermark_stroke_opacity,
+            radius=watermark_radius * watermark_text_scale,
+        )
+        dst_page.insert_text(
+            fitz_module.Point(x1 + pad_x, y1 + box_h * 0.72),
+            text,
+            fontsize=font_size,
+            color=watermark_text_color,
+            fontname="helv",
+        )
 
-                def _fit_note_font(available_w: float, font_size: float) -> Tuple[float, float]:
-                    text_w = fitz_module.get_text_length(note_text, fontname="helv", fontsize=font_size)
-                    if text_w > available_w > 0:
-                        font_size = max(7.0, font_size * (available_w / text_w))
-                        text_w = fitz_module.get_text_length(note_text, fontname="helv", fontsize=font_size)
-                    return font_size, text_w
+        if not assembly_note:
+            return
 
-                right_available_w = rect.width - (x2 + note_gap) - margin - (2 * pad_x)
-                if right_available_w >= min_reasonable_w:
-                    note_x1 = x2 + note_gap
-                    note_y1 = y1
-                    note_y2 = y2
-                    note_font_size, note_text_w = _fit_note_font(right_available_w, note_font_size)
-                else:
-                    # Not enough room beside the QTY box (narrow page, or a
-                    # long assembly name) - stack the note above it instead,
-                    # where the full page width is available.
-                    above_available_w = rect.width - x1 - margin - (2 * pad_x)
-                    note_x1 = x1
-                    note_y2 = y1 - 6
-                    note_y1 = note_y2 - note_box_h
-                    note_font_size, note_text_w = _fit_note_font(above_available_w, note_font_size)
+        note_text = f"ASM: {assembly_note}"
+        note_font_size = 14 * watermark_text_scale
+        note_box_h = box_h
+        note_gap = 10
+        min_reasonable_w = 60.0
 
-                note_x2 = note_x1 + note_text_w + (2 * pad_x)
-                draw_rounded_stroke_rect_fn(
-                    dst_page,
-                    fitz_module.Rect(note_x1, note_y1, note_x2, note_y2),
-                    stroke_color=watermark_stroke_color,
-                    stroke_width=watermark_stroke_width,
-                    stroke_opacity=watermark_stroke_opacity,
-                    radius=watermark_radius * watermark_text_scale,
-                )
-                dst_page.insert_text(
-                    fitz_module.Point(note_x1 + pad_x, note_y1 + note_box_h * 0.72),
-                    note_text,
-                    fontsize=note_font_size,
-                    color=watermark_text_color,
-                    fontname="helv",
-                )
+        def _fit_note_font(available_w: float, font_size: float) -> Tuple[float, float]:
+            text_w = fitz_module.get_text_length(note_text, fontname="helv", fontsize=font_size)
+            if text_w > available_w > 0:
+                font_size = max(7.0, font_size * (available_w / text_w))
+                text_w = fitz_module.get_text_length(note_text, fontname="helv", fontsize=font_size)
+            return font_size, text_w
 
-    if emit_progress:
+        right_available_w = rect.width - (x2 + note_gap) - margin - (2 * pad_x)
+        if right_available_w >= min_reasonable_w:
+            note_x1 = x2 + note_gap
+            note_y1 = y1
+            note_y2 = y2
+            note_font_size, note_text_w = _fit_note_font(right_available_w, note_font_size)
+        else:
+            # Not enough room beside the QTY box (narrow page, or a long
+            # assembly name) - stack the note above it instead, where the
+            # full page width is available.
+            above_available_w = rect.width - x1 - margin - (2 * pad_x)
+            note_x1 = x1
+            note_y2 = y1 - 6
+            note_y1 = note_y2 - note_box_h
+            note_font_size, note_text_w = _fit_note_font(above_available_w, note_font_size)
+
+        note_x2 = note_x1 + note_text_w + (2 * pad_x)
+        draw_rounded_stroke_rect_fn(
+            dst_page,
+            fitz_module.Rect(note_x1, note_y1, note_x2, note_y2),
+            stroke_color=watermark_stroke_color,
+            stroke_width=watermark_stroke_width,
+            stroke_opacity=watermark_stroke_opacity,
+            radius=watermark_radius * watermark_text_scale,
+        )
+        dst_page.insert_text(
+            fitz_module.Point(note_x1 + pad_x, note_y1 + note_box_h * 0.72),
+            note_text,
+            fontsize=note_font_size,
+            color=watermark_text_color,
+            fontname="helv",
+        )
+
+    def _emit_progress() -> None:
+        if not emit_progress:
+            return
         if progress_cb is not None:
             try:
                 progress_cb(progress_done, progress_total, status)
@@ -258,4 +279,20 @@ def apply_packet_result(
             span.progress(progress_done, progress_total, status)
         except Exception:
             pass
+
+    if not bool(res.get("skip", False)):
+        mode = str(res.get("mode", "raster") or "raster").strip().lower()
+        qty = int(res.get("qty", 1) or 1)
+        extra = int(res.get("extra", 0) or 0)
+        assembly_note = str(res.get("assembly_note", "") or "").strip()
+
+        if mode == "vector":
+            dst_page = _apply_vector_mode()
+        else:
+            dst_page = _apply_raster_mode()
+
+        if dst_page is not None and pages_inc > 0:
+            _stamp_watermarks(dst_page, qty, extra, assembly_note)
+
+    _emit_progress()
     return missing_inc, pages_inc, elapsed_ms
