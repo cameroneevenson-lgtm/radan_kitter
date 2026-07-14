@@ -350,81 +350,91 @@ def run_scan_and_log(
     _safe_emit(on_progress, done, total)
 
     tasks: List[Dict[str, Any]] = []
-    for p in part_rows:
-        if should_stop is not None:
-            try:
-                if should_stop():
-                    stopped = True
-                    break
-            except Exception:
-                pass
 
-        part_name = _part_name_from_obj(p)
-        kit_raw = str(getattr(p, "kit_label", "") or "")
-        kit = sanitize_kit_name_fn(kit_raw) or balance_kit
-        sym_path = str(getattr(p, "sym", "") or "")
+    def _build_tasks() -> None:
+        """
+        Walk part_rows once, logging + counting parts skipped for a missing
+        PDF or a part_key dedupe hit, and appending everything else onto
+        `tasks` for feature computation below.
+        """
+        nonlocal stopped, done
+        for p in part_rows:
+            if should_stop is not None:
+                try:
+                    if should_stop():
+                        stopped = True
+                        break
+                except Exception:
+                    pass
 
-        pdf = resolve_asset_fn(sym_path, ".pdf") or ""
-        pdf_exists = bool(pdf and os.path.exists(pdf))
-        if not pdf_exists:
-            counts["missing_pdf_rows"] += 1
-            counts["skipped_missing_pdf_rows"] += 1
-            counts["processed_rows"] += 1
-            done += 1
-            item = {
-                "status": "skipped_missing_pdf",
-                "part_name": part_name,
-                "kit_label": kit,
-                "pdf_path": str(pdf or ""),
-                "reason": "missing_pdf",
-            }
-            _append_example(missing_pdf_examples, f"{part_name or '(unnamed)'} -> {str(pdf or '').strip() or '(missing path)'}")
-            logger.log_part(item)
-            _safe_emit(on_part, item)
-            _safe_emit(on_progress, done, total)
-            if delay_ms > 0:
-                time.sleep(int(delay_ms) / 1000.0)
-            continue
+            part_name = _part_name_from_obj(p)
+            kit_raw = str(getattr(p, "kit_label", "") or "")
+            kit = sanitize_kit_name_fn(kit_raw) or balance_kit
+            sym_path = str(getattr(p, "sym", "") or "")
 
-        dxf = resolve_asset_fn(sym_path, ".dxf") or ""
-        dxf_exists = bool(dxf and os.path.exists(dxf))
-        if not dxf_exists:
-            counts["missing_dxf_rows"] += 1
+            pdf = resolve_asset_fn(sym_path, ".pdf") or ""
+            pdf_exists = bool(pdf and os.path.exists(pdf))
+            if not pdf_exists:
+                counts["missing_pdf_rows"] += 1
+                counts["skipped_missing_pdf_rows"] += 1
+                counts["processed_rows"] += 1
+                done += 1
+                item = {
+                    "status": "skipped_missing_pdf",
+                    "part_name": part_name,
+                    "kit_label": kit,
+                    "pdf_path": str(pdf or ""),
+                    "reason": "missing_pdf",
+                }
+                _append_example(missing_pdf_examples, f"{part_name or '(unnamed)'} -> {str(pdf or '').strip() or '(missing path)'}")
+                logger.log_part(item)
+                _safe_emit(on_part, item)
+                _safe_emit(on_progress, done, total)
+                if delay_ms > 0:
+                    time.sleep(int(delay_ms) / 1000.0)
+                continue
 
-        part_key = _make_part_key(part_name, pdf, dxf)
-        if part_key and part_key in existing_parts:
-            counts["processed_rows"] += 1
-            counts["skipped_duplicate_rows"] += 1
-            done += 1
-            item = {
-                "status": "skipped_duplicate",
-                "part_name": part_name,
-                "part_key": part_key,
-                "kit_label": kit,
-                "pdf_path": str(pdf or ""),
-                "dxf_path": str(dxf or ""),
-                "reason": "dedupe_part_key",
-            }
-            logger.log_part(item)
-            _safe_emit(on_part, item)
-            _safe_emit(on_progress, done, total)
-            if delay_ms > 0:
-                time.sleep(int(delay_ms) / 1000.0)
-            continue
-        if part_key:
-            existing_parts.add(part_key)
+            dxf = resolve_asset_fn(sym_path, ".dxf") or ""
+            dxf_exists = bool(dxf and os.path.exists(dxf))
+            if not dxf_exists:
+                counts["missing_dxf_rows"] += 1
 
-        tasks.append(
-            {
-                "part_name": part_name,
-                "part_key": part_key,
-                "kit_label": kit,
-                "pdf_path": pdf,
-                "dxf_path": dxf,
-                "pdf_exists": pdf_exists,
-                "dxf_exists": dxf_exists,
-            }
-        )
+            part_key = _make_part_key(part_name, pdf, dxf)
+            if part_key and part_key in existing_parts:
+                counts["processed_rows"] += 1
+                counts["skipped_duplicate_rows"] += 1
+                done += 1
+                item = {
+                    "status": "skipped_duplicate",
+                    "part_name": part_name,
+                    "part_key": part_key,
+                    "kit_label": kit,
+                    "pdf_path": str(pdf or ""),
+                    "dxf_path": str(dxf or ""),
+                    "reason": "dedupe_part_key",
+                }
+                logger.log_part(item)
+                _safe_emit(on_part, item)
+                _safe_emit(on_progress, done, total)
+                if delay_ms > 0:
+                    time.sleep(int(delay_ms) / 1000.0)
+                continue
+            if part_key:
+                existing_parts.add(part_key)
+
+            tasks.append(
+                {
+                    "part_name": part_name,
+                    "part_key": part_key,
+                    "kit_label": kit,
+                    "pdf_path": pdf,
+                    "dxf_path": dxf,
+                    "pdf_exists": pdf_exists,
+                    "dxf_exists": dxf_exists,
+                }
+            )
+
+    _build_tasks()
 
     rows_to_upsert: List[Dict[str, Any]] = []
     submitted = 0
@@ -504,63 +514,74 @@ def run_scan_and_log(
         if delay_ms > 0:
             time.sleep(int(delay_ms) / 1000.0)
 
-    if not stopped and total_tasks > 0:
-        if workers <= 1:
-            for task in tasks:
-                if should_stop is not None:
-                    try:
-                        if should_stop():
-                            stopped = True
-                            break
-                    except Exception:
-                        pass
+    def _run_tasks_sequential() -> None:
+        nonlocal stopped, submitted
+        for task in tasks:
+            if should_stop is not None:
+                try:
+                    if should_stop():
+                        stopped = True
+                        break
+                except Exception:
+                    pass
+            err = ""
+            res = None
+            try:
+                res = _compute_ml_log_row(task, rpd_token=rpd_token, signals=signals)
+            except Exception as e:
+                err = str(e)
+            _handle_task_result(task, res, err)
+            submitted += 1
+
+    def _run_tasks_pooled() -> None:
+        nonlocal stopped
+        # NOTE: this stays a `with` block (unlike the other two pooled
+        # sites) so a stop request still lets any already-running tasks
+        # finish and shut the pool down via the context manager's own
+        # wait=True exit, rather than canceling in flight work - that is
+        # existing behavior for this call site, preserved as-is.
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            in_flight: Dict[Future, Dict[str, Any]] = {}
+
+            def _submit_next() -> bool:
+                nonlocal submitted
+                if submitted >= total_tasks:
+                    return False
+                task = tasks[submitted]
+                submitted += 1
+                fut = pool.submit(_compute_ml_log_row, task, rpd_token=rpd_token, signals=signals)
+                in_flight[fut] = task
+                return True
+
+            def _handle_completed_task(task: Dict[str, Any], fut: Future) -> None:
                 err = ""
                 res = None
                 try:
-                    res = _compute_ml_log_row(task, rpd_token=rpd_token, signals=signals)
+                    res = fut.result()
                 except Exception as e:
                     err = str(e)
                 _handle_task_result(task, res, err)
-                submitted += 1
+
+            stopped = _run_pooled(
+                pool,
+                in_flight,
+                _submit_next,
+                _handle_completed_task,
+                max_workers=workers,
+                total_items=total_tasks,
+                should_cancel=should_stop,
+            )
+
+    if not stopped and total_tasks > 0:
+        if workers <= 1:
+            _run_tasks_sequential()
         else:
-            # NOTE: this stays a `with` block (unlike the other two pooled
-            # sites) so a stop request still lets any already-running tasks
-            # finish and shut the pool down via the context manager's own
-            # wait=True exit, rather than canceling in flight work - that is
-            # existing behavior for this call site, preserved as-is.
-            with ThreadPoolExecutor(max_workers=workers) as pool:
-                in_flight: Dict[Future, Dict[str, Any]] = {}
+            _run_tasks_pooled()
 
-                def _submit_next() -> bool:
-                    nonlocal submitted
-                    if submitted >= total_tasks:
-                        return False
-                    task = tasks[submitted]
-                    submitted += 1
-                    fut = pool.submit(_compute_ml_log_row, task, rpd_token=rpd_token, signals=signals)
-                    in_flight[fut] = task
-                    return True
-
-                def _handle_completed_task(task: Dict[str, Any], fut: Future) -> None:
-                    err = ""
-                    res = None
-                    try:
-                        res = fut.result()
-                    except Exception as e:
-                        err = str(e)
-                    _handle_task_result(task, res, err)
-
-                stopped = _run_pooled(
-                    pool,
-                    in_flight,
-                    _submit_next,
-                    _handle_completed_task,
-                    max_workers=workers,
-                    total_items=total_tasks,
-                    should_cancel=should_stop,
-                )
-
-    if rows_to_upsert:
+    def _upsert_rows_to_dataset() -> None:
+        nonlocal base_df
+        if not rows_to_upsert:
+            return
         try:
             # Intentional supersede-on-rescan: dropping existing rows by
             # part_name (not part_key) means re-scanning a part always
@@ -590,6 +611,8 @@ def run_scan_and_log(
                     "error": str(e),
                 }
             )
+
+    _upsert_rows_to_dataset()
 
     summary = {
         **counts,
