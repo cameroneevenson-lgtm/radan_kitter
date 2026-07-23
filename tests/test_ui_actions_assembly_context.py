@@ -67,7 +67,16 @@ class ScanAndStampAssemblyContextTests(unittest.TestCase):
     def test_no_op_when_truck_nest_explorer_is_unavailable(self) -> None:
         parts = [_part("1", str(self.root / "F55334-B-1001.sym"))]
         with patch.object(ui_actions, "_load_truck_nest_explorer_packet_build_service", return_value=None):
-            ui_actions._scan_and_stamp_assembly_context(parts, str(self.root / "job.rpd"))
+            ui_actions._scan_and_stamp_assembly_context(parts, str(self.root / "F55334 PAINT PACK.rpd"))
+        self.assertEqual(parts[0].assembly_note, "")
+
+    def test_no_op_for_non_paint_pack_rpd(self) -> None:
+        parts = [_part("1", str(self.root / "F59487-1.sym"))]
+        fake_tne = SimpleNamespace(
+            collect_unused_tabloid_pdfs=lambda *a, **k: (_ for _ in ()).throw(AssertionError("should not be called"))
+        )
+        with patch.object(ui_actions, "_load_truck_nest_explorer_packet_build_service", return_value=fake_tne):
+            ui_actions._scan_and_stamp_assembly_context(parts, str(self.root / "F59487.rpd"))
         self.assertEqual(parts[0].assembly_note, "")
 
     def test_no_op_when_there_are_no_existing_search_roots(self) -> None:
@@ -81,7 +90,10 @@ class ScanAndStampAssemblyContextTests(unittest.TestCase):
             collect_unused_tabloid_pdfs=lambda *a, **k: (_ for _ in ()).throw(AssertionError("should not be called"))
         )
         with patch.object(ui_actions, "_load_truck_nest_explorer_packet_build_service", return_value=fake_tne):
-            ui_actions._scan_and_stamp_assembly_context(parts, str(self.root / "missing_dir" / "job.rpd"))
+            ui_actions._scan_and_stamp_assembly_context(
+                parts,
+                str(self.root / "missing_dir" / "F55334 PAINT PACK.rpd"),
+            )
         self.assertEqual(parts[0].assembly_note, "")
 
     def test_search_roots_include_rpd_folder_and_asset_root_override(self) -> None:
@@ -98,7 +110,7 @@ class ScanAndStampAssemblyContextTests(unittest.TestCase):
 
         fake_tne = SimpleNamespace(collect_unused_tabloid_pdfs=_fake_collect)
         with patch.object(ui_actions, "_load_truck_nest_explorer_packet_build_service", return_value=fake_tne):
-            ui_actions._scan_and_stamp_assembly_context(parts, str(self.root / "job.rpd"))
+            ui_actions._scan_and_stamp_assembly_context(parts, str(self.root / "F55334 PAINT PACK.rpd"))
 
         self.assertEqual(len(seen_roots), 1)
         expected = sorted([str(self.root), str(override_dir)])
@@ -119,7 +131,7 @@ class ScanAndStampAssemblyContextTests(unittest.TestCase):
             apply_assembly_context_to_sym_comments=lambda **k: sym_comment_calls.append(k) or SimpleNamespace(updated_count=0),
         )
         with patch.object(ui_actions, "_load_truck_nest_explorer_packet_build_service", return_value=fake_tne):
-            ui_actions._scan_and_stamp_assembly_context(parts, str(self.root / "job.rpd"))
+            ui_actions._scan_and_stamp_assembly_context(parts, str(self.root / "F55334 PAINT PACK.rpd"))
 
         self.assertEqual(len(applied_notes_calls), 1)
         self.assertEqual(applied_notes_calls[0], (parts, assembly_context))
@@ -135,7 +147,7 @@ class ScanAndStampAssemblyContextTests(unittest.TestCase):
             collect_unused_tabloid_pdfs=lambda *a, **k: (_ for _ in ()).throw(RuntimeError("boom"))
         )
         with patch.object(ui_actions, "_load_truck_nest_explorer_packet_build_service", return_value=fake_tne):
-            ui_actions._scan_and_stamp_assembly_context(parts, str(self.root / "job.rpd"))
+            ui_actions._scan_and_stamp_assembly_context(parts, str(self.root / "F55334 PAINT PACK.rpd"))
         self.assertEqual(parts[0].assembly_note, "")
 
 

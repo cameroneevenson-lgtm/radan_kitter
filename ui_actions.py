@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 import subprocess
 import sys
 import time
@@ -228,6 +229,15 @@ def _load_truck_nest_explorer_packet_build_service():
     return tne_packet_build_service
 
 
+def _is_paint_pack_rpd(rpd_path: str) -> bool:
+    path = Path(str(rpd_path or "").strip())
+    for piece in (*path.parts, path.stem):
+        words = re.sub(r"[^a-z0-9]+", " ", str(piece or "").casefold()).strip()
+        if words == "paint pack" or words.endswith(" paint pack"):
+            return True
+    return False
+
+
 def _scan_and_stamp_assembly_context(parts: List[PartRow], rpd_path: str) -> None:
     """Best-effort: find assembly drawing PDFs, match parts to them, set
     PartRow.assembly_note for the print packet, and update .sym comments -
@@ -238,13 +248,30 @@ def _scan_and_stamp_assembly_context(parts: List[PartRow], rpd_path: str) -> Non
     override (assets.W_RELEASE_ROOT) if one is set - that override is
     exactly where a one-off job's assembly drawings are expected to live.
     """
+    if not _is_paint_pack_rpd(rpd_path):
+        return
+
     tne = _load_truck_nest_explorer_packet_build_service()
     if tne is None:
         return
 
     search_roots: List[Path] = []
     seen: set[str] = set()
-    for candidate in (os.path.dirname(rpd_path or ""), assets.W_RELEASE_ROOT):
+
+    candidates = [os.path.dirname(rpd_path or "")]
+    asset_root_state = assets.get_asset_root_state()
+    if bool(asset_root_state.get("override_active", False)):
+        candidates.append(str(asset_root_state.get("root") or ""))
+    else:
+        for part in parts:
+            sym_path = str(getattr(part, "sym", "") or "").strip()
+            if not sym_path:
+                continue
+            pdf_path = assets.resolve_asset_fast(sym_path, ".pdf")
+            if pdf_path:
+                candidates.append(os.path.dirname(pdf_path))
+
+    for candidate in candidates:
         text = str(candidate or "").strip()
         if not text or not os.path.isdir(text):
             continue
