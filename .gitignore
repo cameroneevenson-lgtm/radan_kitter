@@ -16,6 +16,7 @@ _out/
 radan_kitter_launch.log
 _runtime/profiles/
 _runtime/runtime_trace.jsonl
+_runtime/asset_lookup_settings.json
 _packet_debug_out/
 _ml_runs/
 _ml_models/
